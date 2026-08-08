@@ -1,0 +1,233 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  STUDENT
+  ADMIN
+}
+
+enum AgeGroup {
+  KIDS
+  ADULTS
+  LADIES_ONLY
+}
+
+enum ProgramCategory {
+  MARTIAL_ARTS
+  FITNESS_WEIGHT_LOSS
+  FITNESS_HIIT
+}
+
+enum MembershipTier {
+  YELLOW_BELT
+  BLUE_BELT
+  PURPLE_BELT
+  BROWN_BELT
+  CHALLENGE_8
+  CHALLENGE_24
+  CHALLENGE_48
+  TRANSFORMATION_96
+}
+
+enum EnrollmentStatus {
+  ACTIVE
+  COMPLETED
+  EXPIRED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+enum PlatformType {
+  GOOGLE_MEET
+  ZOOM
+}
+
+enum ContactStatus {
+  NEW
+  RESOLVED
+}
+
+model User {
+  id            String          @id @default(cuid())
+  name          String
+  email         String          @unique
+  passwordHash  String?
+  role          Role            @default(STUDENT)
+  image         String?
+  emailVerified DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  studentProfile StudentProfile?
+  enrollments    Enrollment[]
+  payments       Payment[]
+  certificates   Certificate[]  @relation("StudentCertificates")
+  issuedCerts    Certificate[]  @relation("AdminIssuedCertificates")
+  notifications  Notification[]
+  updatedLinks   LiveClassLink[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model StudentProfile {
+  id               String    @id @default(cuid())
+  userId           String    @unique
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  phone            String?
+  country          String?
+  city             String?
+  emergencyContact String?
+  dateOfBirth      DateTime?
+  ageGroup         AgeGroup?
+}
+
+model Program {
+  id             String          @id @default(cuid())
+  title          String
+  slug           String          @unique
+  category       ProgramCategory
+  targetAudience AgeGroup
+  description    String
+  isActive       Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+
+  membershipPlans MembershipPlan[]
+  liveClasses     LiveClass[]
+  certificates    Certificate[]
+}
+
+model MembershipPlan {
+  id             String         @id @default(cuid())
+  programId      String
+  program        Program        @relation(fields: [programId], references: [id], onDelete: Cascade)
+  name           String
+  tierType       MembershipTier
+  durationMonths Int
+  totalClasses   Int
+  priceINR       Decimal        @db.Decimal(10, 2)
+  priceUSD       Decimal        @db.Decimal(10, 2)
+  isActive       Boolean        @default(true)
+
+  enrollments Enrollment[]
+}
+
+model Enrollment {
+  id                 String           @id @default(cuid())
+  userId             String
+  user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  membershipPlanId   String
+  membershipPlan     MembershipPlan   @relation(fields: [membershipPlanId], references: [id])
+  startDate          DateTime         @default(now())
+  endDate            DateTime
+  totalClassesGranted Int
+  remainingClasses   Int
+  status             EnrollmentStatus @default(ACTIVE)
+  createdAt          DateTime         @default(now())
+
+  payments Payment[]
+
+  @@index([userId, status])
+}
+
+model LiveClass {
+  id           String   @id @default(cuid())
+  programId    String
+  program      Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
+  batchName    String
+  scheduleDays String
+  startTime    String
+  endTime      String
+
+  liveClassLinks LiveClassLink[]
+}
+
+model LiveClassLink {
+  id              String       @id @default(cuid())
+  liveClassId     String
+  liveClass       LiveClass    @relation(fields: [liveClassId], references: [id], onDelete: Cascade)
+  meetingUrl      String
+  platform        PlatformType @default(GOOGLE_MEET)
+  validForDate    DateTime     @db.Date
+  notes           String?
+  updatedByUserId String
+  updatedByUser   User         @relation(fields: [updatedByUserId], references: [id])
+  updatedAt       DateTime     @updatedAt
+
+  @@unique([liveClassId, validForDate])
+  @@index([validForDate])
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  userId            String
+  user              User          @relation(fields: [userId], references: [id])
+  enrollmentId      String?
+  enrollment        Enrollment?   @relation(fields: [enrollmentId], references: [id])
+  razorpayOrderId   String        @unique
+  razorpayPaymentId String?       @unique
+  razorpaySignature String?
+  amount            Decimal       @db.Decimal(10, 2)
+  currency          String        // "INR" | "USD"
+  status            PaymentStatus @default(PENDING)
+  rawWebhookPayload Json?
+  createdAt         DateTime      @default(now())
+
+  @@index([userId])
+  @@index([razorpayOrderId])
+}
+
+model Certificate {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation("StudentCertificates", fields: [userId], references: [id], onDelete: Cascade)
+  programId         String
+  program           Program  @relation(fields: [programId], references: [id])
+  title             String
+  certificateNumber String   @unique
+  fileKey           String
+  issuedDate        DateTime @default(now())
+  issuedByUserId    String
+  issuedByUser      User     @relation("AdminIssuedCertificates", fields: [issuedByUserId], references: [id])
+
+  @@index([userId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+model ContactInquiry {
+  id        String        @id @default(cuid())
+  name      String
+  email     String
+  phone     String?
+  message   String
+  status    ContactStatus @default(NEW)
+  createdAt DateTime      @default(now())
+}
+
+model WebsiteSettings {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  updatedAt DateTime @updatedAt
+}
