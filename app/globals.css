@@ -1,26 +1,67 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: 10 11 14;          /* #0A0B0E Onyx Dark */
+    --foreground: 255 255 255;      /* #FFFFFF Pure White */
+    
+    --card: 20 22 29;              /* #14161D Charcoal Surface */
+    --card-foreground: 255 255 255;
+    
+    --popover: 20 22 29;
+    --popover-foreground: 255 255 255;
+    
+    --primary: 229 9 20;           /* #E50914 Brand Crimson */
+    --primary-foreground: 255 255 255;
+    
+    --secondary: 0 128 255;        /* #0080FF Brand Azure */
+    --secondary-foreground: 255 255 255;
+    
+    --muted: 31 41 55;             /* #1F2937 */
+    --muted-foreground: 156 163 175;/* #9CA3AF Silver */
+    
+    --accent: 255 30 39;           /* #FF1E27 Bright Red */
+    --accent-foreground: 255 255 255;
+    
+    --destructive: 239 68 68;
+    --destructive-foreground: 255 255 255;
+    
+    --border: 255 255 255 0.1;
+    --input: 255 255 255 0.12;
+    --ring: 229 9 20;
+    
+    --radius: 0.75rem;
   }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: rgb(var(--background));
+  color: rgb(var(--foreground));
+  min-height: 100vh;
+  font-feature-settings: "rlig" 1, "calt" 1;
+}
+
+/* Custom Pulsing Animation for Live Class Indicator */
+@keyframes live-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(16, 185, 129, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+.animate-live-pulse {
+  animation: live-pulse 1.8s infinite;
+}
+
+/* Glassmorphism utility */
+.glass-panel {
+  background: rgba(20, 22, 29, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }

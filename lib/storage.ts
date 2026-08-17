@@ -11,7 +11,7 @@ export class LocalStorageProvider implements StorageProvider {
   private baseDir: string;
 
   constructor() {
-    this.baseDir = path.resolve(process.env.STORAGE_DIR || "./public/uploads");
+    this.baseDir = path.join(process.cwd(), "public", "uploads");
   }
 
   async uploadFile(fileBuffer: Buffer, fileName: string, subDir: string = "certificates"): Promise<{ fileKey: string; publicUrl: string }> {

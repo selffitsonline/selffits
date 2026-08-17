@@ -10,6 +10,7 @@ generator client {
 enum Role {
   STUDENT
   ADMIN
+  SUPER_ADMIN
 }
 
 enum AgeGroup {
@@ -61,6 +62,8 @@ enum ContactStatus {
 
 model User {
   id            String          @id @default(cuid())
+  firstName     String?
+  lastName      String?
   name          String
   email         String          @unique
   passwordHash  String?
@@ -92,6 +95,26 @@ model StudentProfile {
   emergencyContact String?
   dateOfBirth      DateTime?
   ageGroup         AgeGroup?
+}
+
+model VerificationToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expires   DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([email, token])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  email     String
+  token     String   @unique
+  expires   DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([email, token])
 }
 
 model Program {

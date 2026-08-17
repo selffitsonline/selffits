@@ -1,0 +1,233 @@
+"use client";
+
+import React, { useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+import { signOut, useSession } from "next-auth/react";
+import {
+  LayoutDashboard,
+  BookOpen,
+  Video,
+  Film,
+  Award,
+  BarChart3,
+  User,
+  Bell,
+  LogOut,
+  Menu,
+  X,
+  ChevronRight,
+  ShieldCheck,
+} from "lucide-react";
+
+interface StudentShellProps {
+  children: React.ReactNode;
+}
+
+export function StudentShell({ children }: StudentShellProps) {
+  const { data: session } = useSession();
+  const pathname = usePathname();
+  const router = useRouter();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+
+  const navigationItems = [
+    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { name: "My Programs", href: "/dashboard/programs", icon: BookOpen },
+    { name: "Live Classes", href: "/dashboard/live", icon: Video, badge: "LIVE" },
+    { name: "Recorded Classes", href: "/dashboard/recordings", icon: Film },
+    { name: "My Certificates", href: "/dashboard/certificates", icon: Award },
+    { name: "My Progress", href: "/dashboard/progress", icon: BarChart3 },
+    { name: "Notifications", href: "/dashboard/notifications", icon: Bell },
+    { name: "Profile & Settings", href: "/dashboard/profile", icon: User },
+  ];
+
+  const handleLogout = async () => {
+    await signOut({ callbackUrl: "/login" });
+  };
+
+  const userDisplayName = session?.user?.name || "Student";
+  const userEmail = session?.user?.email || "student@selffits.com";
+
+  return (
+    <div className="min-h-screen bg-[#0A0B0E] text-white flex flex-col md:flex-row">
+      {/* Desktop Sidebar Navigation */}
+      <aside className="hidden md:flex flex-col w-64 bg-[#14161D] border-r border-white/10 shrink-0 sticky top-0 h-screen z-40">
+        {/* Brand Header */}
+        <div className="p-5 border-b border-white/10 flex items-center justify-between">
+          <Link href="/dashboard" className="flex items-center group">
+            <Image
+              src="/logo.jpg"
+              alt="SELFFITS Logo"
+              width={200}
+              height={70}
+              priority
+              className="h-12 w-auto object-contain rounded-xl group-hover:scale-105 transition-transform"
+            />
+          </Link>
+        </div>
+
+        {/* Student Profile Quick Card */}
+        <div className="p-4 m-4 rounded-xl bg-[#0F1117] border border-white/10 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#E50914] to-[#0080FF] flex items-center justify-center font-bold text-white text-sm shrink-0">
+            {userDisplayName.charAt(0).toUpperCase()}
+          </div>
+          <div className="overflow-hidden">
+            <h4 className="text-xs font-bold text-white truncate">{userDisplayName}</h4>
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#0080FF]">
+              <ShieldCheck className="w-3 h-3 text-[#0080FF]" />
+              Blue Belt Student
+            </span>
+          </div>
+        </div>
+
+        {/* Nav Links */}
+        <nav className="flex-1 px-4 py-2 space-y-1 overflow-y-auto">
+          {navigationItems.map((item) => {
+            const isActive = pathname === item.href;
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center justify-between px-4 py-3 rounded-xl text-xs font-semibold transition-all ${
+                  isActive
+                    ? "bg-[#E50914] text-white shadow-lg shadow-[#E50914]/20 font-bold"
+                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-gray-400"}`} />
+                  <span>{item.name}</span>
+                </div>
+                {item.badge && (
+                  <span className="px-2 py-0.5 rounded-full bg-[#10B981]/20 text-[#10B981] text-[9px] font-extrabold border border-[#10B981]/30 animate-pulse">
+                    {item.badge}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Sidebar Footer / Logout */}
+        <div className="p-4 border-t border-white/10">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold text-gray-400 hover:text-[#EF4444] hover:bg-[#EF4444]/10 transition-colors cursor-pointer"
+          >
+            <LogOut className="w-4 h-4" />
+            <span>Logout Account</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Top Navbar */}
+        <header className="sticky top-0 z-30 bg-[#0A0B0E]/90 backdrop-blur-md border-b border-white/10 px-4 sm:px-8 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            {/* Mobile Hamburger Toggle */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 rounded-lg text-gray-300 hover:bg-white/10"
+              aria-label="Toggle Menu"
+            >
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+
+            <h1 className="text-lg font-extrabold text-white font-[family-name:var(--font-outfit)] hidden sm:block">
+              Student Dashboard
+            </h1>
+          </div>
+
+          <div className="flex items-center gap-4">
+            {/* Notifications Dropdown Toggle */}
+            <div className="relative">
+              <button
+                onClick={() => setNotificationsOpen(!notificationsOpen)}
+                className="relative p-2.5 rounded-xl bg-[#14161D] border border-white/10 text-gray-300 hover:text-white hover:border-white/20 transition-colors cursor-pointer"
+                aria-label="Notifications"
+              >
+                <Bell className="w-4 h-4" />
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#E50914] animate-ping" />
+              </button>
+
+              {notificationsOpen && (
+                <div className="absolute right-0 mt-2 w-80 bg-[#14161D] border border-white/15 rounded-2xl shadow-2xl p-4 z-50">
+                  <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-3">
+                    <h4 className="text-xs font-bold text-white">Notifications</h4>
+                    <span className="text-[10px] text-[#0080FF] font-semibold">2 New</span>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="p-2.5 rounded-lg bg-[#0F1117] text-xs space-y-1">
+                      <p className="font-semibold text-white">Live Class Starting Soon</p>
+                      <p className="text-[11px] text-gray-400">Adults Martial Arts batch starts in 15 mins.</p>
+                    </div>
+                    <div className="p-2.5 rounded-lg bg-[#0F1117] text-xs space-y-1">
+                      <p className="font-semibold text-white">New Certificate Issued</p>
+                      <p className="text-[11px] text-gray-400">Your Yellow Belt Certificate is ready to download.</p>
+                    </div>
+                  </div>
+                  <Link
+                    href="/dashboard/notifications"
+                    onClick={() => setNotificationsOpen(false)}
+                    className="block text-center text-xs text-[#E50914] font-semibold mt-3 hover:underline"
+                  >
+                    View All Notifications
+                  </Link>
+                </div>
+              )}
+            </div>
+
+            {/* User Profile Pill */}
+            <Link
+              href="/dashboard/profile"
+              className="flex items-center gap-3 p-1.5 pr-4 rounded-full bg-[#14161D] border border-white/10 hover:border-white/20 transition-colors"
+            >
+              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#E50914] to-[#0080FF] flex items-center justify-center font-bold text-white text-xs">
+                {userDisplayName.charAt(0).toUpperCase()}
+              </div>
+              <span className="text-xs font-bold text-white hidden sm:inline">{userDisplayName}</span>
+            </Link>
+          </div>
+        </header>
+
+        {/* Mobile Navigation Drawer */}
+        {mobileMenuOpen && (
+          <div className="md:hidden bg-[#14161D] border-b border-white/10 px-4 py-4 space-y-2">
+            {navigationItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold ${
+                  pathname === item.href
+                    ? "bg-[#E50914] text-white"
+                    : "text-gray-300 hover:bg-white/5"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <item.icon className="w-5 h-5" />
+                  <span>{item.name}</span>
+                </div>
+                <ChevronRight className="w-4 h-4 opacity-50" />
+              </Link>
+            ))}
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm font-semibold text-[#EF4444]"
+            >
+              <LogOut className="w-5 h-5" />
+              Logout
+            </button>
+          </div>
+        )}
+
+        {/* Page Content Container */}
+        <main className="flex-1 p-4 sm:p-8 max-w-7xl w-full mx-auto">{children}</main>
+      </div>
+    </div>
+  );
+}
