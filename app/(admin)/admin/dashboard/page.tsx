@@ -125,8 +125,8 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Quick Action Bar */}
-        <div className="bg-gradient-to-r from-[#14161D] via-[#1A1D27] to-[#14161D] border border-white/10 p-6 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="space-y-1 text-center md:text-left">
+        <div className="bg-gradient-to-r from-[#14161D] via-[#1A1D27] to-[#14161D] border border-white/10 p-5 sm:p-6 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="space-y-1 text-center sm:text-left">
             <h3 className="text-base font-bold text-white">Daily Operational Task</h3>
             <p className="text-xs text-gray-400">
               Update Google Meet / Zoom meeting links for active batches today.
@@ -134,14 +134,14 @@ export default function AdminDashboardPage() {
           </div>
           <Link
             href="/admin/live-links"
-            className="px-6 py-3 rounded-xl bg-[#E50914] text-white font-bold text-xs hover:opacity-95 transition-opacity shadow-lg shadow-[#E50914]/20 flex items-center gap-2"
+            className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#E50914] text-white font-bold text-xs hover:opacity-95 transition-opacity shadow-lg shadow-[#E50914]/20 flex items-center justify-center gap-2"
           >
             <PlusCircle className="w-4 h-4" /> Broadcast Today&apos;s Meeting Links
           </Link>
         </div>
 
         {/* Student Roster Preview Data Table */}
-        <div className="bg-[#14161D] border border-white/10 rounded-2xl overflow-hidden p-6 space-y-4">
+        <div className="bg-[#14161D] border border-white/10 rounded-2xl overflow-hidden p-4 sm:p-6 space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-lg font-bold text-white font-[family-name:var(--font-outfit)]">

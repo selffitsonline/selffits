@@ -196,7 +196,7 @@ export function StudentShell({ children }: StudentShellProps) {
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-[#14161D] border-b border-white/10 px-4 py-4 space-y-2">
+          <div className="md:hidden bg-[#14161D] border-b border-white/10 px-4 py-4 space-y-2 max-h-[80vh] overflow-y-auto shadow-2xl">
             {navigationItems.map((item) => (
               <Link
                 key={item.href}

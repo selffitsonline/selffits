@@ -152,17 +152,18 @@ export function AdminShell({ children }: AdminShellProps) {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Link
               href="/admin/live-links"
-              className="px-4 py-2 rounded-xl bg-[#E50914] text-white text-xs font-bold hover:opacity-95 transition-opacity shadow-md shadow-[#E50914]/20 flex items-center gap-1.5"
+              className="px-3 sm:px-4 py-2 rounded-xl bg-[#E50914] text-white text-xs font-bold hover:opacity-95 transition-opacity shadow-md shadow-[#E50914]/20 flex items-center gap-1.5 shrink-0"
             >
-              <PlusCircle className="w-4 h-4" />
-              Update Today&apos;s Link
+              <PlusCircle className="w-4 h-4 shrink-0" />
+              <span className="hidden sm:inline">Update Today&apos;s Link</span>
+              <span className="sm:hidden">Live Link</span>
             </Link>
 
-            <div className="flex items-center gap-2 p-1.5 pr-4 rounded-full bg-[#14161D] border border-white/10">
-              <div className="w-8 h-8 rounded-full bg-[#0080FF] flex items-center justify-center font-bold text-white text-xs">
+            <div className="flex items-center gap-2 p-1.5 pr-3 sm:pr-4 rounded-full bg-[#14161D] border border-white/10 shrink-0">
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#0080FF] flex items-center justify-center font-bold text-white text-xs shrink-0">
                 {adminName.charAt(0).toUpperCase()}
               </div>
               <span className="text-xs font-bold text-white hidden sm:inline">{adminName}</span>
@@ -172,7 +173,7 @@ export function AdminShell({ children }: AdminShellProps) {
 
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-[#14161D] border-b border-white/10 px-4 py-4 space-y-2">
+          <div className="md:hidden bg-[#14161D] border-b border-white/10 px-4 py-4 space-y-2 max-h-[80vh] overflow-y-auto shadow-2xl">
             {adminNavItems.map((item) => (
               <Link
                 key={item.href}

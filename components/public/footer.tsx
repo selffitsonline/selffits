@@ -7,9 +7,9 @@ export function Footer() {
   return (
     <footer className="bg-[#07080A] border-t border-white/10 text-gray-400 text-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 sm:gap-10">
           {/* Column 1: Brand Info */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="sm:col-span-2 space-y-4">
             <Link href="/" className="inline-block">
               <Image
                 src="/logo.jpg"
@@ -92,7 +92,7 @@ export function Footer() {
             <ul className="space-y-3 text-xs">
               <li className="flex items-start gap-2.5">
                 <Mail className="w-4 h-4 text-[#E50914] shrink-0 mt-0.5" />
-                <span>support@selffits.com</span>
+                <span className="break-all">support@selffits.com</span>
               </li>
               <li className="flex items-start gap-2.5">
                 <Phone className="w-4 h-4 text-[#0080FF] shrink-0 mt-0.5" />
@@ -111,9 +111,9 @@ export function Footer() {
         </div>
 
         {/* Bottom Bar */}
-        <div className="mt-12 pt-8 border-t border-white/10 flex flex-col md:flex-row items-center justify-between gap-4 text-xs">
+        <div className="mt-12 pt-8 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-center sm:text-left">
           <p>© {new Date().getFullYear()} SELFFITS Academy. All rights reserved.</p>
-          <div className="flex items-center gap-6">
+          <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6">
             <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
             <Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
             <Link href="/contact" className="hover:text-white transition-colors">Contact Us</Link>

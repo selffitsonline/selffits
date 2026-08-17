@@ -63,7 +63,7 @@ export default function RegisterPage() {
       {/* Dynamic Background Glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-gradient-to-tr from-[#E50914]/15 to-[#0080FF]/15 rounded-full blur-[120px] pointer-events-none" />
 
-      <div className="relative z-10 w-full max-w-xl bg-[#14161D] border border-white/10 rounded-2xl p-8 shadow-2xl backdrop-blur-xl">
+      <div className="relative z-10 w-full max-w-xl bg-[#14161D] border border-white/10 rounded-2xl p-5 sm:p-8 shadow-2xl backdrop-blur-xl">
         {/* Logo Header */}
         <div className="flex flex-col items-center mb-6">
           <Link href="/">

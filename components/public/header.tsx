@@ -52,7 +52,7 @@ export function Header() {
             width={240}
             height={85}
             priority
-            className="h-14 sm:h-18 w-auto object-contain rounded-xl group-hover:scale-105 transition-transform"
+            className="h-10 sm:h-14 md:h-16 w-auto object-contain rounded-xl group-hover:scale-105 transition-transform"
           />
         </Link>
 
@@ -96,10 +96,10 @@ export function Header() {
         {/* Mobile Hamburger Toggle */}
         <button
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          className="lg:hidden p-2.5 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 transition-colors"
+          className="lg:hidden p-2 rounded-xl text-gray-300 hover:text-white hover:bg-white/10 transition-colors shrink-0"
           aria-label="Toggle Menu"
         >
-          {mobileMenuOpen ? <X className="w-7 h-7" /> : <Menu className="w-7 h-7" />}
+          {mobileMenuOpen ? <X className="w-6 h-6 sm:w-7 sm:h-7" /> : <Menu className="w-6 h-6 sm:w-7 sm:h-7" />}
         </button>
       </div>
 
@@ -110,9 +110,9 @@ export function Header() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="lg:hidden bg-[#14161D] border-b border-white/10 overflow-hidden"
+            className="lg:hidden bg-[#14161D] border-b border-white/10 max-h-[85vh] overflow-y-auto shadow-2xl"
           >
-            <div className="px-4 pt-3 pb-6 space-y-2">
+            <div className="px-4 pt-3 pb-6 space-y-2 max-w-full">
               {navLinks.map((link) => (
                 <Link
                   key={link.href}

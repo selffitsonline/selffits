@@ -194,11 +194,11 @@ export function PricingCards() {
       </div>
 
       {/* Pricing Cards Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
+      <div className={`grid grid-cols-1 sm:grid-cols-2 ${currentPlans.length === 3 ? "lg:grid-cols-3" : "lg:grid-cols-4"} gap-6 items-stretch`}>
         {currentPlans.map((plan) => (
           <div
             key={plan.id}
-            className={`relative rounded-2xl p-6 flex flex-col justify-between transition-all duration-300 hover:translate-y-[-4px] ${
+            className={`relative rounded-2xl p-5 sm:p-6 flex flex-col justify-between transition-all duration-300 hover:translate-y-[-4px] ${
               plan.popular
                 ? "bg-gradient-to-b from-[#1E2330] to-[#14161D] border-2 border-[#E50914] shadow-2xl shadow-[#E50914]/20"
                 : "bg-[#14161D] border border-white/10 hover:border-white/20"
