@@ -52,13 +52,13 @@ export default function CoachesPage() {
           {coaches.map((coach, idx) => (
             <div
               key={idx}
-              className="bg-[#14161D] border border-white/10 rounded-3xl overflow-hidden p-8 lg:p-10 grid grid-cols-1 lg:grid-cols-3 gap-8 items-center"
+              className="bg-[#14161D] border border-white/10 rounded-3xl overflow-hidden grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 items-stretch"
             >
-              <div className="relative h-72 lg:h-full rounded-2xl overflow-hidden border border-white/10 shrink-0">
+              <div className="relative w-full h-64 sm:h-80 lg:h-full min-h-[280px] overflow-hidden shrink-0">
                 <Image src={coach.image} alt={coach.name} fill className="object-cover" />
               </div>
 
-              <div className="lg:col-span-2 space-y-4">
+              <div className="lg:col-span-2 p-6 sm:p-8 lg:p-10 space-y-4 flex flex-col justify-center">
                 <div>
                   <span className="text-xs font-bold uppercase tracking-wider text-[#0080FF]">
                     {coach.rank}

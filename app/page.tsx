@@ -502,11 +502,11 @@ export default function HomePage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 max-w-4xl mx-auto">
               {coaches.map((c, i) => (
-                <div key={i} className="bg-[#14161D] border border-white/10 rounded-2xl overflow-hidden flex flex-col sm:flex-row items-center p-5 sm:p-6 gap-5 sm:gap-6">
-                  <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-xl overflow-hidden relative shrink-0 border border-white/10">
-                    <Image src={c.image} alt={c.name} fill className="object-cover" />
+                <div key={i} className="bg-[#14161D] border border-white/10 rounded-2xl overflow-hidden flex flex-col sm:flex-row group hover:border-[#E50914]/40 transition-all">
+                  <div className="relative w-full h-56 sm:w-48 sm:h-auto shrink-0 overflow-hidden">
+                    <Image src={c.image} alt={c.name} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
                   </div>
-                  <div className="space-y-2 text-center sm:text-left">
+                  <div className="p-5 sm:p-6 space-y-2 text-left flex-1 flex flex-col justify-center">
                     <h3 className="text-base sm:text-lg font-bold text-white font-[family-name:var(--font-outfit)]">{c.name}</h3>
                     <p className="text-xs font-semibold text-[#E50914]">{c.role}</p>
                     <p className="text-[11px] text-gray-400">{c.experience} • {c.rank}</p>
