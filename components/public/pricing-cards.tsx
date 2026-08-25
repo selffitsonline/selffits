@@ -20,7 +20,7 @@ export function PricingCards() {
       popular: false,
       features: [
         "8 Interactive Live Classes",
-        "Google Meet / Zoom Access",
+        "Zoom Classes Access",
         "Stance & Punching Foundations",
         "Form & Technique Corrections",
         "Yellow Belt Completion Cert",
@@ -37,7 +37,7 @@ export function PricingCards() {
       popular: true, // RECOMMENDED
       features: [
         "24 Interactive Live Classes",
-        "Google Meet / Zoom Access",
+        "Zoom Classes Access",
         "Kicking Combos & Self Defense",
         "Personalized Form Corrections",
         "Official Blue Belt Certification",
@@ -55,7 +55,7 @@ export function PricingCards() {
       popular: false,
       features: [
         "48 Interactive Live Classes",
-        "Google Meet / Zoom Access",
+        "Zoom Classes Access",
         "Advanced Kata & Sparring Drills",
         "1-on-1 Form Evaluation",
         "Official Purple Belt Certification",
@@ -73,7 +73,7 @@ export function PricingCards() {
       popular: false,
       features: [
         "96 Interactive Live Classes",
-        "Google Meet / Zoom Access",
+        "Zoom Classes Access",
         "Master Rank Sparring & Weaponry",
         "Complete Fitness Conditioning",
         "Official Brown Belt Certification",

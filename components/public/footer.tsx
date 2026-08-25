@@ -20,7 +20,7 @@ export function Footer() {
               />
             </Link>
             <p className="text-gray-400 text-sm leading-relaxed max-w-sm">
-              SELFFITS is a Global Online Fitness & Martial Arts Academy empowering kids, adults, and women worldwide through real-time interactive live coaching on Google Meet & Zoom.
+              SELFFITS is a Global Online Fitness & Martial Arts Academy empowering kids, adults, and women worldwide through real-time interactive live coaching on Zoom Classes.
             </p>
             <div className="flex items-center gap-4 text-gray-400 pt-2">
               <span className="inline-flex items-center gap-1.5 text-xs text-[#10B981] bg-[#10B981]/10 px-3 py-1 rounded-full border border-[#10B981]/20 font-medium">
@@ -44,9 +44,6 @@ export function Footer() {
               </li>
               <li>
                 <Link href="/programs" className="hover:text-white transition-colors">All Programs</Link>
-              </li>
-              <li>
-                <Link href="/membership" className="hover:text-white transition-colors">Membership & Pricing</Link>
               </li>
               <li>
                 <Link href="/coaches" className="hover:text-white transition-colors">Master Coaches</Link>
@@ -79,7 +76,7 @@ export function Footer() {
                 <Link href="/programs?category=HIIT" className="hover:text-white transition-colors">HIIT Fitness Training</Link>
               </li>
               <li>
-                <Link href="/membership" className="hover:text-white transition-colors">Official Belt Certification</Link>
+                <Link href="/programs" className="hover:text-white transition-colors">Official Belt Certification</Link>
               </li>
             </ul>
           </div>

@@ -1,9 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ShieldCheck,
   Video,
@@ -15,13 +15,31 @@ import {
   Zap,
   Sparkles,
   Calendar,
+  Tag,
 } from "lucide-react";
 import { Header } from "@/components/public/header";
 import { Footer } from "@/components/public/footer";
 import { PricingCards } from "@/components/public/pricing-cards";
 import { FAQAccordion } from "@/components/public/faq-accordion";
 
+const HERO_IMAGES = [
+  "/images/hero1.jpg",
+  "/images/hero2.jpg",
+];
+
 export default function HomePage() {
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % HERO_IMAGES.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % HERO_IMAGES.length);
+  const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + HERO_IMAGES.length) % HERO_IMAGES.length);
+
   const programs = [
     {
       id: "kids",
@@ -31,6 +49,8 @@ export default function HomePage() {
       description: "Build confidence, discipline, focus, and physical coordination in a safe online virtual class environment.",
       classes: "8 - 96 Live Classes",
       duration: "1 - 12 Months",
+      priceStartsINR: "2,999",
+      priceStartsUSD: "39",
     },
     {
       id: "adults",
@@ -40,6 +60,8 @@ export default function HomePage() {
       description: "Master real striking, self defense techniques, belt rank mastery, and high energy martial fitness.",
       classes: "8 - 96 Live Classes",
       duration: "1 - 12 Months",
+      priceStartsINR: "2,999",
+      priceStartsUSD: "39",
     },
     {
       id: "ladies",
@@ -49,6 +71,8 @@ export default function HomePage() {
       description: "Empowering female-only live sessions focusing on self-defense, weight management, and toning.",
       classes: "8 - 48 Live Classes",
       duration: "1 - 6 Months",
+      priceStartsINR: "2,999",
+      priceStartsUSD: "39",
     },
     {
       id: "weight-loss",
@@ -58,6 +82,8 @@ export default function HomePage() {
       description: "High-intensity calorie-burning workouts designed for fat loss, stamina, and lean muscle building.",
       classes: "8 - 96 Live Sessions",
       duration: "8 - 96 Days",
+      priceStartsINR: "1,499",
+      priceStartsUSD: "19",
     },
   ];
 
@@ -108,114 +134,155 @@ export default function HomePage() {
     <div className="min-h-screen bg-[#0A0B0E] text-white flex flex-col selection:bg-[#E50914] selection:text-white">
       <Header />
 
-      <main className="flex-grow pt-20">
-        {/* 1. HERO SECTION */}
-        <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden py-20 px-4">
-          {/* Background Ambient Glows */}
-          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-tr from-[#E50914]/20 via-transparent to-[#0080FF]/20 rounded-full blur-[140px] pointer-events-none" />
+      <main className="flex-grow pt-14 sm:pt-16">
+        {/* 1. HERO SECTION WITH FULL-SCREEN 2-IMAGE CAROUSEL */}
+        <section className="relative w-full min-h-[calc(100vh-64px)] flex items-center justify-center overflow-hidden py-6 sm:py-10 px-4 sm:px-6 lg:px-8">
+          {/* Full-Screen Edge-to-Edge 2-Image Background Carousel */}
+          <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+            {HERO_IMAGES.map((img, idx) => (
+              <div
+                key={img}
+                className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out ${
+                  currentSlide === idx ? "opacity-100" : "opacity-0"
+                }`}
+              >
+                <Image
+                  src={img}
+                  alt={`Hero Background ${idx + 1}`}
+                  fill
+                  priority={idx === 0}
+                  unoptimized
+                  className="object-cover object-center w-full h-full"
+                />
+              </div>
+            ))}
 
-          <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10">
-            {/* Left Content Column */}
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="space-y-6 text-center lg:text-left"
-            >
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#E50914]/10 border border-[#E50914]/30 text-[#E50914] text-xs font-bold uppercase tracking-wider">
+            {/* Soft Light Overlay for Bright & Clear Background Image Visibility */}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0A0B0E]/80 via-[#0A0B0E]/30 to-[#0A0B0E]/10 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#0A0B0E]/40 via-transparent to-[#0A0B0E]/40 pointer-events-none" />
+          </div>
+
+          {/* Background Ambient Glow */}
+          <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-tr from-[#E50914]/25 via-transparent to-[#0080FF]/20 rounded-full blur-[140px] pointer-events-none z-1" />
+
+          {/* Overlaid Hero Content Container - Large Text with Tight Line Spacing */}
+          <div className="max-w-4xl mx-auto relative z-10 w-full px-4 sm:px-6 text-center">
+            <div className="max-w-2xl mx-auto space-y-2.5 sm:space-y-3 flex flex-col items-center">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#0A0B0E]/80 border border-[#E50914]/60 text-[#E50914] text-xs sm:text-sm font-black uppercase tracking-wider backdrop-blur-md shadow-lg">
                 <span className="w-2 h-2 rounded-full bg-[#10B981] animate-ping" />
-                Live Virtual Academy • Google Meet & Zoom
+                Live Virtual Academy • Zoom Classes
               </div>
 
-              <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-tight font-[family-name:var(--font-outfit)]">
+              <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[0.98] font-[family-name:var(--font-outfit)] text-white">
                 Train Anywhere. <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#E50914] via-white to-[#0080FF]">
+                <span className="text-[#E50914]">
                   Transform Yourself.
                 </span>
               </h1>
 
-              <p className="text-gray-300 text-base sm:text-lg max-w-xl mx-auto lg:mx-0 leading-relaxed">
+              <p className="text-gray-100 text-base sm:text-lg font-semibold max-w-xl mx-auto leading-normal">
                 Join live, interactive Martial Arts Belts & Fitness Transformation classes from anywhere in the world. Real-time form correction, official belt certifications, and world-class instructors.
               </p>
 
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-4 pt-2 w-full max-w-md mx-auto lg:mx-0">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-3 w-full max-w-xl mx-auto">
                 <Link
-                  href="/membership"
-                  className="px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl bg-gradient-to-r from-[#E50914] to-[#FF1E27] text-white font-bold text-base hover:opacity-95 transition-all shadow-xl shadow-[#E50914]/25 hover:translate-y-[-2px] flex items-center justify-center gap-2 text-center"
+                  href="/programs"
+                  className="px-8 py-3.5 sm:px-9 sm:py-4 rounded-2xl bg-gradient-to-r from-[#E50914] to-[#FF1E27] text-white font-extrabold text-base sm:text-lg hover:opacity-95 transition-all shadow-2xl shadow-[#E50914]/50 hover:translate-y-[-2px] flex items-center justify-center gap-2.5 text-center whitespace-nowrap shrink-0 tracking-wide w-full sm:w-auto"
                 >
                   Join Academy Now
-                  <ArrowRight className="w-5 h-5" />
+                  <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" />
                 </Link>
                 <Link
                   href="/programs"
-                  className="px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl bg-[#14161D] border border-white/15 text-white font-semibold text-base hover:bg-white/5 transition-all text-center"
+                  className="px-8 py-3.5 sm:px-9 sm:py-4 rounded-2xl bg-[#0A0B0E]/85 backdrop-blur-md border border-white/35 text-white font-bold text-base sm:text-lg hover:bg-white/20 transition-all text-center whitespace-nowrap shrink-0 tracking-wide w-full sm:w-auto shadow-xl"
                 >
                   View Programs
                 </Link>
               </div>
-
-              {/* Stats Bar */}
-              <div className="pt-8 border-t border-white/10 grid grid-cols-1 sm:grid-cols-3 gap-6 text-center lg:text-left">
-                <div>
-                  <h4 className="text-2xl sm:text-3xl font-extrabold text-white font-[family-name:var(--font-outfit)]">
-                    2,000+
-                  </h4>
-                  <p className="text-xs text-gray-400">Active Global Students</p>
-                </div>
-                <div>
-                  <h4 className="text-2xl sm:text-3xl font-extrabold text-[#0080FF] font-[family-name:var(--font-outfit)]">
-                    98%
-                  </h4>
-                  <p className="text-xs text-gray-400">Belt Certification Rate</p>
-                </div>
-                <div>
-                  <h4 className="text-2xl sm:text-3xl font-extrabold text-[#10B981] font-[family-name:var(--font-outfit)]">
-                    4.9 / 5
-                  </h4>
-                  <p className="text-xs text-gray-400">Student Satisfaction</p>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Right Media Column */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              className="relative flex justify-center w-full"
-            >
-              <div className="relative rounded-2xl overflow-hidden border border-white/15 shadow-2xl bg-[#14161D] group max-w-lg w-full">
-                <Image
-                  src="/images/adults_martial_arts.png"
-                  alt="Live Martial Arts Training"
-                  width={600}
-                  height={600}
-                  priority
-                  className="w-full h-[280px] sm:h-[380px] md:h-[450px] object-cover transition-transform duration-700 group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#0A0B0E] via-transparent to-transparent" />
-
-                {/* Floating Live Badge Overlay */}
-                <div className="absolute bottom-4 left-4 right-4 sm:bottom-6 sm:left-6 sm:right-6 p-3 sm:p-4 rounded-xl glass-panel flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-[#E50914]/20 border border-[#E50914] flex items-center justify-center text-[#E50914] shrink-0">
-                      <Video className="w-4 h-4 sm:w-5 sm:h-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <h4 className="text-xs sm:text-sm font-bold text-white truncate">Live Class Broadcasting</h4>
-                      <p className="text-[10px] sm:text-xs text-gray-400 truncate">Google Meet & Zoom Active</p>
-                    </div>
-                  </div>
-                  <span className="px-2.5 py-1 rounded-full bg-[#10B981]/20 text-[#10B981] text-[10px] sm:text-xs font-bold border border-[#10B981]/30 shrink-0">
-                    LIVE NOW
-                  </span>
-                </div>
-              </div>
-            </motion.div>
+            </div>
           </div>
         </section>
 
-        {/* 2. ABOUT PREVIEW SECTION */}
+        {/* 2. ACADEMY IMPACT & STATS SECTION */}
+        <section className="relative z-20 bg-[#10121A] border-y border-white/10 py-12 sm:py-16 overflow-hidden">
+          {/* Ambient Glows */}
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[300px] bg-gradient-to-r from-[#E50914]/15 via-[#0080FF]/15 to-[#10B981]/15 rounded-full blur-[140px] pointer-events-none" />
+
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            {/* Header */}
+            <div className="text-center max-w-2xl mx-auto mb-10 space-y-2">
+              <span className="text-xs font-black uppercase tracking-widest text-[#E50914] bg-[#E50914]/15 px-3.5 py-1.5 rounded-full border border-[#E50914]/40 inline-block shadow-lg backdrop-blur-md">
+                Academy Metrics & Impact
+              </span>
+              <h2 className="text-2xl sm:text-4xl font-extrabold font-[family-name:var(--font-outfit)] text-white tracking-tight">
+                Proven Excellence Worldwide
+              </h2>
+              <p className="text-gray-400 text-xs sm:text-sm max-w-lg mx-auto">
+                Transforming lives daily through high-energy live Zoom training, real-time coaching, and official belt advancement.
+              </p>
+            </div>
+
+            {/* 5 Stats Cards Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6">
+              {/* Stat 1 */}
+              <div className="bg-[#14161D]/90 border border-white/15 hover:border-[#E50914]/60 rounded-2xl p-5 text-center transition-all duration-300 hover:-translate-y-1 shadow-2xl flex flex-col justify-center items-center group backdrop-blur-md">
+                <div className="w-11 h-11 rounded-xl bg-[#E50914]/15 border border-[#E50914]/30 flex items-center justify-center text-[#E50914] mb-3 group-hover:scale-110 transition-transform shadow-md">
+                  <Users className="w-5 h-5" />
+                </div>
+                <h3 className="text-2xl sm:text-3xl font-black text-white font-[family-name:var(--font-outfit)]">
+                  2,000+
+                </h3>
+                <p className="text-xs font-bold text-gray-300 mt-1">Active Students</p>
+              </div>
+
+              {/* Stat 2 */}
+              <div className="bg-[#14161D]/90 border border-white/15 hover:border-[#38BDF8]/60 rounded-2xl p-5 text-center transition-all duration-300 hover:-translate-y-1 shadow-2xl flex flex-col justify-center items-center group backdrop-blur-md">
+                <div className="w-11 h-11 rounded-xl bg-[#0080FF]/15 border border-[#0080FF]/30 flex items-center justify-center text-[#38BDF8] mb-3 group-hover:scale-110 transition-transform shadow-md">
+                  <Award className="w-5 h-5" />
+                </div>
+                <h3 className="text-2xl sm:text-3xl font-black text-[#38BDF8] font-[family-name:var(--font-outfit)]">
+                  98%
+                </h3>
+                <p className="text-xs font-bold text-gray-300 mt-1">Belt Pass Rate</p>
+              </div>
+
+              {/* Stat 3 */}
+              <div className="bg-[#14161D]/90 border border-white/15 hover:border-[#34D399]/60 rounded-2xl p-5 text-center transition-all duration-300 hover:-translate-y-1 shadow-2xl flex flex-col justify-center items-center group backdrop-blur-md">
+                <div className="w-11 h-11 rounded-xl bg-[#10B981]/15 border border-[#10B981]/30 flex items-center justify-center text-[#34D399] mb-3 group-hover:scale-110 transition-transform shadow-md">
+                  <Star className="w-5 h-5 fill-[#34D399]" />
+                </div>
+                <h3 className="text-2xl sm:text-3xl font-black text-[#34D399] font-[family-name:var(--font-outfit)]">
+                  4.9 / 5
+                </h3>
+                <p className="text-xs font-bold text-gray-300 mt-1">Satisfaction</p>
+              </div>
+
+              {/* Stat 4 */}
+              <div className="bg-[#14161D]/90 border border-white/15 hover:border-[#FBBF24]/60 rounded-2xl p-5 text-center transition-all duration-300 hover:-translate-y-1 shadow-2xl flex flex-col justify-center items-center group backdrop-blur-md">
+                <div className="w-11 h-11 rounded-xl bg-[#F59E0B]/15 border border-[#F59E0B]/30 flex items-center justify-center text-[#FBBF24] mb-3 group-hover:scale-110 transition-transform shadow-md">
+                  <Video className="w-5 h-5" />
+                </div>
+                <h3 className="text-2xl sm:text-3xl font-black text-[#FBBF24] font-[family-name:var(--font-outfit)]">
+                  50+
+                </h3>
+                <p className="text-xs font-bold text-gray-300 mt-1">Live Classes Every Wk</p>
+              </div>
+
+              {/* Stat 5 */}
+              <div className="bg-[#14161D]/90 border border-white/15 hover:border-[#C084FC]/60 rounded-2xl p-5 text-center transition-all duration-300 hover:-translate-y-1 shadow-2xl flex flex-col justify-center items-center group col-span-2 sm:col-span-1 backdrop-blur-md">
+                <div className="w-11 h-11 rounded-xl bg-[#A855F7]/15 border border-[#A855F7]/30 flex items-center justify-center text-[#C084FC] mb-3 group-hover:scale-110 transition-transform shadow-md">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <h3 className="text-2xl sm:text-3xl font-black text-[#C084FC] font-[family-name:var(--font-outfit)]">
+                  20+
+                </h3>
+                <p className="text-xs font-bold text-gray-300 mt-1">Expert Coaches</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 3. ABOUT PREVIEW SECTION */}
         <section className="py-16 sm:py-20 bg-[#0E1015] border-y border-white/10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 items-center">
             <div className="relative rounded-2xl overflow-hidden border border-white/10">
@@ -284,48 +351,65 @@ export default function HomePage() {
             {programs.map((prog) => (
               <div
                 key={prog.id}
-                className="bg-[#14161D] border border-white/10 rounded-2xl overflow-hidden group hover:border-[#E50914]/50 transition-all duration-300 flex flex-col justify-between"
+                className="bg-[#14161D] border border-white/15 rounded-2xl overflow-hidden group hover:border-[#E50914]/60 transition-all duration-300 flex flex-col justify-between shadow-xl hover:-translate-y-1"
               >
                 <div>
-                  <div className="relative h-44 sm:h-48 overflow-hidden">
+                  <div className="relative h-48 sm:h-52 overflow-hidden">
                     <Image
                       src={prog.image}
                       alt={prog.title}
                       fill
                       className="object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-[#0A0B0E]/80 backdrop-blur-md text-[10px] font-extrabold uppercase tracking-wider text-[#0080FF]">
+                    <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-[#0A0B0E]/85 backdrop-blur-md text-[11px] font-extrabold uppercase tracking-wider text-[#0080FF] border border-white/10">
                       {prog.category}
                     </span>
                   </div>
 
-                  <div className="p-4 sm:p-5 space-y-3">
-                    <h3 className="text-base sm:text-lg font-bold text-white font-[family-name:var(--font-outfit)]">
+                  <div className="p-5 space-y-4">
+                    <h3 className="text-lg sm:text-xl font-bold text-white font-[family-name:var(--font-outfit)] leading-snug">
                       {prog.title}
                     </h3>
-                    <p className="text-xs text-gray-400 line-clamp-3 leading-relaxed">
+                    <p className="text-xs sm:text-sm text-gray-300 line-clamp-3 leading-relaxed font-medium">
                       {prog.description}
                     </p>
 
-                    <div className="pt-3 border-t border-white/10 flex items-center justify-between text-[11px] text-gray-300">
-                      <span className="flex items-center gap-1">
-                        <Video className="w-3.5 h-3.5 text-[#E50914]" />
-                        {prog.classes}
+                    {/* Classes & Duration Format Badges */}
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/10 text-xs">
+                      <div className="flex items-center gap-1.5 p-2 rounded-lg bg-[#0A0B0E]/60 border border-white/5 text-gray-200">
+                        <Video className="w-4 h-4 text-[#E50914] shrink-0" />
+                        <span className="font-semibold text-[11px] sm:text-xs truncate">{prog.classes}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 p-2 rounded-lg bg-[#0A0B0E]/60 border border-white/5 text-gray-200">
+                        <Calendar className="w-4 h-4 text-[#0080FF] shrink-0" />
+                        <span className="font-semibold text-[11px] sm:text-xs truncate">{prog.duration}</span>
+                      </div>
+                    </div>
+
+                    {/* PROMINENT ATTRACTIVE PRICE BOX */}
+                    <div className="p-3.5 rounded-xl bg-[#0A0B0E] border border-white/15 shadow-inner space-y-1">
+                      <span className="text-[10px] sm:text-xs uppercase font-extrabold tracking-wider text-gray-400 flex items-center gap-1.5">
+                        <Tag className="w-3.5 h-3.5 text-[#E50914]" />
+                        Starts From
                       </span>
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-3.5 h-3.5 text-[#0080FF]" />
-                        {prog.duration}
-                      </span>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-2xl font-black text-white font-[family-name:var(--font-outfit)]">
+                          ₹{prog.priceStartsINR}
+                        </span>
+                        <span className="text-xs font-bold text-gray-400">
+                          (${prog.priceStartsUSD} USD)
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="p-4 sm:p-5 pt-0">
+                <div className="p-5 pt-0">
                   <Link
                     href={`/programs#${prog.id}`}
-                    className="w-full py-2.5 rounded-lg bg-white/5 border border-white/10 hover:bg-[#E50914] hover:border-[#E50914] text-white text-xs font-bold text-center block transition-all"
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-[#E50914] to-[#FF1E27] text-white text-xs sm:text-sm font-extrabold text-center block transition-all shadow-md shadow-[#E50914]/20 hover:opacity-95 flex items-center justify-center gap-2"
                   >
-                    View Details
+                    View Program Details <ArrowRight className="w-4 h-4" />
                   </Link>
                 </div>
               </div>
@@ -333,24 +417,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* 4. MEMBERSHIP & PRICING SECTION */}
-        <section className="py-16 sm:py-24 bg-[#0E1015] border-y border-white/10 px-4">
-          <div className="max-w-7xl mx-auto">
-            <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16 space-y-3">
-              <span className="text-xs font-bold uppercase tracking-widest text-[#0080FF]">
-                Transparent Pricing
-              </span>
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-[family-name:var(--font-outfit)]">
-                Membership Plans & Belt Tiers
-              </h2>
-              <p className="text-gray-400 text-sm">
-                Choose your martial arts belt progression or fitness challenge plan.
-              </p>
-            </div>
-
-            <PricingCards />
-          </div>
-        </section>
 
         {/* 5. WHY CHOOSE SELFFITS */}
         <section className="py-16 sm:py-24 max-w-7xl mx-auto px-4">
@@ -370,7 +436,7 @@ export default function HomePage() {
               </div>
               <h3 className="text-base font-bold text-white">100% Live Coaching</h3>
               <p className="text-xs text-gray-400 leading-relaxed">
-                No boring pre-recorded videos. Every class is live over Google Meet or Zoom.
+                No boring pre-recorded videos. Every class is live over Zoom Classes.
               </p>
             </div>
 
@@ -435,7 +501,7 @@ export default function HomePage() {
                 </span>
                 <h3 className="text-base sm:text-lg font-bold text-white mb-2">Join Live Classes</h3>
                 <p className="text-xs text-gray-400 leading-relaxed">
-                  Log into your student dashboard, view today&apos;s active Meet/Zoom link, and train with live feedback.
+                  Log into your student dashboard, view today&apos;s active Zoom Classes link, and train with live feedback.
                 </p>
               </div>
 
@@ -543,7 +609,7 @@ export default function HomePage() {
             </p>
             <div className="pt-4">
               <Link
-                href="/membership"
+                href="/programs"
                 className="px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl bg-white text-[#0A0B0E] font-black text-sm sm:text-base hover:bg-gray-100 transition-all shadow-xl inline-flex items-center gap-2"
               >
                 Enroll in Academy <Sparkles className="w-5 h-5 text-[#E50914]" />

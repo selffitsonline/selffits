@@ -14,7 +14,7 @@ const defaultFaqs: FAQItem[] = [
   {
     question: "How do live online classes work at SELFFITS?",
     answer:
-      "All classes are held live over Google Meet or Zoom. Once you enroll, you get instant access to your Student Dashboard where today's active live link is displayed 15 minutes before class time. Simply click 'Join Class' to enter your session.",
+      "All classes are held live over Zoom Classes. Once you enroll, you get instant access to your Student Dashboard where today's active live link is displayed 15 minutes before class time. Simply click 'Join Class' to enter your session.",
   },
   {
     question: "Do I need prior martial arts experience or special equipment?",
