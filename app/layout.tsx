@@ -35,9 +35,9 @@ export const metadata: Metadata = {
     "SELFFITS",
   ],
   icons: {
-    icon: "/logo.jpg",
-    shortcut: "/logo.jpg",
-    apple: "/logo.jpg",
+    icon: "/logo-updated.jpg",
+    shortcut: "/logo-updated.jpg",
+    apple: "/logo-updated.jpg",
   },
   openGraph: {
     title: "SELFFITS - Global Online Fitness & Martial Arts Academy",
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
     siteName: "SELFFITS Academy",
     images: [
       {
-        url: "/logo.jpg",
+        url: "/logo-updated.jpg",
         width: 800,
         height: 600,
         alt: "SELFFITS Logo",

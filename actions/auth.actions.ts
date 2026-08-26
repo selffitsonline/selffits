@@ -35,7 +35,7 @@ export async function registerStudentAction(
       };
     }
 
-    const { firstName, lastName, email, phone, country, password } = validated.data;
+    const { firstName, lastName, email, phone, age, gender, country, password } = validated.data;
     const normalizedEmail = email.toLowerCase().trim();
 
     const existingUser = await db.user.findUnique({
@@ -63,6 +63,7 @@ export async function registerStudentAction(
           email: normalizedEmail,
           passwordHash,
           role: "STUDENT",
+          emailVerified: new Date(),
         },
       });
 
@@ -70,6 +71,8 @@ export async function registerStudentAction(
         data: {
           userId: user.id,
           phone: phone.trim(),
+          age,
+          gender,
           country: country.trim(),
         },
       });

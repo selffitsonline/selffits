@@ -73,7 +73,7 @@ export default function AdminLoginPage() {
         <div className="flex flex-col items-center mb-6">
           <Link href="/">
             <Image
-              src="/logo.jpg"
+              src="/logo-updated.jpg"
               alt="SELFFITS Logo"
               width={160}
               height={120}

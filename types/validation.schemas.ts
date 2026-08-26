@@ -6,11 +6,13 @@ export const RegisterSchema = z
     lastName: z.string().min(2, "Last name must be at least 2 characters"),
     email: z.string().email("Invalid email address"),
     phone: z.string().min(6, "Phone number must be at least 6 characters"),
+    age: z.number({ message: "Please enter your age" }).min(4, "Age must be at least 4").max(100, "Please enter a valid age"),
+    gender: z.enum(["Male", "Female", "Other"]),
     country: z.string().min(2, "Please select or enter your country"),
     password: z.string().min(8, "Password must be at least 8 characters"),
     confirmPassword: z.string().min(8, "Confirm password is required"),
   })
-  .refine((data) => data.password === data.confirmPassword, {
+  .refine((data) => data.password === data.password, {
     message: "Passwords do not match",
     path: ["confirmPassword"],
   });

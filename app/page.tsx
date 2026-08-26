@@ -21,6 +21,8 @@ import { Header } from "@/components/public/header";
 import { Footer } from "@/components/public/footer";
 import { PricingCards } from "@/components/public/pricing-cards";
 import { FAQAccordion } from "@/components/public/faq-accordion";
+import { CoachesCarousel } from "@/components/public/coaches-carousel";
+import { ScrollProgressButton } from "@/components/public/scroll-progress-button";
 
 const HERO_IMAGES = [
   "/images/hero1.jpg",
@@ -168,9 +170,9 @@ export default function HomePage() {
           {/* Overlaid Hero Content Container - Large Text with Tight Line Spacing */}
           <div className="max-w-4xl mx-auto relative z-10 w-full px-4 sm:px-6 text-center">
             <div className="max-w-2xl mx-auto space-y-2.5 sm:space-y-3 flex flex-col items-center">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#0A0B0E]/80 border border-[#E50914]/60 text-[#E50914] text-xs sm:text-sm font-black uppercase tracking-wider backdrop-blur-md shadow-lg">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#0A0B0E]/80 border border-[#E50914]/60 text-[#E50914] text-xs sm:text-sm font-semibold uppercase tracking-wider backdrop-blur-md shadow-lg">
                 <span className="w-2 h-2 rounded-full bg-[#10B981] animate-ping" />
-                Live Virtual Academy • Zoom Classes
+                Online Fitness & Martial Arts Academy
               </div>
 
               <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[0.98] font-[family-name:var(--font-outfit)] text-white">
@@ -204,7 +206,7 @@ export default function HomePage() {
         </section>
 
         {/* 2. ACADEMY IMPACT & STATS SECTION */}
-        <section className="relative z-20 bg-[#10121A] border-y border-white/10 py-12 sm:py-16 overflow-hidden">
+        <section className="relative z-20 bg-[#10121A] border-y-[0.5px] border-white/10 py-12 sm:py-16 overflow-hidden">
           {/* Ambient Glows */}
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[300px] bg-gradient-to-r from-[#E50914]/15 via-[#0080FF]/15 to-[#10B981]/15 rounded-full blur-[140px] pointer-events-none" />
 
@@ -283,7 +285,7 @@ export default function HomePage() {
         </section>
 
         {/* 3. ABOUT PREVIEW SECTION */}
-        <section className="py-16 sm:py-20 bg-[#0E1015] border-y border-white/10">
+        <section className="py-16 sm:py-20 bg-[#0E1015] border-y-[0.5px] border-white/10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-12 items-center">
             <div className="relative rounded-2xl overflow-hidden border border-white/10">
               <Image
@@ -473,7 +475,7 @@ export default function HomePage() {
         </section>
 
         {/* 6. HOW IT WORKS (3 Simple Steps) */}
-        <section className="py-16 sm:py-24 bg-[#0E1015] border-y border-white/10 px-4">
+        <section className="py-16 sm:py-24 bg-[#0E1015] border-y-[0.5px] border-white/10 px-4">
           <div className="max-w-7xl mx-auto">
             <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16 space-y-3">
               <span className="text-xs font-bold uppercase tracking-widest text-[#0080FF]">
@@ -518,7 +520,91 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* 7. SUCCESS STORIES PREVIEW */}
+        {/* 7. MEET OUR COACHES CAROUSEL */}
+        <section className="py-16 sm:py-24 bg-[#0E1015] border-y-[0.5px] border-white/10 px-4">
+          <div className="max-w-7xl mx-auto space-y-12">
+            <div className="text-center max-w-2xl mx-auto space-y-3">
+              <span className="text-xs font-bold uppercase tracking-widest text-[#0080FF]">
+                World Class Instructors
+              </span>
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-[family-name:var(--font-outfit)]">
+                Meet Our Master Coaches
+              </h2>
+              <p className="text-gray-400 text-xs sm:text-sm">
+                Swipe or click to meet our black belt senseis and master fitness trainers.
+              </p>
+            </div>
+
+            <CoachesCarousel />
+          </div>
+        </section>
+
+        {/* 8. STUDENT CTA BANNER: READY TO KICKSTART YOUR JOURNEY */}
+        <section className="py-16 sm:py-20 px-4">
+          <div className="max-w-5xl mx-auto rounded-3xl bg-gradient-to-r from-[#E50914] via-[#DC2626] to-[#0080FF] p-6 sm:p-12 lg:p-16 text-center space-y-6 shadow-2xl relative overflow-hidden">
+            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white font-[family-name:var(--font-outfit)]">
+              Ready to Kickstart Your Journey?
+            </h2>
+            <p className="text-white/90 text-xs sm:text-sm md:text-base max-w-2xl mx-auto">
+              Join thousands of students training live around the world. Enroll in a belt tier or fitness challenge today.
+            </p>
+            <div className="pt-4">
+              <Link
+                href="/programs"
+                className="px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl bg-white text-[#0A0B0E] font-black text-sm sm:text-base hover:bg-gray-100 transition-all shadow-xl inline-flex items-center gap-2"
+              >
+                Enroll in Academy <Sparkles className="w-5 h-5 text-[#E50914]" />
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* 9. FAQ PREVIEW */}
+        <section className="py-16 sm:py-24 max-w-5xl mx-auto px-4">
+          <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16 space-y-3">
+            <span className="text-xs font-bold uppercase tracking-widest text-[#E50914]">
+              Got Questions?
+            </span>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-[family-name:var(--font-outfit)]">
+              Frequently Asked Questions
+            </h2>
+          </div>
+
+          <FAQAccordion />
+        </section>
+
+        {/* 10. BECOME A SELFFITS COACH CTA */}
+        <section className="py-16 sm:py-20 px-4">
+          <div className="max-w-5xl mx-auto rounded-3xl bg-[#14161D] border border-white/15 p-8 sm:p-12 lg:p-14 text-center space-y-6 shadow-2xl relative overflow-hidden group hover:border-[#E50914]/40 transition-all">
+            {/* Background Ambient Glow */}
+            <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-tr from-[#E50914]/15 to-[#0080FF]/15 rounded-full blur-[100px] pointer-events-none" />
+
+            <div className="relative z-10 space-y-3">
+              <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#E50914]/10 text-[#E50914] text-xs font-bold border border-[#E50914]/30 uppercase tracking-widest">
+                <Award className="w-3.5 h-3.5" />
+                Instructor Recruitment
+              </span>
+              <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white font-[family-name:var(--font-outfit)] tracking-tight uppercase">
+                BECOME A SELFFITS COACH
+              </h2>
+            </div>
+
+            <p className="relative z-10 text-gray-300 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed font-medium">
+              Are you a qualified fitness or martial arts instructor? Join SELFFITS and share your expertise with students from around the world.
+            </p>
+
+            <div className="relative z-10 pt-2">
+              <Link
+                href="/become-coach"
+                className="px-8 py-4 rounded-2xl bg-gradient-to-r from-[#E50914] to-[#FF1E27] text-white font-black text-sm sm:text-base uppercase tracking-wider hover:opacity-95 transition-all shadow-xl shadow-[#E50914]/30 inline-flex items-center gap-2"
+              >
+                BECOME A COACH <ArrowRight className="w-5 h-5" />
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* 11. SUCCESS STORIES & TESTIMONIALS (JUST ABOVE FOOTER) */}
         <section className="py-16 sm:py-24 max-w-7xl mx-auto px-4">
           <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16 space-y-3">
             <span className="text-xs font-bold uppercase tracking-widest text-[#E50914]">
@@ -553,73 +639,10 @@ export default function HomePage() {
             ))}
           </div>
         </section>
-
-        {/* 8. MEET OUR COACHES */}
-        <section className="py-16 sm:py-24 bg-[#0E1015] border-y border-white/10 px-4">
-          <div className="max-w-7xl mx-auto">
-            <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16 space-y-3">
-              <span className="text-xs font-bold uppercase tracking-widest text-[#0080FF]">
-                World Class Instructors
-              </span>
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-[family-name:var(--font-outfit)]">
-                Meet Our Master Coaches
-              </h2>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 max-w-4xl mx-auto">
-              {coaches.map((c, i) => (
-                <div key={i} className="bg-[#14161D] border border-white/10 rounded-2xl overflow-hidden flex flex-col sm:flex-row group hover:border-[#E50914]/40 transition-all">
-                  <div className="relative w-full h-56 sm:w-48 sm:h-auto shrink-0 overflow-hidden">
-                    <Image src={c.image} alt={c.name} fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
-                  </div>
-                  <div className="p-5 sm:p-6 space-y-2 text-left flex-1 flex flex-col justify-center">
-                    <h3 className="text-base sm:text-lg font-bold text-white font-[family-name:var(--font-outfit)]">{c.name}</h3>
-                    <p className="text-xs font-semibold text-[#E50914]">{c.role}</p>
-                    <p className="text-[11px] text-gray-400">{c.experience} • {c.rank}</p>
-                    <p className="text-xs text-gray-300 leading-relaxed pt-1">{c.bio}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* 9. FAQ PREVIEW */}
-        <section className="py-16 sm:py-24 max-w-7xl mx-auto px-4">
-          <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16 space-y-3">
-            <span className="text-xs font-bold uppercase tracking-widest text-[#E50914]">
-              Got Questions?
-            </span>
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-[family-name:var(--font-outfit)]">
-              Frequently Asked Questions
-            </h2>
-          </div>
-
-          <FAQAccordion />
-        </section>
-
-        {/* 10. FINAL CTA BANNER */}
-        <section className="py-16 sm:py-20 px-4">
-          <div className="max-w-5xl mx-auto rounded-3xl bg-gradient-to-r from-[#E50914] via-[#DC2626] to-[#0080FF] p-6 sm:p-12 lg:p-16 text-center space-y-6 shadow-2xl relative overflow-hidden">
-            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white font-[family-name:var(--font-outfit)]">
-              Ready to Kickstart Your Journey?
-            </h2>
-            <p className="text-white/90 text-xs sm:text-sm md:text-base max-w-2xl mx-auto">
-              Join thousands of students training live around the world. Enroll in a belt tier or fitness challenge today.
-            </p>
-            <div className="pt-4">
-              <Link
-                href="/programs"
-                className="px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl bg-white text-[#0A0B0E] font-black text-sm sm:text-base hover:bg-gray-100 transition-all shadow-xl inline-flex items-center gap-2"
-              >
-                Enroll in Academy <Sparkles className="w-5 h-5 text-[#E50914]" />
-              </Link>
-            </div>
-          </div>
-        </section>
       </main>
 
       <Footer />
+      <ScrollProgressButton />
     </div>
   );
 }

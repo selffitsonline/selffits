@@ -102,12 +102,24 @@ export default function StudentProgramsPage() {
                 </div>
 
                 <div className="p-6 pt-0">
-                  <Link
-                    href="/dashboard/live"
-                    className="w-full py-3 rounded-xl bg-gradient-to-r from-[#E50914] to-[#FF1E27] text-white font-bold text-xs text-center block hover:opacity-95 transition-opacity shadow-md shadow-[#E50914]/20 flex items-center justify-center gap-2"
-                  >
-                    Go to Live Class <ArrowRight className="w-4 h-4" />
-                  </Link>
+                  {course.status === "ACTIVE" ? (
+                    <a
+                      href="https://meet.google.com/selffits-live-class"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="w-full py-3 rounded-xl bg-gradient-to-r from-[#10B981] to-[#059669] text-black font-extrabold text-xs text-center block hover:opacity-95 transition-all shadow-md shadow-[#10B981]/20 flex items-center justify-center gap-2"
+                    >
+                      <Video className="w-4 h-4 fill-current" />
+                      JOIN LIVE CLASS NOW <ArrowRight className="w-4 h-4" />
+                    </a>
+                  ) : (
+                    <Link
+                      href="/dashboard/certificates"
+                      className="w-full py-3 rounded-xl bg-white/10 text-white font-bold text-xs text-center block hover:bg-white/20 transition-all flex items-center justify-center gap-2"
+                    >
+                      View Belt Certificate <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  )}
                 </div>
               </div>
             );

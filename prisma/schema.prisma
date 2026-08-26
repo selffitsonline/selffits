@@ -95,6 +95,8 @@ model StudentProfile {
   emergencyContact String?
   dateOfBirth      DateTime?
   ageGroup         AgeGroup?
+  age              Int?
+  gender           String?
 }
 
 model VerificationToken {
@@ -253,4 +255,77 @@ model WebsiteSettings {
   key       String   @unique
   value     Json
   updatedAt DateTime @updatedAt
+}
+
+enum CoachAppStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model CoachApplication {
+  id                    String         @id @default(cuid())
+  // 1. Personal Info
+  fullName              String
+  dateOfBirth           String?
+  gender                String?
+  nationality           String?
+  phone                 String
+  email                 String
+  location              String?
+  profilePhotoUrl       String?
+
+  // 2. Coaching Discipline
+  disciplines           Json
+
+  // 3. Qualifications & Certifications
+  highestRank           String?
+  certificationName     String?
+  issuingOrganization   String?
+  yearObtained          String?
+  certificateNumber     String?
+  certificateUploadUrl String?
+
+  // 4. Coaching Experience
+  totalExperience       String?
+  previousAcademy       String?
+  coachingBio           String?
+  targetAgeGroups       Json
+
+  // 5. Specializations
+  specializations       Json
+
+  // 6. Online Coaching
+  hasOnlineExperience   String?
+  preferredPlatform     String?
+  isLiveClassAvailable  String?
+
+  // 7. Availability
+  availability          Json
+
+  // 8. Coach Introduction
+  aboutSelf             String?
+  whyJoinSelffits       String?
+  whatMakesGoodCoach    String?
+
+  // 9. Portfolio & Social Media
+  instagramUrl          String?
+  facebookUrl           String?
+  youtubeUrl            String?
+  websiteUrl            String?
+  trainingVideoUrl      String?
+
+  // 10. Documents
+  resumeUrl             String?
+  qualificationCertsUrl String?
+  licenseUrl            String?
+  idPassportUrl         String?
+
+  // 11. Declaration
+  agreedDeclaration     Boolean        @default(true)
+  status                CoachAppStatus @default(PENDING)
+  createdAt             DateTime       @default(now())
+
+  @@index([email])
+  @@index([status])
 }

@@ -64,7 +64,7 @@ export function AdminShell({ children }: AdminShellProps) {
         <div className="p-5 border-b border-white/10 flex items-center justify-between">
           <Link href="/admin/dashboard" className="flex items-center group">
             <Image
-              src="/logo.jpg"
+              src="/logo-updated.jpg"
               alt="SELFFITS Logo"
               width={200}
               height={70}

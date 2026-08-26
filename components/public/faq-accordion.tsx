@@ -46,7 +46,7 @@ export function FAQAccordion({ items = defaultFaqs }: { items?: FAQItem[] }) {
   };
 
   return (
-    <div className="space-y-4 max-w-3xl mx-auto">
+    <div className="space-y-4 max-w-5xl mx-auto">
       {items.map((item, idx) => {
         const isOpen = openIndex === idx;
         return (

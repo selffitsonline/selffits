@@ -257,7 +257,7 @@ export function PricingCards() {
 
       <div className="text-center text-xs text-gray-400 flex items-center justify-center gap-2">
         <ShieldCheck className="w-4 h-4 text-[#10B981]" />
-        <span>Razorpay 100% Secure Checkout • Instant Enrollment Confirmation</span>
+        <span>100% Secure Checkout • Instant Enrollment Confirmation</span>
       </div>
     </div>
   );

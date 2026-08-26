@@ -25,6 +25,8 @@ export default function RegisterPage() {
       lastName: "",
       email: "",
       phone: "",
+      age: 18,
+      gender: "Male",
       country: "",
       password: "",
       confirmPassword: "",
@@ -68,7 +70,7 @@ export default function RegisterPage() {
         <div className="flex flex-col items-center mb-6">
           <Link href="/">
             <Image
-              src="/logo.jpg"
+              src="/logo-updated.jpg"
               alt="SELFFITS Logo"
               width={160}
               height={120}
@@ -91,20 +93,32 @@ export default function RegisterPage() {
         )}
 
         {successMsg ? (
-          <div className="p-6 rounded-xl bg-[#10B981]/10 border border-[#10B981]/30 text-center">
-            <div className="w-12 h-12 rounded-full bg-[#10B981]/20 flex items-center justify-center text-[#10B981] mx-auto mb-3 text-xl font-bold">
+          <div className="p-6 sm:p-8 rounded-xl bg-[#10B981]/10 border border-[#10B981]/30 text-center space-y-4">
+            <div className="w-14 h-14 rounded-full bg-[#10B981]/20 border border-[#10B981]/40 flex items-center justify-center text-[#10B981] mx-auto text-2xl font-black shadow-lg">
               ✓
             </div>
-            <h3 className="text-lg font-bold text-white mb-2">Check Your Email</h3>
-            <p className="text-gray-300 text-sm mb-6 leading-relaxed">
-              {successMsg}
-            </p>
-            <Link
-              href="/login"
-              className="inline-block px-6 py-2.5 rounded-lg bg-[#E50914] text-white font-bold text-sm hover:opacity-90 transition-opacity"
-            >
-              Go to Login
-            </Link>
+            <h3 className="text-xl sm:text-2xl font-black text-white font-[family-name:var(--font-outfit)] tracking-tight uppercase">
+              REGISTRATION SUCCESSFUL!
+            </h3>
+            <div className="text-gray-300 text-sm leading-relaxed space-y-3">
+              <p className="font-semibold text-white">
+                Your account has been created successfully.
+              </p>
+              <p className="text-gray-300">
+                To access your Student Dashboard and continue with your course enrollment, please log in using your registered email address and password.
+              </p>
+              <p className="text-gray-400 text-xs italic">
+                Click the button below to log in and proceed to your dashboard.
+              </p>
+            </div>
+            <div className="pt-2">
+              <Link
+                href="/login"
+                className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-[#E50914] to-[#FF1E27] text-white font-extrabold text-sm uppercase tracking-wider hover:opacity-95 transition-all shadow-xl shadow-[#E50914]/25 inline-flex items-center justify-center gap-2"
+              >
+                LOG IN TO YOUR DASHBOARD
+              </Link>
+            </div>
           </div>
         ) : (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -183,6 +197,43 @@ export default function RegisterPage() {
                 />
                 {errors.country && (
                   <p className="text-xs text-[#EF4444] mt-1">{errors.country.message}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1.5">
+                  Student Age
+                </label>
+                <input
+                  type="number"
+                  placeholder="e.g. 14"
+                  min={4}
+                  max={100}
+                  {...register("age", { valueAsNumber: true })}
+                  className="w-full h-11 px-4 rounded-lg bg-[#0F1117] border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-[#E50914] focus:ring-1 focus:ring-[#E50914] transition-colors text-sm"
+                />
+                {errors.age && (
+                  <p className="text-xs text-[#EF4444] mt-1">{errors.age.message}</p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-1.5">
+                  Gender
+                </label>
+                <select
+                  {...register("gender")}
+                  className="w-full h-11 px-4 rounded-lg bg-[#0F1117] border border-white/10 text-white focus:outline-none focus:border-[#E50914] focus:ring-1 focus:ring-[#E50914] transition-colors text-sm cursor-pointer"
+                >
+                  <option value="" disabled className="bg-[#0F1117] text-gray-400">Select Gender</option>
+                  <option value="Male" className="bg-[#0F1117] text-white">Male</option>
+                  <option value="Female" className="bg-[#0F1117] text-white">Female</option>
+                  <option value="Other" className="bg-[#0F1117] text-white">Other</option>
+                </select>
+                {errors.gender && (
+                  <p className="text-xs text-[#EF4444] mt-1">{errors.gender.message}</p>
                 )}
               </div>
             </div>

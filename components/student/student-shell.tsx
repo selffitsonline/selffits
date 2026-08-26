@@ -19,6 +19,7 @@ import {
   X,
   ChevronRight,
   ShieldCheck,
+  Globe,
 } from "lucide-react";
 
 interface StudentShellProps {
@@ -35,8 +36,6 @@ export function StudentShell({ children }: StudentShellProps) {
   const navigationItems = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "My Programs", href: "/dashboard/programs", icon: BookOpen },
-    { name: "Live Classes", href: "/dashboard/live", icon: Video, badge: "LIVE" },
-    { name: "Recorded Classes", href: "/dashboard/recordings", icon: Film },
     { name: "My Certificates", href: "/dashboard/certificates", icon: Award },
     { name: "My Progress", href: "/dashboard/progress", icon: BarChart3 },
     { name: "Notifications", href: "/dashboard/notifications", icon: Bell },
@@ -58,7 +57,7 @@ export function StudentShell({ children }: StudentShellProps) {
         <div className="p-5 border-b border-white/10 flex items-center justify-between">
           <Link href="/dashboard" className="flex items-center group">
             <Image
-              src="/logo.jpg"
+              src="/logo-updated.jpg"
               alt="SELFFITS Logo"
               width={200}
               height={70}
@@ -77,7 +76,7 @@ export function StudentShell({ children }: StudentShellProps) {
             <h4 className="text-xs font-bold text-white truncate">{userDisplayName}</h4>
             <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#0080FF]">
               <ShieldCheck className="w-3 h-3 text-[#0080FF]" />
-              Blue Belt Student
+              Student Account
             </span>
           </div>
         </div>
@@ -101,11 +100,6 @@ export function StudentShell({ children }: StudentShellProps) {
                   <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-gray-400"}`} />
                   <span>{item.name}</span>
                 </div>
-                {item.badge && (
-                  <span className="px-2 py-0.5 rounded-full bg-[#10B981]/20 text-[#10B981] text-[9px] font-extrabold border border-[#10B981]/30 animate-pulse">
-                    {item.badge}
-                  </span>
-                )}
               </Link>
             );
           })}
@@ -140,18 +134,27 @@ export function StudentShell({ children }: StudentShellProps) {
             <h1 className="text-lg font-extrabold text-white font-[family-name:var(--font-outfit)] hidden sm:block">
               Student Dashboard
             </h1>
+
+            <Link
+              href="/"
+              className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-xs text-white font-bold flex items-center gap-1.5 transition-all shadow-md active:scale-95"
+            >
+              <Globe className="w-3.5 h-3.5 text-[#0080FF]" />
+              <span>Main Website</span>
+            </Link>
           </div>
 
-          <div className="flex items-center gap-4">
-            {/* Notifications Dropdown Toggle */}
+          <div className="flex items-center gap-3">
+            {/* Notifications Dropdown Toggle (Cleanly Aligned on Right) */}
             <div className="relative">
               <button
                 onClick={() => setNotificationsOpen(!notificationsOpen)}
-                className="relative p-2.5 rounded-xl bg-[#14161D] border border-white/10 text-gray-300 hover:text-white hover:border-white/20 transition-colors cursor-pointer"
+                className="relative p-2.5 rounded-xl bg-[#14161D] border border-white/15 text-gray-300 hover:text-white hover:border-white/30 transition-all shadow-md active:scale-95 cursor-pointer flex items-center gap-2"
                 aria-label="Notifications"
               >
-                <Bell className="w-4 h-4" />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#E50914] animate-ping" />
+                <Bell className="w-4.5 h-4.5 text-[#0080FF]" />
+                <span className="text-xs font-bold text-white hidden sm:inline">Notifications</span>
+                <span className="w-2 h-2 rounded-full bg-[#E50914] animate-ping" />
               </button>
 
               {notificationsOpen && (
@@ -180,17 +183,6 @@ export function StudentShell({ children }: StudentShellProps) {
                 </div>
               )}
             </div>
-
-            {/* User Profile Pill */}
-            <Link
-              href="/dashboard/profile"
-              className="flex items-center gap-3 p-1.5 pr-4 rounded-full bg-[#14161D] border border-white/10 hover:border-white/20 transition-colors"
-            >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#E50914] to-[#0080FF] flex items-center justify-center font-bold text-white text-xs">
-                {userDisplayName.charAt(0).toUpperCase()}
-              </div>
-              <span className="text-xs font-bold text-white hidden sm:inline">{userDisplayName}</span>
-            </Link>
           </div>
         </header>
 

@@ -4,19 +4,25 @@ import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Menu,
   X,
   ChevronRight,
+  ChevronDown,
   User,
   ArrowRight,
   Sparkles,
   Phone,
   Mail,
+  LayoutDashboard,
+  BookOpen,
+  Award,
+  LogOut,
 } from "lucide-react";
 
-// Custom Inline SVG Icons for Social Media Platforms (Guarantees zero build errors)
+// Custom Inline SVG Icons for Social Media Platforms
 const WhatsAppIcon = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" {...props}>
     <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.205 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z" />
@@ -42,21 +48,10 @@ const FacebookIcon = (props: React.SVGProps<SVGSVGElement>) => (
 );
 
 export function Header() {
-  const [isScrolled, setIsScrolled] = useState(false);
+  const { data: session } = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const pathname = usePathname();
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 20) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
-    };
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   // Lock body scroll when full-screen mobile menu is active
   useEffect(() => {
@@ -72,12 +67,8 @@ export function Header() {
 
   const navLinks = [
     { name: "Home", href: "/" },
-    { name: "About Us", href: "/about" },
     { name: "Programs", href: "/programs" },
     { name: "Coaches", href: "/coaches" },
-    { name: "Success Stories", href: "/success-stories" },
-    { name: "FAQ", href: "/faq" },
-    { name: "Contact", href: "/contact" },
   ];
 
   const socialLinks = [
@@ -109,18 +100,12 @@ export function Header() {
 
   return (
     <>
-      <header
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b py-2.5 sm:py-3 ${
-          isScrolled
-            ? "bg-[#0A0B0E]/90 backdrop-blur-xl border-white/10 shadow-2xl shadow-black/50"
-            : "bg-[#0A0B0E]/40 backdrop-blur-md border-transparent"
-        }`}
-      >
+      <header className="fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b-[0.5px] border-white/10 py-2.5 sm:py-3 bg-black shadow-2xl shadow-black/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between">
           {/* Standalone Logo Image */}
           <Link href="/" className="flex items-center group shrink-0">
             <Image
-              src="/logo.jpg"
+              src="/logo-updated.jpg"
               alt="SELFFITS Logo"
               width={240}
               height={85}
@@ -129,41 +114,118 @@ export function Header() {
             />
           </Link>
 
-          {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-1 xl:gap-2">
-            {navLinks.map((link) => {
-              const isActive = pathname === link.href;
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                    isActive
-                      ? "text-[#E50914] bg-[#E50914]/10"
-                      : "text-gray-300 hover:text-white hover:bg-white/5"
-                  }`}
-                >
-                  {link.name}
-                </Link>
-              );
-            })}
-          </nav>
+          {/* Desktop Right-Aligned Navigation Links & Auth State */}
+          <div className="hidden lg:flex items-center gap-3 xl:gap-4 ml-auto">
+            <nav className="flex items-center gap-2 xl:gap-3">
+              {navLinks.map((link) => {
+                const isActive = pathname === link.href;
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className={`px-4 py-2 rounded-xl text-base font-black uppercase tracking-wider transition-all ${
+                      isActive
+                        ? "text-[#E50914] bg-[#E50914]/15 shadow-sm"
+                        : "text-gray-200 hover:text-white hover:bg-white/10"
+                    }`}
+                  >
+                    {link.name}
+                  </Link>
+                );
+              })}
+            </nav>
 
-          {/* Desktop CTA Buttons */}
-          <div className="hidden lg:flex items-center gap-3">
-            <Link
-              href="/login"
-              className="px-4 py-2.5 rounded-xl text-sm font-semibold text-white border border-white/15 hover:border-white/30 hover:bg-white/5 transition-all flex items-center gap-2"
-            >
-              <User className="w-4 h-4" />
-              Student Login
-            </Link>
-            <Link
-              href="/programs"
-              className="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-gradient-to-r from-[#E50914] to-[#FF1E27] hover:opacity-95 transition-opacity shadow-lg shadow-[#E50914]/25 hover:translate-y-[-1px]"
-            >
-              Join Academy
-            </Link>
+            {/* Dynamic Auth Section */}
+            {session?.user ? (
+              /* LOGGED IN: PROFILE AVATAR PILL + DROPDOWN MENU */
+              <div className="relative">
+                <button
+                  onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                  className="flex items-center gap-2.5 p-1.5 pr-3.5 rounded-full bg-[#14161D] border border-white/20 hover:border-white/40 transition-all cursor-pointer shadow-md"
+                >
+                  <div className="w-8.5 h-8.5 rounded-full bg-gradient-to-tr from-[#E50914] to-[#0080FF] flex items-center justify-center font-black text-white text-sm shadow-inner">
+                    {session.user.name ? session.user.name.charAt(0).toUpperCase() : "U"}
+                  </div>
+                  <span className="text-xs font-black uppercase tracking-wider text-white max-w-[120px] truncate">
+                    {session.user.name || "Account"}
+                  </span>
+                  <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${profileDropdownOpen ? "rotate-180" : ""}`} />
+                </button>
+
+                {profileDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-56 bg-[#14161D] border border-white/15 rounded-2xl shadow-2xl p-2 z-50 space-y-1 backdrop-blur-2xl">
+                    <div className="p-3 border-b border-white/10 mb-1">
+                      <p className="text-xs font-bold text-white truncate">{session.user.name}</p>
+                      <p className="text-[11px] text-gray-400 truncate">{session.user.email}</p>
+                    </div>
+
+                    <Link
+                      href={session.user.role === "ADMIN" || session.user.role === "SUPER_ADMIN" ? "/admin/dashboard" : "/dashboard"}
+                      onClick={() => setProfileDropdownOpen(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-white bg-[#E50914] hover:opacity-90 transition-opacity"
+                    >
+                      <LayoutDashboard className="w-4 h-4" />
+                      Dashboard
+                    </Link>
+
+                    <Link
+                      href="/dashboard/programs"
+                      onClick={() => setProfileDropdownOpen(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/10 transition-colors"
+                    >
+                      <BookOpen className="w-4 h-4 text-[#0080FF]" />
+                      My Programs
+                    </Link>
+
+                    <Link
+                      href="/dashboard/certificates"
+                      onClick={() => setProfileDropdownOpen(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/10 transition-colors"
+                    >
+                      <Award className="w-4 h-4 text-[#F59E0B]" />
+                      Certificates
+                    </Link>
+
+                    <Link
+                      href="/dashboard/profile"
+                      onClick={() => setProfileDropdownOpen(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-gray-300 hover:text-white hover:bg-white/10 transition-colors"
+                    >
+                      <User className="w-4 h-4 text-[#10B981]" />
+                      Profile Settings
+                    </Link>
+
+                    <div className="pt-1 border-t border-white/10 mt-1">
+                      <button
+                        onClick={() => signOut({ callbackUrl: "/" })}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-[#EF4444] hover:bg-[#EF4444]/15 transition-colors cursor-pointer"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Logout Account
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* LOGGED OUT: STUDENT LOGIN & REGISTER BUTTONS */
+              <>
+                <Link
+                  href="/login"
+                  className="px-5 py-2.5 rounded-xl text-sm font-extrabold uppercase tracking-wider text-white border border-white/20 hover:border-white/40 hover:bg-white/10 transition-all flex items-center gap-2 shrink-0 shadow-md"
+                >
+                  <User className="w-4 h-4 text-[#0080FF]" />
+                  Student Login
+                </Link>
+
+                <Link
+                  href="/register"
+                  className="px-6 py-2.5 rounded-xl text-sm font-black uppercase tracking-wider text-white bg-gradient-to-r from-[#E50914] to-[#FF1E27] hover:opacity-95 transition-opacity shadow-xl shadow-[#E50914]/30 shrink-0"
+                >
+                  Register
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Hamburger Toggle */}
@@ -185,12 +247,8 @@ export function Header() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: "100%" }}
             transition={{ type: "spring", damping: 28, stiffness: 260 }}
-            className="fixed inset-0 z-[100] bg-[#0A0B0E] backdrop-blur-3xl flex flex-col justify-between overflow-y-auto px-5 py-5 min-h-screen"
+            className="fixed inset-0 z-[100] bg-black flex flex-col justify-between overflow-y-auto px-5 py-5 min-h-screen"
           >
-            {/* Ambient Background Lighting */}
-            <div className="absolute top-0 right-0 w-80 h-80 bg-[#E50914]/15 rounded-full blur-[120px] pointer-events-none" />
-            <div className="absolute bottom-0 left-0 w-80 h-80 bg-[#0080FF]/15 rounded-full blur-[120px] pointer-events-none" />
-
             <div className="relative z-10 space-y-4">
               {/* Drawer Top Header: Single Clean Logo + Close Button */}
               <div className="flex items-center justify-between pb-3 border-b border-white/10">
@@ -200,7 +258,7 @@ export function Header() {
                   className="flex items-center gap-2"
                 >
                   <Image
-                    src="/logo.jpg"
+                    src="/logo-updated.jpg"
                     alt="SELFFITS Logo"
                     width={240}
                     height={85}
@@ -217,7 +275,7 @@ export function Header() {
                 </button>
               </div>
 
-              {/* Navigation Links with Micro-Animations */}
+              {/* Navigation Links */}
               <nav className="space-y-1.5 pt-1">
                 {navLinks.map((link, idx) => {
                   const isActive = pathname === link.href;
@@ -249,30 +307,64 @@ export function Header() {
               </nav>
             </div>
 
-            {/* Bottom Actions, Social Media Icons & Direct Support */}
+            {/* Bottom Actions for Mobile */}
             <div className="relative z-10 pt-6 mt-6 space-y-6">
-              {/* Quick Action Buttons */}
-              <div className="grid grid-cols-2 gap-3">
-                <Link
-                  href="/login"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full py-3.5 px-3 rounded-2xl text-center font-bold text-sm text-white bg-white/10 hover:bg-white/20 border border-white/15 transition-all flex items-center justify-center gap-2 shadow-lg active:scale-98"
-                >
-                  <User className="w-4 h-4 text-[#38BDF8]" />
-                  Student Login
-                </Link>
+              <div className="space-y-3">
+                {session?.user ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3 p-3 rounded-2xl bg-white/5 border border-white/10">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#E50914] to-[#0080FF] flex items-center justify-center font-bold text-white text-sm">
+                        {session.user.name ? session.user.name.charAt(0).toUpperCase() : "U"}
+                      </div>
+                      <div className="overflow-hidden">
+                        <p className="text-xs font-bold text-white truncate">{session.user.name}</p>
+                        <p className="text-[10px] text-gray-400 truncate">{session.user.email}</p>
+                      </div>
+                    </div>
 
-                <Link
-                  href="/programs"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="w-full py-3.5 px-3 rounded-2xl text-center font-black text-sm text-white bg-gradient-to-r from-[#E50914] to-[#FF1E27] hover:opacity-95 shadow-xl shadow-[#E50914]/35 flex items-center justify-center gap-1.5 active:scale-98"
-                >
-                  Join Academy
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Link
+                        href={session.user.role === "ADMIN" || session.user.role === "SUPER_ADMIN" ? "/admin/dashboard" : "/dashboard"}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="py-3 px-3 rounded-xl text-center font-bold text-xs text-white bg-[#E50914] flex items-center justify-center gap-1.5"
+                      >
+                        <LayoutDashboard className="w-4 h-4" />
+                        Dashboard
+                      </Link>
+
+                      <button
+                        onClick={() => signOut({ callbackUrl: "/" })}
+                        className="py-3 px-3 rounded-xl text-center font-bold text-xs text-[#EF4444] bg-[#EF4444]/15 border border-[#EF4444]/30 flex items-center justify-center gap-1.5"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Logout
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    <Link
+                      href="/login"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="w-full py-3.5 px-3 rounded-2xl text-center font-bold text-sm text-white bg-white/10 hover:bg-white/20 border border-white/15 transition-all flex items-center justify-center gap-2 shadow-lg active:scale-98"
+                    >
+                      <User className="w-4 h-4 text-[#38BDF8]" />
+                      Student Login
+                    </Link>
+
+                    <Link
+                      href="/register"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="w-full py-3.5 px-3 rounded-2xl text-center font-black text-sm text-white bg-gradient-to-r from-[#E50914] to-[#FF1E27] hover:opacity-95 shadow-xl shadow-[#E50914]/35 flex items-center justify-center gap-1.5 active:scale-98"
+                    >
+                      Register
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  </div>
+                )}
               </div>
 
-              {/* Social Media Links - Airy & Borderless */}
+              {/* Social Media Links */}
               <div className="space-y-3 pt-1 text-center">
                 <p className="text-[11px] font-extrabold uppercase tracking-widest text-gray-400">
                   Connect With Us
@@ -297,7 +389,7 @@ export function Header() {
                 </div>
               </div>
 
-              {/* Clean Support Contact Info - No Boxes, Minimalist */}
+              {/* Support Contact Info */}
               <div className="pt-1 text-center pb-2">
                 <div className="flex items-center justify-center gap-5 text-xs font-semibold text-gray-400">
                   <a href="tel:+919847012345" className="flex items-center gap-1.5 hover:text-white transition-colors">
