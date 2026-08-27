@@ -373,3 +373,24 @@ export async function createDirectCardEnrollmentAction(
     };
   }
 }
+
+export async function cancelStudentEnrollmentAction(enrollmentId: string) {
+  try {
+    const session = await auth();
+    if (!session || !session.user) {
+      return { success: false, error: "Unauthorized session." };
+    }
+
+    await db.enrollment.deleteMany({
+      where: {
+        id: enrollmentId,
+        userId: session.user.id,
+      },
+    });
+
+    return { success: true, message: "Program enrollment removed successfully." };
+  } catch (err: any) {
+    console.error("cancelStudentEnrollmentAction error:", err);
+    return { success: false, error: "Failed to delete program enrollment." };
+  }
+}
