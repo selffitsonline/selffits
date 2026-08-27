@@ -226,9 +226,9 @@ export default function HomePage() {
                 {activeSlide.badgeText}
               </div>
 
-              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight font-[family-name:var(--font-outfit)] text-white sm:whitespace-nowrap">
-                {activeSlide.titleMain}{" "}
-                <span className="text-[#E50914]">
+              <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.05] font-[family-name:var(--font-outfit)] text-white">
+                <span className="block">{activeSlide.titleMain}</span>
+                <span className="text-[#E50914] block mt-1 sm:mt-2">
                   {activeSlide.titleHighlight}
                 </span>
               </h1>
