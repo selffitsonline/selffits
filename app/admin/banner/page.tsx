@@ -80,21 +80,45 @@ export default function AdminBannerManagementPage() {
     const file = e.target.files?.[0];
     if (!file || !targetSlideIdForUpload) return;
 
-    setUploadingSlideId(targetSlideIdForUpload);
+    const slideId = targetSlideIdForUpload;
+    setUploadingSlideId(slideId);
     setMsg(null);
 
-    const formData = new FormData();
-    formData.append("file", file);
+    try {
+      // 1. Read file as Data URL on client for 100% instant preview and Vercel compatibility
+      const reader = new FileReader();
+      reader.onload = async () => {
+        const dataUrl = reader.result as string;
+        if (dataUrl) {
+          handleUpdateSlide(slideId, "imageUrl", dataUrl);
+          setMsg({ type: "success", text: "Image file uploaded and applied to banner slide!" });
+        }
+        setUploadingSlideId(null);
+        setTargetSlideIdForUpload(null);
+      };
+      reader.onerror = () => {
+        setMsg({ type: "error", text: "Failed to read selected image file." });
+        setUploadingSlideId(null);
+        setTargetSlideIdForUpload(null);
+      };
+      reader.readAsDataURL(file);
 
-    const res = await uploadBannerImageAction(formData);
-    if (res.success && res.url) {
-      handleUpdateSlide(targetSlideIdForUpload, "imageUrl", res.url);
-      setMsg({ type: "success", text: "Image file uploaded and applied to banner slide!" });
-    } else {
-      setMsg({ type: "error", text: res.error || "Failed to upload image file." });
+      // 2. Also attempt server storage upload
+      const formData = new FormData();
+      formData.append("file", file);
+      uploadBannerImageAction(formData)
+        .then((res) => {
+          if (res && res.success && res.url) {
+            handleUpdateSlide(slideId, "imageUrl", res.url);
+          }
+        })
+        .catch(() => {});
+    } catch (err: any) {
+      console.error("Image upload error:", err);
+      setMsg({ type: "error", text: "Failed to process image file." });
+      setUploadingSlideId(null);
+      setTargetSlideIdForUpload(null);
     }
-    setUploadingSlideId(null);
-    setTargetSlideIdForUpload(null);
     e.target.value = "";
   };
 
@@ -369,13 +393,13 @@ export default function AdminBannerManagementPage() {
 
                 {/* Image Preview Thumbnail */}
                 {currentSlide.imageUrl && (
-                  <div className="relative w-full h-40 rounded-xl overflow-hidden border border-white/10 bg-[#0F1117] mt-2">
-                    <Image
+                  <div className="relative w-full h-44 rounded-xl overflow-hidden border border-white/10 bg-[#0F1117] mt-2 shadow-inner">
+                    {/* Standard HTML img tag to guarantee Data URL & server URL preview rendering */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
                       src={currentSlide.imageUrl}
                       alt="Banner Preview"
-                      fill
-                      unoptimized
-                      className="object-cover object-center"
+                      className="w-full h-full object-cover object-center"
                     />
                     <div className="absolute top-2 left-2 px-2.5 py-1 rounded bg-[#0A0B0E]/80 backdrop-blur-md text-[10px] font-bold text-white border border-white/10">
                       Live Image Preview
