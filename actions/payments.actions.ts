@@ -381,14 +381,38 @@ export async function cancelStudentEnrollmentAction(enrollmentId: string) {
       return { success: false, error: "Unauthorized session." };
     }
 
-    await db.enrollment.deleteMany({
+    const enrollment = await db.enrollment.findFirst({
       where: {
         id: enrollmentId,
         userId: session.user.id,
       },
     });
 
-    return { success: true, message: "Program enrollment removed successfully." };
+    if (!enrollment) {
+      return { success: false, error: "Enrollment record not found." };
+    }
+
+    const now = new Date();
+    const isExpired =
+      enrollment.status === "EXPIRED" ||
+      enrollment.status === "COMPLETED" ||
+      enrollment.remainingClasses <= 0 ||
+      new Date(enrollment.endDate) < now;
+
+    if (!isExpired) {
+      return {
+        success: false,
+        error: "Active ongoing programs cannot be deleted. Only expired or completed programs can be deleted.",
+      };
+    }
+
+    await db.enrollment.delete({
+      where: {
+        id: enrollmentId,
+      },
+    });
+
+    return { success: true, message: "Expired program enrollment removed successfully." };
   } catch (err: any) {
     console.error("cancelStudentEnrollmentAction error:", err);
     return { success: false, error: "Failed to delete program enrollment." };

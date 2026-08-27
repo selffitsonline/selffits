@@ -5,7 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { StudentShell } from "@/components/student/student-shell";
-import { Video, Calendar, User, ArrowRight, ShieldCheck, BookOpen, Trash2, AlertTriangle, X } from "lucide-react";
+import { Video, Calendar, User, ArrowRight, ShieldCheck, BookOpen, Trash2, AlertTriangle, X, Lock, Info } from "lucide-react";
 
 import { getStudentEnrollmentAction, cancelStudentEnrollmentAction } from "@/actions/payments.actions";
 
@@ -13,7 +13,7 @@ export default function StudentProgramsPage() {
   const searchParams = useSearchParams();
   const [enrolledCourses, setEnrolledCourses] = useState<any[]>([]);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
-  const [courseToDelete, setCourseToDelete] = useState<{ id: string; title: string } | null>(null);
+  const [courseToDelete, setCourseToDelete] = useState<{ id: string; title: string; isExpired: boolean; remainingClasses: number } | null>(null);
 
   React.useEffect(() => {
     async function loadPrograms() {
@@ -41,7 +41,7 @@ export default function StudentProgramsPage() {
   }, [searchParams]);
 
   const confirmDeleteProgram = async () => {
-    if (!courseToDelete) return;
+    if (!courseToDelete || !courseToDelete.isExpired) return;
 
     setIsDeleting(true);
     const res = await cancelStudentEnrollmentAction(courseToDelete.id);
@@ -62,7 +62,7 @@ export default function StudentProgramsPage() {
             My Enrolled Programs
           </h1>
           <p className="text-xs text-gray-400 mt-1">
-            Manage active belt tiers, track remaining classes, and view completed courses.
+            Manage active belt tiers, track remaining classes, and clean up expired courses.
           </p>
         </div>
 
@@ -91,6 +91,7 @@ export default function StudentProgramsPage() {
             {enrolledCourses.map((course) => {
               const completedCount = course.totalClasses - course.remainingClasses;
               const progressPercent = Math.round((completedCount / course.totalClasses) * 100);
+              const isExpired = course.status === "EXPIRED" || course.status === "COMPLETED" || course.remainingClasses <= 0 || course.daysRemaining <= 0;
 
               return (
                 <div
@@ -102,24 +103,36 @@ export default function StudentProgramsPage() {
                       <Image src={course.image} alt={course.title} fill className="object-cover" />
                       <span
                         className={`absolute top-3 left-3 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
-                          course.status === "ACTIVE"
+                          course.status === "ACTIVE" && !isExpired
                             ? "bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30 backdrop-blur-md"
-                            : "bg-white/10 text-gray-300"
+                            : "bg-[#E50914]/20 text-[#EF4444] border border-[#E50914]/30 backdrop-blur-md"
                         }`}
                       >
-                        {course.status}
+                        {isExpired ? "EXPIRED" : course.status}
                       </span>
 
-                      {/* Top Right Delete Program Button */}
-                      <button
-                        type="button"
-                        onClick={() => setCourseToDelete({ id: course.id, title: course.title })}
-                        title="Delete Program"
-                        className="absolute top-3 right-3 px-3 py-1 rounded-full text-[11px] font-extrabold bg-[#E50914]/30 hover:bg-[#E50914]/60 text-white border border-[#E50914]/50 transition-all flex items-center gap-1.5 cursor-pointer shadow-md backdrop-blur-md active:scale-95"
-                      >
-                        <Trash2 className="w-3.5 h-3.5 text-white" />
-                        Delete
-                      </button>
+                      {/* Top Right Delete / Active Lock Badge */}
+                      {isExpired ? (
+                        <button
+                          type="button"
+                          onClick={() => setCourseToDelete({ id: course.id, title: course.title, isExpired: true, remainingClasses: course.remainingClasses })}
+                          title="Delete Expired Program"
+                          className="absolute top-3 right-3 px-3 py-1 rounded-full text-[11px] font-extrabold bg-[#E50914]/30 hover:bg-[#E50914]/60 text-white border border-[#E50914]/50 transition-all flex items-center gap-1.5 cursor-pointer shadow-md backdrop-blur-md active:scale-95"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-white" />
+                          Delete Expired
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setCourseToDelete({ id: course.id, title: course.title, isExpired: false, remainingClasses: course.remainingClasses })}
+                          title="Active Course - Cannot Delete"
+                          className="absolute top-3 right-3 px-3 py-1 rounded-full text-[11px] font-bold bg-white/10 hover:bg-white/20 text-gray-300 border border-white/20 transition-all flex items-center gap-1.5 cursor-pointer shadow-md backdrop-blur-md active:scale-95"
+                        >
+                          <Lock className="w-3.5 h-3.5 text-[#0080FF]" />
+                          Active (Protected)
+                        </button>
+                      )}
                     </div>
 
                     <div className="p-6 space-y-4">
@@ -145,7 +158,7 @@ export default function StudentProgramsPage() {
                         </div>
                         <div className="w-full h-2 rounded-full bg-[#0F1117] overflow-hidden">
                           <div
-                            className="h-full bg-gradient-to-r from-[#0080FF] to-[#10B981] rounded-full"
+                            className={`h-full rounded-full ${isExpired ? "bg-red-500" : "bg-gradient-to-r from-[#0080FF] to-[#10B981]"}`}
                             style={{ width: `${progressPercent}%` }}
                           />
                         </div>
@@ -154,7 +167,7 @@ export default function StudentProgramsPage() {
                   </div>
 
                   <div className="p-6 pt-0 flex items-center gap-3">
-                    {course.status === "ACTIVE" ? (
+                    {!isExpired ? (
                       <a
                         href="https://meet.google.com/selffits-live-class"
                         target="_blank"
@@ -165,22 +178,30 @@ export default function StudentProgramsPage() {
                         JOIN LIVE CLASS NOW <ArrowRight className="w-4 h-4" />
                       </a>
                     ) : (
-                      <Link
-                        href="/dashboard/certificates"
-                        className="flex-grow py-3 rounded-xl bg-white/10 text-white font-bold text-xs text-center block hover:bg-white/20 transition-all flex items-center justify-center gap-2"
-                      >
-                        View Belt Certificate <ArrowRight className="w-4 h-4" />
-                      </Link>
+                      <span className="flex-grow py-3 rounded-xl bg-white/5 border border-white/10 text-gray-400 font-bold text-xs text-center block">
+                        Course Validity Expired
+                      </span>
                     )}
 
-                    <button
-                      type="button"
-                      onClick={() => setCourseToDelete({ id: course.id, title: course.title })}
-                      className="px-3.5 py-3 rounded-xl bg-[#E50914]/15 hover:bg-[#E50914]/30 text-[#EF4444] border border-[#E50914]/30 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
-                      title="Delete Program"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {isExpired ? (
+                      <button
+                        type="button"
+                        onClick={() => setCourseToDelete({ id: course.id, title: course.title, isExpired: true, remainingClasses: course.remainingClasses })}
+                        className="px-3.5 py-3 rounded-xl bg-[#E50914]/15 hover:bg-[#E50914]/30 text-[#EF4444] border border-[#E50914]/30 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
+                        title="Delete Expired Program"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setCourseToDelete({ id: course.id, title: course.title, isExpired: false, remainingClasses: course.remainingClasses })}
+                        className="px-3.5 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 border border-white/10 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
+                        title="Active Course Protected"
+                      >
+                        <Lock className="w-4 h-4 text-[#0080FF]" />
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -188,7 +209,7 @@ export default function StudentProgramsPage() {
           </div>
         )}
 
-        {/* DELETE CONFIRMATION POPUP MODAL */}
+        {/* INTERACTIVE POPUP MODAL */}
         {courseToDelete && (
           <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
             <div className="bg-[#14161D] border border-white/15 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative space-y-6">
@@ -200,40 +221,75 @@ export default function StudentProgramsPage() {
                 <X className="w-5 h-5" />
               </button>
 
-              <div className="flex flex-col items-center text-center space-y-3">
-                <div className="w-14 h-14 rounded-2xl bg-[#E50914]/15 border border-[#E50914]/30 flex items-center justify-center text-[#E50914] shadow-lg shadow-[#E50914]/20">
-                  <AlertTriangle className="w-7 h-7" />
-                </div>
+              {courseToDelete.isExpired ? (
+                /* EXPIRED COURSE DELETE CONFIRMATION POPUP */
+                <>
+                  <div className="flex flex-col items-center text-center space-y-3">
+                    <div className="w-14 h-14 rounded-2xl bg-[#E50914]/15 border border-[#E50914]/30 flex items-center justify-center text-[#E50914] shadow-lg shadow-[#E50914]/20">
+                      <AlertTriangle className="w-7 h-7" />
+                    </div>
 
-                <h3 className="text-xl font-extrabold text-white font-[family-name:var(--font-outfit)]">
-                  Delete Enrolled Program?
-                </h3>
+                    <h3 className="text-xl font-extrabold text-white font-[family-name:var(--font-outfit)]">
+                      Delete Expired Program?
+                    </h3>
 
-                <p className="text-xs text-gray-300 leading-relaxed">
-                  Are you sure you want to delete <span className="text-white font-bold">&quot;{courseToDelete.title}&quot;</span> from your account? This action is permanent and will cancel your active class access.
-                </p>
-              </div>
+                    <p className="text-xs text-gray-300 leading-relaxed">
+                      Are you sure you want to delete the expired program <span className="text-white font-bold">&quot;{courseToDelete.title}&quot;</span> from your dashboard history? This action is permanent.
+                    </p>
+                  </div>
 
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setCourseToDelete(null)}
-                  disabled={isDeleting}
-                  className="py-3 px-4 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition-all cursor-pointer disabled:opacity-50"
-                >
-                  Cancel
-                </button>
+                  <div className="grid grid-cols-2 gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setCourseToDelete(null)}
+                      disabled={isDeleting}
+                      className="py-3 px-4 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition-all cursor-pointer disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
 
-                <button
-                  type="button"
-                  onClick={confirmDeleteProgram}
-                  disabled={isDeleting}
-                  className="py-3 px-4 rounded-xl bg-gradient-to-r from-[#E50914] to-[#FF1E27] text-white font-extrabold text-xs hover:opacity-95 transition-all shadow-lg shadow-[#E50914]/25 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  {isDeleting ? "Deleting..." : "Yes, Delete"}
-                </button>
-              </div>
+                    <button
+                      type="button"
+                      onClick={confirmDeleteProgram}
+                      disabled={isDeleting}
+                      className="py-3 px-4 rounded-xl bg-gradient-to-r from-[#E50914] to-[#FF1E27] text-white font-extrabold text-xs hover:opacity-95 transition-all shadow-lg shadow-[#E50914]/25 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      {isDeleting ? "Deleting..." : "Yes, Delete Expired"}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                /* ACTIVE COURSE CANNOT DELETE POPUP WARNING */
+                <>
+                  <div className="flex flex-col items-center text-center space-y-3">
+                    <div className="w-14 h-14 rounded-2xl bg-[#0080FF]/15 border border-[#0080FF]/30 flex items-center justify-center text-[#0080FF] shadow-lg shadow-[#0080FF]/20">
+                      <Lock className="w-7 h-7" />
+                    </div>
+
+                    <h3 className="text-xl font-extrabold text-white font-[family-name:var(--font-outfit)]">
+                      Cannot Delete Active Program
+                    </h3>
+
+                    <p className="text-xs text-gray-300 leading-relaxed">
+                      Active ongoing programs cannot be deleted. <span className="text-white font-bold">&quot;{courseToDelete.title}&quot;</span> is currently active with <span className="text-[#10B981] font-bold">{courseToDelete.remainingClasses} classes remaining</span>.
+                    </p>
+                    <p className="text-[11px] text-gray-400 bg-white/5 border border-white/10 p-3 rounded-xl">
+                      💡 Note: Only expired or completed programs can be deleted from your account.
+                    </p>
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setCourseToDelete(null)}
+                      className="w-full py-3.5 rounded-xl bg-[#0080FF] hover:bg-[#0080FF]/90 text-white font-extrabold text-xs transition-all cursor-pointer shadow-lg shadow-[#0080FF]/25"
+                    >
+                      Got It
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
