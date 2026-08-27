@@ -1,18 +1,19 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { StudentShell } from "@/components/student/student-shell";
-import { Video, Calendar, User, ArrowRight, ShieldCheck, BookOpen, Trash2 } from "lucide-react";
+import { Video, Calendar, User, ArrowRight, ShieldCheck, BookOpen, Trash2, AlertTriangle, X } from "lucide-react";
 
 import { getStudentEnrollmentAction, cancelStudentEnrollmentAction } from "@/actions/payments.actions";
 
 export default function StudentProgramsPage() {
   const searchParams = useSearchParams();
-  const [enrolledCourses, setEnrolledCourses] = React.useState<any[]>([]);
-  const [isDeleting, setIsDeleting] = React.useState<string | null>(null);
+  const [enrolledCourses, setEnrolledCourses] = useState<any[]>([]);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [courseToDelete, setCourseToDelete] = useState<{ id: string; title: string } | null>(null);
 
   React.useEffect(() => {
     async function loadPrograms() {
@@ -39,23 +40,23 @@ export default function StudentProgramsPage() {
     loadPrograms();
   }, [searchParams]);
 
-  const handleDeleteProgram = async (courseId: string) => {
-    if (!window.confirm("Are you sure you want to delete this enrolled program from your account?")) {
-      return;
-    }
-    setIsDeleting(courseId);
-    const res = await cancelStudentEnrollmentAction(courseId);
+  const confirmDeleteProgram = async () => {
+    if (!courseToDelete) return;
+
+    setIsDeleting(true);
+    const res = await cancelStudentEnrollmentAction(courseToDelete.id);
     if (res.success) {
-      setEnrolledCourses((prev) => prev.filter((item) => item.id !== courseId));
+      setEnrolledCourses((prev) => prev.filter((item) => item.id !== courseToDelete.id));
+      setCourseToDelete(null);
     } else {
       alert(res.error || "Failed to delete program.");
     }
-    setIsDeleting(null);
+    setIsDeleting(false);
   };
 
   return (
     <StudentShell>
-      <div className="space-y-6">
+      <div className="space-y-6 relative">
         <div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white font-[family-name:var(--font-outfit)]">
             My Enrolled Programs
@@ -112,13 +113,12 @@ export default function StudentProgramsPage() {
                       {/* Top Right Delete Program Button */}
                       <button
                         type="button"
-                        onClick={() => handleDeleteProgram(course.id)}
-                        disabled={isDeleting === course.id}
+                        onClick={() => setCourseToDelete({ id: course.id, title: course.title })}
                         title="Delete Program"
-                        className="absolute top-3 right-3 px-3 py-1 rounded-full text-[11px] font-extrabold bg-[#E50914]/30 hover:bg-[#E50914]/60 text-white border border-[#E50914]/50 transition-all flex items-center gap-1.5 cursor-pointer shadow-md backdrop-blur-md active:scale-95 disabled:opacity-50"
+                        className="absolute top-3 right-3 px-3 py-1 rounded-full text-[11px] font-extrabold bg-[#E50914]/30 hover:bg-[#E50914]/60 text-white border border-[#E50914]/50 transition-all flex items-center gap-1.5 cursor-pointer shadow-md backdrop-blur-md active:scale-95"
                       >
                         <Trash2 className="w-3.5 h-3.5 text-white" />
-                        {isDeleting === course.id ? "Deleting..." : "Delete"}
+                        Delete
                       </button>
                     </div>
 
@@ -175,8 +175,7 @@ export default function StudentProgramsPage() {
 
                     <button
                       type="button"
-                      onClick={() => handleDeleteProgram(course.id)}
-                      disabled={isDeleting === course.id}
+                      onClick={() => setCourseToDelete({ id: course.id, title: course.title })}
                       className="px-3.5 py-3 rounded-xl bg-[#E50914]/15 hover:bg-[#E50914]/30 text-[#EF4444] border border-[#E50914]/30 text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 shrink-0"
                       title="Delete Program"
                     >
@@ -186,6 +185,56 @@ export default function StudentProgramsPage() {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* DELETE CONFIRMATION POPUP MODAL */}
+        {courseToDelete && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+            <div className="bg-[#14161D] border border-white/15 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl relative space-y-6">
+              <button
+                type="button"
+                onClick={() => setCourseToDelete(null)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex flex-col items-center text-center space-y-3">
+                <div className="w-14 h-14 rounded-2xl bg-[#E50914]/15 border border-[#E50914]/30 flex items-center justify-center text-[#E50914] shadow-lg shadow-[#E50914]/20">
+                  <AlertTriangle className="w-7 h-7" />
+                </div>
+
+                <h3 className="text-xl font-extrabold text-white font-[family-name:var(--font-outfit)]">
+                  Delete Enrolled Program?
+                </h3>
+
+                <p className="text-xs text-gray-300 leading-relaxed">
+                  Are you sure you want to delete <span className="text-white font-bold">&quot;{courseToDelete.title}&quot;</span> from your account? This action is permanent and will cancel your active class access.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setCourseToDelete(null)}
+                  disabled={isDeleting}
+                  className="py-3 px-4 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition-all cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={confirmDeleteProgram}
+                  disabled={isDeleting}
+                  className="py-3 px-4 rounded-xl bg-gradient-to-r from-[#E50914] to-[#FF1E27] text-white font-extrabold text-xs hover:opacity-95 transition-all shadow-lg shadow-[#E50914]/25 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  {isDeleting ? "Deleting..." : "Yes, Delete"}
+                </button>
+              </div>
+            </div>
           </div>
         )}
       </div>
