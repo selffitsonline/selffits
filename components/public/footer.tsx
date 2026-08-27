@@ -8,17 +8,17 @@ import { Mail, Phone, MapPin, ShieldCheck } from "lucide-react";
 import { getAdminMenuItemsAction } from "@/actions/admin.actions";
 
 export function Footer() {
-  const [dynamicFooterLinks, setDynamicFooterLinks] = useState<any[]>([]);
+  const [dynamicFooterLinks, setDynamicFooterLinks] = useState<any[] | null>(null);
 
   useEffect(() => {
     async function loadFooterNav() {
       try {
         const res = await getAdminMenuItemsAction();
-        if (res && res.success && res.footerMenu) {
+        if (res && res.success && Array.isArray(res.footerMenu)) {
           const activeItems = res.footerMenu
             .filter((item: any) => item.isEnabled)
             .map((item: any) => ({ label: item.label, href: item.href }));
-          if (activeItems.length > 0) setDynamicFooterLinks(activeItems);
+          setDynamicFooterLinks(activeItems);
         }
       } catch (err) {
         console.error("Footer menu load error:", err);
@@ -38,7 +38,7 @@ export function Footer() {
     { label: "Contact Support", href: "/contact" },
   ];
 
-  const quickLinks = dynamicFooterLinks.length > 0 ? dynamicFooterLinks : defaultFooterLinks;
+  const quickLinks = dynamicFooterLinks !== null ? dynamicFooterLinks : defaultFooterLinks;
   const socialLinks = [
     {
       name: "Instagram",

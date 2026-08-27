@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/admin-shell";
-import { Menu as MenuIcon, Plus, Save, Trash2, CheckCircle2, AlertCircle, LayoutList, Navigation } from "lucide-react";
+import { Plus, Save, Trash2, CheckCircle2, AlertCircle, LayoutList, Navigation } from "lucide-react";
 import { getAdminMenuItemsAction, updateAdminMenuItemsAction } from "@/actions/admin.actions";
 
 export default function AdminMenuManagementPage() {
@@ -15,12 +15,17 @@ export default function AdminMenuManagementPage() {
 
   useEffect(() => {
     async function loadMenus() {
-      const res = await getAdminMenuItemsAction();
-      if (res && res.success) {
-        setHeaderMenu(res.headerMenu || []);
-        setFooterMenu(res.footerMenu || []);
+      try {
+        const res = await getAdminMenuItemsAction();
+        if (res && res.success) {
+          setHeaderMenu(res.headerMenu || []);
+          setFooterMenu(res.footerMenu || []);
+        }
+      } catch (err) {
+        console.error("Failed to load menus:", err);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     }
     loadMenus();
   }, []);
@@ -58,13 +63,18 @@ export default function AdminMenuManagementPage() {
   const handleSaveAllMenus = async () => {
     setIsSaving(true);
     setMsg(null);
-    const res = await updateAdminMenuItemsAction(headerMenu, footerMenu);
-    if (res.success) {
-      setMsg({ type: "success", text: res.message || "Header & Footer menus updated successfully!" });
-    } else {
-      setMsg({ type: "error", text: res.error || "Failed to save menu changes." });
+    try {
+      const res = await updateAdminMenuItemsAction(headerMenu, footerMenu);
+      if (res && res.success) {
+        setMsg({ type: "success", text: res.message || "Header & Footer navigation menus saved successfully!" });
+      } else {
+        setMsg({ type: "error", text: res?.error || "Failed to save menu changes." });
+      }
+    } catch (err: any) {
+      setMsg({ type: "error", text: err.message || "An unexpected error occurred while saving." });
+    } finally {
+      setIsSaving(false);
     }
-    setIsSaving(false);
   };
 
   if (isLoading) {
@@ -104,7 +114,7 @@ export default function AdminMenuManagementPage() {
               disabled={isSaving}
               className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#0080FF] to-[#2563EB] text-white font-extrabold text-xs hover:opacity-95 transition-all shadow-lg shadow-[#0080FF]/25 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
-              <Save className="w-4 h-4" /> {isSaving ? "Saving..." : "Save Navigation Changes"}
+              <Save className="w-4 h-4" /> {isSaving ? "Saving Changes..." : "Save Navigation Changes"}
             </button>
           </div>
         </div>
@@ -158,7 +168,7 @@ export default function AdminMenuManagementPage() {
               {activeTab === "HEADER" ? "Header Navigation Links" : "Footer Navigation Quick Links"} ({currentList.length} Items)
             </span>
             <span className="text-[11px] text-[#0080FF] font-bold">
-              Changes reflect live across public website after saving
+              Changes save permanently and update live across public website
             </span>
           </div>
 
@@ -170,61 +180,67 @@ export default function AdminMenuManagementPage() {
             <span className="col-span-1 text-center">Action</span>
           </div>
 
-          <div className="space-y-3">
-            {currentList.map((item, index) => (
-              <div
-                key={item.id}
-                className="grid grid-cols-12 items-center gap-3 p-3 rounded-xl bg-[#0F1117] border border-white/5 text-xs"
-              >
-                <div className="col-span-1 text-center font-bold text-gray-400">
-                  #{index + 1}
-                </div>
+          {currentList.length === 0 ? (
+            <div className="p-8 text-center text-gray-500 text-xs">
+              No links in {activeTab === "HEADER" ? "Header" : "Footer"} menu. Click &quot;Add Link&quot; above to create one.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {currentList.map((item, index) => (
+                <div
+                  key={item.id}
+                  className="grid grid-cols-12 items-center gap-3 p-3 rounded-xl bg-[#0F1117] border border-white/5 text-xs"
+                >
+                  <div className="col-span-1 text-center font-bold text-gray-400">
+                    #{index + 1}
+                  </div>
 
-                <div className="col-span-4">
-                  <input
-                    type="text"
-                    value={item.label}
-                    onChange={(e) => handleUpdateItem(item.id, "label", e.target.value)}
-                    className="w-full h-9 px-3 rounded-lg bg-[#14161D] border border-white/10 text-white font-medium focus:outline-none focus:border-[#0080FF]"
-                  />
-                </div>
+                  <div className="col-span-4">
+                    <input
+                      type="text"
+                      value={item.label}
+                      onChange={(e) => handleUpdateItem(item.id, "label", e.target.value)}
+                      className="w-full h-9 px-3 rounded-lg bg-[#14161D] border border-white/10 text-white font-medium focus:outline-none focus:border-[#0080FF]"
+                    />
+                  </div>
 
-                <div className="col-span-4">
-                  <input
-                    type="text"
-                    value={item.href}
-                    onChange={(e) => handleUpdateItem(item.id, "href", e.target.value)}
-                    className="w-full h-9 px-3 rounded-lg bg-[#14161D] border border-white/10 font-mono text-gray-300 focus:outline-none focus:border-[#0080FF]"
-                  />
-                </div>
+                  <div className="col-span-4">
+                    <input
+                      type="text"
+                      value={item.href}
+                      onChange={(e) => handleUpdateItem(item.id, "href", e.target.value)}
+                      className="w-full h-9 px-3 rounded-lg bg-[#14161D] border border-white/10 font-mono text-gray-300 focus:outline-none focus:border-[#0080FF]"
+                    />
+                  </div>
 
-                <div className="col-span-2 flex items-center justify-center">
-                  <button
-                    type="button"
-                    onClick={() => handleUpdateItem(item.id, "isEnabled", !item.isEnabled)}
-                    className={`px-3 py-1 rounded-full text-[10px] font-extrabold uppercase transition-all cursor-pointer ${
-                      item.isEnabled
-                        ? "bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30"
-                        : "bg-white/10 text-gray-400 border border-white/10"
-                    }`}
-                  >
-                    {item.isEnabled ? "Active" : "Disabled"}
-                  </button>
-                </div>
+                  <div className="col-span-2 flex items-center justify-center">
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateItem(item.id, "isEnabled", !item.isEnabled)}
+                      className={`px-3 py-1 rounded-full text-[10px] font-extrabold uppercase transition-all cursor-pointer ${
+                        item.isEnabled
+                          ? "bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/30"
+                          : "bg-white/10 text-gray-400 border border-white/10"
+                      }`}
+                    >
+                      {item.isEnabled ? "Active" : "Disabled"}
+                    </button>
+                  </div>
 
-                <div className="col-span-1 flex items-center justify-center">
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteItem(item.id)}
-                    className="p-2 rounded-lg bg-[#E50914]/15 hover:bg-[#E50914]/30 text-[#EF4444] border border-[#E50914]/30 transition-all cursor-pointer"
-                    title="Delete Link"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="col-span-1 flex items-center justify-center">
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteItem(item.id)}
+                      className="p-2 rounded-lg bg-[#E50914]/15 hover:bg-[#E50914]/30 text-[#EF4444] border border-[#E50914]/30 transition-all cursor-pointer"
+                      title="Delete Link"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </AdminShell>

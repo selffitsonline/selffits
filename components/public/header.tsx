@@ -53,18 +53,18 @@ export function Header() {
   const { data: session } = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  const [dynamicHeaderNav, setDynamicHeaderNav] = useState<any[]>([]);
+  const [dynamicHeaderNav, setDynamicHeaderNav] = useState<any[] | null>(null);
   const pathname = usePathname();
 
   useEffect(() => {
     async function loadDynamicNav() {
       try {
         const res = await getAdminMenuItemsAction();
-        if (res && res.success && res.headerMenu) {
+        if (res && res.success && Array.isArray(res.headerMenu)) {
           const activeItems = res.headerMenu
             .filter((item: any) => item.isEnabled)
             .map((item: any) => ({ name: item.label, href: item.href }));
-          if (activeItems.length > 0) setDynamicHeaderNav(activeItems);
+          setDynamicHeaderNav(activeItems);
         }
       } catch (err) {
         console.error("Header menu load error:", err);
@@ -91,7 +91,7 @@ export function Header() {
     { name: "Coaches", href: "/coaches" },
   ];
 
-  const navLinks = dynamicHeaderNav.length > 0 ? dynamicHeaderNav : defaultNavLinks;
+  const navLinks = dynamicHeaderNav !== null ? dynamicHeaderNav : defaultNavLinks;
 
   const socialLinks = [
     {
