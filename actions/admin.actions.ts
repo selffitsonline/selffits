@@ -403,29 +403,42 @@ export async function getAdminProgramsAction() {
   }
 }
 
-export async function updateAdminProgramPricingAction(id: string, priceINR: number, priceUSD: number, isActive: boolean) {
+export async function getAdminProgramsCatalogAction() {
+  try {
+    const setting = await db.websiteSettings.findUnique({
+      where: { key: "programs_catalog" },
+    });
+
+    if (setting && setting.value) {
+      return { success: true, catalog: setting.value };
+    }
+
+    return { success: true, catalog: null };
+  } catch (err: any) {
+    console.error("getAdminProgramsCatalogAction error:", err);
+    return { success: false, error: "Failed to fetch programs catalog." };
+  }
+}
+
+export async function updateAdminProgramsCatalogAction(catalogData: any) {
   try {
     const session = await auth();
     if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
       return { success: false, error: "Unauthorized access." };
     }
 
-    await db.membershipPlan.update({
-      where: { id },
-      data: {
-        priceINR,
-        priceUSD,
-        isActive,
-      },
+    await db.websiteSettings.upsert({
+      where: { key: "programs_catalog" },
+      update: { value: catalogData },
+      create: { key: "programs_catalog", value: catalogData },
     });
 
     revalidatePath("/programs");
-    revalidatePath("/checkout");
     revalidatePath("/admin/programs");
-    return { success: true, message: "Program pricing and status updated!" };
+    return { success: true, message: "Course catalog updated successfully!" };
   } catch (err: any) {
-    console.error("updateAdminProgramPricingAction error:", err);
-    return { success: false, error: "Failed to update program pricing." };
+    console.error("updateAdminProgramsCatalogAction error:", err);
+    return { success: false, error: "Failed to update course catalog." };
   }
 }
 

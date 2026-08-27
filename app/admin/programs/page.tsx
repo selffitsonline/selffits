@@ -1,6 +1,5 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { getAdminProgramsAction } from "@/actions/admin.actions";
 import { AdminProgramsView } from "@/components/admin/admin-programs-view";
 
 export default async function AdminProgramsPage() {
@@ -9,8 +8,5 @@ export default async function AdminProgramsPage() {
     redirect("/admin/login?callbackUrl=/admin/programs");
   }
 
-  const res = await getAdminProgramsAction();
-  const initialPrograms = res?.programs || [];
-
-  return <AdminProgramsView initialPrograms={initialPrograms} />;
+  return <AdminProgramsView />;
 }

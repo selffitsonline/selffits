@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { Header } from "@/components/public/header";
 import { Footer } from "@/components/public/footer";
+import { getAdminProgramsCatalogAction } from "@/actions/admin.actions";
 import {
   Video,
   Calendar,
@@ -584,7 +585,26 @@ export default function ProgramsPage() {
   const [mmaCategory, setMmaCategory] = useState<MmaCategory>("kids");
   const [currency, setCurrency] = useState<Currency>("INR");
 
-  const currentMmaCategoryData = MMA_DATA[mmaCategory];
+  const [mmaCatalog, setMmaCatalog] = useState<any>(MMA_DATA);
+  const [hiitCatalog, setHiitCatalog] = useState<any[]>(HIIT_DATA);
+
+  useEffect(() => {
+    async function loadCatalog() {
+      try {
+        const res = await getAdminProgramsCatalogAction();
+        if (res && res.success && res.catalog) {
+          const cat = res.catalog as any;
+          if (cat.mmaData) setMmaCatalog(cat.mmaData);
+          if (cat.hiitData) setHiitCatalog(cat.hiitData);
+        }
+      } catch (err) {
+        console.error("Failed to fetch dynamic program catalog:", err);
+      }
+    }
+    loadCatalog();
+  }, []);
+
+  const currentMmaCategoryData = mmaCatalog[mmaCategory] || MMA_DATA[mmaCategory];
 
   return (
     <div className="min-h-screen bg-[#0A0B0E] text-white flex flex-col selection:bg-[#E50914] selection:text-white">
@@ -710,7 +730,7 @@ export default function ProgramsPage() {
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {mainTab === "mma" ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {currentMmaCategoryData.courses.map((course) => (
+              {((currentMmaCategoryData && currentMmaCategoryData.courses) || []).filter((c: any) => c.isActive !== false).map((course: any) => (
                 <div
                   key={course.id}
                   id={course.id}
@@ -800,7 +820,7 @@ export default function ProgramsPage() {
                         Curriculum:
                       </h3>
                       <ol className="space-y-2.5">
-                        {course.curriculum.map((item, idx) => (
+                        {((course.curriculum) || []).map((item: any, idx: number) => (
                           <li
                             key={idx}
                             className="flex items-start gap-3 text-sm sm:text-base text-gray-200 leading-relaxed font-medium"
@@ -825,14 +845,14 @@ export default function ProgramsPage() {
                         <div className="flex items-center justify-between py-1.5 border-b border-white/5">
                           <span className="text-gray-300 font-medium">Classes weekly:</span>
                           <span className="font-bold text-white">
-                            {course.schedule.classesWeekly}
+                            {course.schedule?.classesWeekly}
                           </span>
                         </div>
 
                         <div className="flex items-center justify-between py-1.5 border-b border-white/5">
                           <span className="text-gray-300 font-medium">Duration:</span>
                           <span className="font-bold text-white">
-                            {course.schedule.duration}
+                            {course.schedule?.duration}
                           </span>
                         </div>
 
@@ -841,7 +861,7 @@ export default function ProgramsPage() {
                             Available days:
                           </span>
                           <div className="flex flex-wrap gap-2">
-                            {course.schedule.availableDays.map((day) => (
+                            {((course.schedule && course.schedule.availableDays) || []).map((day: any) => (
                               <span
                                 key={day}
                                 className="px-3 py-1.5 rounded-lg bg-[#0A0B0E] border border-white/15 text-white font-bold text-xs sm:text-sm"
@@ -853,13 +873,13 @@ export default function ProgramsPage() {
                         </div>
 
                         {/* Available Timings for Kids */}
-                        {course.schedule.availableTimings && (
+                        {course.schedule?.availableTimings && (
                           <div className="pt-2">
                             <span className="text-gray-300 font-medium block mb-2">
                               Available timings:
                             </span>
                             <div className="space-y-2">
-                              {course.schedule.availableTimings.map((time) => (
+                              {course.schedule.availableTimings.map((time: any) => (
                                 <div
                                   key={time}
                                   className="px-4 py-2 rounded-xl bg-[#0A0B0E] border border-emerald-500/30 text-emerald-300 font-mono text-sm sm:text-base font-bold shadow-inner"
@@ -872,7 +892,7 @@ export default function ProgramsPage() {
                         )}
 
                         {/* Morning & Evening Batches for Adults & Ladies */}
-                        {course.schedule.morningBatch && (
+                        {course.schedule?.morningBatch && (
                           <div className="pt-2 space-y-3">
                             <div>
                               <span className="text-gray-300 font-bold flex items-center gap-1.5 mb-2 text-xs sm:text-sm uppercase tracking-wide">
@@ -880,7 +900,7 @@ export default function ProgramsPage() {
                                 Morning Batch:
                               </span>
                               <div className="space-y-2">
-                                {course.schedule.morningBatch.map((time) => (
+                                {course.schedule.morningBatch.map((time: any) => (
                                   <div
                                     key={time}
                                     className="px-4 py-2 rounded-xl bg-[#0A0B0E] border border-amber-500/30 text-amber-300 font-mono text-sm sm:text-base font-bold shadow-inner"
@@ -891,14 +911,14 @@ export default function ProgramsPage() {
                               </div>
                             </div>
 
-                            {course.schedule.eveningBatch && (
+                            {course.schedule?.eveningBatch && (
                               <div>
                                 <span className="text-gray-300 font-bold flex items-center gap-1.5 mb-2 text-xs sm:text-sm uppercase tracking-wide">
                                   <Moon className="w-4 h-4 text-indigo-400" />
                                   Evening Batch:
                                 </span>
                                 <div className="space-y-2">
-                                  {course.schedule.eveningBatch.map((time) => (
+                                  {course.schedule.eveningBatch.map((time: any) => (
                                     <div
                                       key={time}
                                       className="px-4 py-2 rounded-xl bg-[#0A0B0E] border border-indigo-500/30 text-indigo-300 font-mono text-sm sm:text-base font-bold shadow-inner"
@@ -930,7 +950,7 @@ export default function ProgramsPage() {
           ) : (
             /* Weight Loss & HIIT Workout Section */
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {HIIT_DATA.map((challenge) => (
+              {(hiitCatalog || []).filter((c: any) => c.isActive !== false).map((challenge: any) => (
                 <div
                   key={challenge.id}
                   id={challenge.id}
@@ -1010,7 +1030,7 @@ export default function ProgramsPage() {
                         Program:
                       </h3>
                       <ol className="space-y-2.5">
-                        {challenge.program.map((item, idx) => (
+                        {((challenge.program) || []).map((item: any, idx: number) => (
                           <li
                             key={idx}
                             className="flex items-start gap-3 text-sm sm:text-base text-gray-200 leading-relaxed font-medium"
@@ -1035,17 +1055,17 @@ export default function ProgramsPage() {
                         <div className="flex items-center justify-between py-1.5 border-b border-white/5">
                           <span className="text-gray-300 font-medium">Classes weekly:</span>
                           <span className="font-bold text-white">
-                            {challenge.schedule.classesWeekly}
+                            {challenge.schedule?.classesWeekly}
                           </span>
                         </div>
 
-                        {challenge.schedule.availableDays && (
+                        {challenge.schedule?.availableDays && (
                           <div className="pt-1">
                             <span className="text-gray-300 font-medium block mb-2">
                               Available days:
                             </span>
                             <div className="flex flex-wrap gap-2">
-                              {challenge.schedule.availableDays.map((day) => (
+                              {((challenge.schedule && challenge.schedule.availableDays) || []).map((day: any) => (
                                 <span
                                   key={day}
                                   className="px-3 py-1.5 rounded-lg bg-[#0A0B0E] border border-white/15 text-white font-bold text-xs sm:text-sm"
