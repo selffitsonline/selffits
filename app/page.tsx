@@ -218,10 +218,10 @@ export default function HomePage() {
           {/* Background Ambient Glow */}
           <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-tr from-[#E50914]/25 via-transparent to-[#0080FF]/20 rounded-full blur-[140px] pointer-events-none z-1" />
 
-          {/* Overlaid Hero Content Container - Large Text with Tight Line Spacing */}
-          <div className="max-w-4xl mx-auto relative z-10 w-full px-4 sm:px-6 text-center">
-            <div className="max-w-2xl mx-auto space-y-2.5 sm:space-y-3 flex flex-col items-center">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#0A0B0E]/80 border border-[#E50914]/60 text-[#E50914] text-xs sm:text-sm font-bold uppercase tracking-wider backdrop-blur-md shadow-lg">
+          {/* Overlaid Hero Content Container - Expansive Content Width */}
+          <div className="max-w-6xl mx-auto relative z-10 w-full px-4 sm:px-6 text-center">
+            <div className="max-w-4xl mx-auto space-y-3.5 sm:space-y-4 flex flex-col items-center">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#0A0B0E]/80 border border-[#E50914]/60 text-[#E50914] text-xs sm:text-sm font-bold uppercase tracking-wider backdrop-blur-md shadow-lg">
                 <span className="w-2 h-2 rounded-full bg-[#10B981] animate-ping" />
                 {activeSlide.badgeText}
               </div>
@@ -233,21 +233,21 @@ export default function HomePage() {
                 </span>
               </h1>
 
-              <p className="text-gray-100 text-base sm:text-lg font-semibold max-w-xl mx-auto leading-normal">
+              <p className="text-gray-100 text-base sm:text-xl font-semibold max-w-3xl mx-auto leading-relaxed">
                 {activeSlide.subtitle}
               </p>
 
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-3 w-full max-w-xl mx-auto">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4 w-full max-w-2xl mx-auto">
                 <Link
                   href={activeSlide.primaryCtaLink || "/programs"}
-                  className="px-8 py-3.5 sm:px-9 sm:py-4 rounded-2xl bg-gradient-to-r from-[#E50914] to-[#FF1E27] text-white font-extrabold text-base sm:text-lg hover:opacity-95 transition-all shadow-2xl shadow-[#E50914]/50 hover:translate-y-[-2px] flex items-center justify-center gap-2.5 text-center whitespace-nowrap shrink-0 tracking-wide w-full sm:w-auto"
+                  className="px-8 py-4 sm:px-10 sm:py-4.5 rounded-2xl bg-gradient-to-r from-[#E50914] to-[#FF1E27] text-white font-extrabold text-base sm:text-lg hover:opacity-95 transition-all shadow-2xl shadow-[#E50914]/50 hover:translate-y-[-2px] flex items-center justify-center gap-2.5 text-center whitespace-nowrap shrink-0 tracking-wide w-full sm:w-auto"
                 >
                   {activeSlide.primaryCtaText}
                   <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" />
                 </Link>
                 <Link
                   href={activeSlide.secondaryCtaLink || "/programs"}
-                  className="px-8 py-3.5 sm:px-9 sm:py-4 rounded-2xl bg-[#0A0B0E]/85 backdrop-blur-md border border-white/35 text-white font-bold text-base sm:text-lg hover:bg-white/20 transition-all text-center whitespace-nowrap shrink-0 tracking-wide w-full sm:w-auto shadow-xl"
+                  className="px-8 py-4 sm:px-10 sm:py-4.5 rounded-2xl bg-[#0A0B0E]/85 backdrop-blur-md border border-white/35 text-white font-bold text-base sm:text-lg hover:bg-white/20 transition-all text-center whitespace-nowrap shrink-0 tracking-wide w-full sm:w-auto shadow-xl"
                 >
                   {activeSlide.secondaryCtaText}
                 </Link>
