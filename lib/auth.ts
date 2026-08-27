@@ -41,9 +41,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (user && user.passwordHash) {
           const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
           if (isPasswordValid) {
-            if (user.role === "STUDENT" && !user.emailVerified) {
-              throw new Error("UNVERIFIED_EMAIL");
-            }
             return {
               id: user.id,
               email: user.email,

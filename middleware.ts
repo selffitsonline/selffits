@@ -17,7 +17,31 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  const secureCookie = req.url.startsWith("https://") || process.env.NODE_ENV === "production";
+
+  // Check NextAuth v5 and NextAuth v4 cookie names for Vercel HTTPS deployment
+  let token = await getToken({
+    req,
+    secret: process.env.NEXTAUTH_SECRET,
+    cookieName: secureCookie ? "__Secure-authjs.session-token" : "authjs.session-token",
+    secureCookie,
+  });
+
+  if (!token) {
+    token = await getToken({
+      req,
+      secret: process.env.NEXTAUTH_SECRET,
+      cookieName: secureCookie ? "__Secure-next-auth.session-token" : "next-auth.session-token",
+      secureCookie,
+    });
+  }
+
+  if (!token) {
+    token = await getToken({
+      req,
+      secret: process.env.NEXTAUTH_SECRET,
+    });
+  }
 
   const isAdminRoute = pathname.startsWith("/admin");
   const isProtectedUserRoute =
