@@ -54,8 +54,8 @@ export default function AdminLoginPage() {
         return;
       }
 
-      router.push(callbackUrl);
-      router.refresh();
+      // Instant browser navigation to admin dashboard
+      window.location.href = callbackUrl;
     } catch (err) {
       console.error(err);
       setErrorMsg("An unexpected system error occurred.");

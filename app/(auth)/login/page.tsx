@@ -50,8 +50,8 @@ export default function LoginPage() {
         return;
       }
 
-      router.push(callbackUrl);
-      router.refresh();
+      // Instant browser navigation to dashboard with session cookie
+      window.location.href = callbackUrl;
     } catch (err) {
       console.error(err);
       setErrorMsg("An unexpected error occurred. Please try again.");
