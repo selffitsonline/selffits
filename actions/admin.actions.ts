@@ -174,38 +174,75 @@ export async function updateAdminMenuItemsAction(headerMenu: any[], footerMenu: 
   }
 }
 
-// 3. HOMEPAGE BANNER CONTENT ACTIONS
+import { storageProvider } from "@/lib/storage";
+
+// 3. HOMEPAGE BANNER CONTENT ACTIONS (MULTI-SLIDE & IMAGE UPLOAD)
 export async function getAdminBannerContentAction() {
   try {
     const setting = await db.websiteSettings.findUnique({
       where: { key: "homepage_banner" },
     });
 
-    const defaultBanner = {
-      badgeText: "ONLINE FITNESS & MARTIAL ARTS ACADEMY",
-      titleMain: "Train Anywhere.",
-      titleHighlight: "Transform Yourself!",
-      subtitle: "Join live, interactive Martial Arts Belts & Fitness Transformation classes from anywhere in the world. Real-time form correction, official belt certifications, and world-class instructors.",
-      primaryCtaText: "Join Academy Now",
-      primaryCtaLink: "/programs",
-      secondaryCtaText: "View Programs",
-      secondaryCtaLink: "/programs",
-      imageUrl: "/images/hero1.jpg",
-      isEnabled: true,
-    };
+    const defaultSlides = [
+      {
+        id: "slide_1",
+        badgeText: "ONLINE FITNESS & MARTIAL ARTS ACADEMY",
+        titleMain: "Train Anywhere.",
+        titleHighlight: "Transform Yourself!",
+        subtitle: "Join live, interactive Martial Arts Belts & Fitness Transformation classes from anywhere in the world. Real-time form correction, official belt certifications, and world-class instructors.",
+        primaryCtaText: "Join Academy Now",
+        primaryCtaLink: "/programs",
+        secondaryCtaText: "View Programs",
+        secondaryCtaLink: "/programs",
+        imageUrl: "/images/hero1.jpg",
+        isEnabled: true,
+      },
+      {
+        id: "slide_2",
+        badgeText: "LIVE VIRTUAL ZOOM CLASSES",
+        titleMain: "Master Belt Ranks.",
+        titleHighlight: "Earn Official Certification!",
+        subtitle: "Interactive training with 4th Dan Black Belt Instructors. Kids, Adults, and Ladies Only dedicated batches.",
+        primaryCtaText: "Explore Belt Programs",
+        primaryCtaLink: "/programs",
+        secondaryCtaText: "Meet Master Coaches",
+        secondaryCtaLink: "/coaches",
+        imageUrl: "/images/hero2.jpg",
+        isEnabled: true,
+      },
+      {
+        id: "slide_3",
+        badgeText: "FEMALE FITNESS & SELF DEFENSE",
+        titleMain: "Empower Your Spirit.",
+        titleHighlight: "Ladies Only Batches!",
+        subtitle: "Female-led high energy HIIT workouts, fat loss challenges, and real-world self-defense techniques.",
+        primaryCtaText: "Join Ladies Batch",
+        primaryCtaLink: "/programs#ladies",
+        secondaryCtaText: "Contact Support",
+        secondaryCtaLink: "/contact",
+        imageUrl: "/images/ladies_fitness.png",
+        isEnabled: true,
+      },
+    ];
 
     if (setting && setting.value) {
-      return { success: true, banner: { ...defaultBanner, ...(setting.value as object) } };
+      const stored = setting.value as any;
+      if (Array.isArray(stored.slides) && stored.slides.length > 0) {
+        return { success: true, slides: stored.slides };
+      }
+      if (stored.badgeText || stored.titleMain) {
+        return { success: true, slides: [{ id: "slide_1", ...stored }] };
+      }
     }
 
-    return { success: true, banner: defaultBanner };
+    return { success: true, slides: defaultSlides };
   } catch (err: any) {
     console.error("getAdminBannerContentAction error:", err);
     return { success: false, error: "Failed to load banner content." };
   }
 }
 
-export async function updateAdminBannerContentAction(bannerData: any) {
+export async function updateAdminBannerContentAction(slides: any[]) {
   try {
     const session = await auth();
     if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
@@ -214,15 +251,38 @@ export async function updateAdminBannerContentAction(bannerData: any) {
 
     await db.websiteSettings.upsert({
       where: { key: "homepage_banner" },
-      update: { value: bannerData },
-      create: { key: "homepage_banner", value: bannerData },
+      update: { value: { slides } },
+      create: { key: "homepage_banner", value: { slides } },
     });
 
     revalidatePath("/");
-    return { success: true, message: "Homepage banner updated successfully!" };
+    return { success: true, message: "Homepage banner slides updated successfully!" };
   } catch (err: any) {
     console.error("updateAdminBannerContentAction error:", err);
     return { success: false, error: "Failed to update homepage banner." };
+  }
+}
+
+export async function uploadBannerImageAction(formData: FormData) {
+  try {
+    const session = await auth();
+    if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
+      return { success: false, error: "Unauthorized access." };
+    }
+
+    const file = formData.get("file") as File;
+    if (!file) {
+      return { success: false, error: "No file selected." };
+    }
+
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+
+    const result = await storageProvider.uploadFile(buffer, file.name, "banners");
+    return { success: true, url: result.publicUrl };
+  } catch (err: any) {
+    console.error("uploadBannerImageAction error:", err);
+    return { success: false, error: "Failed to upload image file." };
   }
 }
 

@@ -32,26 +32,43 @@ const HERO_IMAGES = [
 ];
 
 export default function HomePage() {
+  const [heroSlides, setHeroSlides] = useState<any[]>([
+    {
+      id: "slide_1",
+      badgeText: "ONLINE FITNESS & MARTIAL ARTS ACADEMY",
+      titleMain: "Train Anywhere.",
+      titleHighlight: "Transform Yourself!",
+      subtitle: "Join live, interactive Martial Arts Belts & Fitness Transformation classes from anywhere in the world. Real-time form correction, official belt certifications, and world-class instructors.",
+      primaryCtaText: "Join Academy Now",
+      primaryCtaLink: "/programs",
+      secondaryCtaText: "View Programs",
+      secondaryCtaLink: "/programs",
+      imageUrl: "/images/hero1.jpg",
+      isEnabled: true,
+    },
+    {
+      id: "slide_2",
+      badgeText: "LIVE VIRTUAL ZOOM CLASSES",
+      titleMain: "Master Belt Ranks.",
+      titleHighlight: "Earn Official Certification!",
+      subtitle: "Interactive training with 4th Dan Black Belt Instructors. Kids, Adults, and Ladies Only dedicated batches.",
+      primaryCtaText: "Explore Belt Programs",
+      primaryCtaLink: "/programs",
+      secondaryCtaText: "Meet Master Coaches",
+      secondaryCtaLink: "/coaches",
+      imageUrl: "/images/hero2.jpg",
+      isEnabled: true,
+    },
+  ]);
+
   const [currentSlide, setCurrentSlide] = useState(0);
-  const [heroData, setHeroData] = useState({
-    badgeText: "ONLINE FITNESS & MARTIAL ARTS ACADEMY",
-    titleMain: "Train Anywhere.",
-    titleHighlight: "Transform Yourself!",
-    subtitle: "Join live, interactive Martial Arts Belts & Fitness Transformation classes from anywhere in the world. Real-time form correction, official belt certifications, and world-class instructors.",
-    primaryCtaText: "Join Academy Now",
-    primaryCtaLink: "/programs",
-    secondaryCtaText: "View Programs",
-    secondaryCtaLink: "/programs",
-    imageUrl: "/images/hero1.jpg",
-    isEnabled: true,
-  });
 
   useEffect(() => {
     async function loadBanner() {
       try {
         const res = await getAdminBannerContentAction();
-        if (res && res.success && res.banner) {
-          setHeroData((prev) => ({ ...prev, ...res.banner }));
+        if (res && res.success && Array.isArray(res.slides) && res.slides.length > 0) {
+          setHeroSlides(res.slides);
         }
       } catch (err) {
         console.error("Hero banner fetch error:", err);
@@ -60,12 +77,18 @@ export default function HomePage() {
     loadBanner();
   }, []);
 
+  const activeSlides = heroSlides.filter((s) => s.isEnabled);
+  const activeSlideCount = activeSlides.length > 0 ? activeSlides.length : 1;
+
   useEffect(() => {
+    if (activeSlideCount <= 1) return;
     const timer = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % HERO_IMAGES.length);
+      setCurrentSlide((prev) => (prev + 1) % activeSlideCount);
     }, 5000);
     return () => clearInterval(timer);
-  }, []);
+  }, [activeSlideCount]);
+
+  const activeSlide = activeSlides[currentSlide] || activeSlides[0] || heroSlides[0];
 
   const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % HERO_IMAGES.length);
   const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + HERO_IMAGES.length) % HERO_IMAGES.length);
@@ -167,18 +190,18 @@ export default function HomePage() {
       <main className="flex-grow pt-14 sm:pt-16">
         {/* 1. HERO SECTION WITH FULL-SCREEN 2-IMAGE CAROUSEL */}
         <section className="relative w-full min-h-[calc(100vh-64px)] flex items-center justify-center overflow-hidden py-6 sm:py-10 px-4 sm:px-6 lg:px-8">
-          {/* Full-Screen Edge-to-Edge 2-Image Background Carousel */}
+          {/* Full-Screen Edge-to-Edge Multi-Slide Background Carousel */}
           <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-            {HERO_IMAGES.map((img, idx) => (
+            {activeSlides.map((s, idx) => (
               <div
-                key={img}
+                key={s.id || idx}
                 className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out ${
                   currentSlide === idx ? "opacity-100" : "opacity-0"
                 }`}
               >
                 <Image
-                  src={img}
-                  alt={`Hero Background ${idx + 1}`}
+                  src={s.imageUrl || "/images/hero1.jpg"}
+                  alt={`Hero Background Slide ${idx + 1}`}
                   fill
                   priority={idx === 0}
                   unoptimized
@@ -200,35 +223,51 @@ export default function HomePage() {
             <div className="max-w-2xl mx-auto space-y-2.5 sm:space-y-3 flex flex-col items-center">
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#0A0B0E]/80 border border-[#E50914]/60 text-[#E50914] text-xs sm:text-sm font-bold uppercase tracking-wider backdrop-blur-md shadow-lg">
                 <span className="w-2 h-2 rounded-full bg-[#10B981] animate-ping" />
-                {heroData.badgeText}
+                {activeSlide.badgeText}
               </div>
 
               <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[0.98] font-[family-name:var(--font-outfit)] text-white">
-                {heroData.titleMain} <br />
+                {activeSlide.titleMain} <br />
                 <span className="text-[#E50914]">
-                  {heroData.titleHighlight}
+                  {activeSlide.titleHighlight}
                 </span>
               </h1>
 
               <p className="text-gray-100 text-base sm:text-lg font-semibold max-w-xl mx-auto leading-normal">
-                {heroData.subtitle}
+                {activeSlide.subtitle}
               </p>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-3 w-full max-w-xl mx-auto">
                 <Link
-                  href={heroData.primaryCtaLink || "/programs"}
+                  href={activeSlide.primaryCtaLink || "/programs"}
                   className="px-8 py-3.5 sm:px-9 sm:py-4 rounded-2xl bg-gradient-to-r from-[#E50914] to-[#FF1E27] text-white font-extrabold text-base sm:text-lg hover:opacity-95 transition-all shadow-2xl shadow-[#E50914]/50 hover:translate-y-[-2px] flex items-center justify-center gap-2.5 text-center whitespace-nowrap shrink-0 tracking-wide w-full sm:w-auto"
                 >
-                  {heroData.primaryCtaText}
+                  {activeSlide.primaryCtaText}
                   <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" />
                 </Link>
                 <Link
-                  href={heroData.secondaryCtaLink || "/programs"}
+                  href={activeSlide.secondaryCtaLink || "/programs"}
                   className="px-8 py-3.5 sm:px-9 sm:py-4 rounded-2xl bg-[#0A0B0E]/85 backdrop-blur-md border border-white/35 text-white font-bold text-base sm:text-lg hover:bg-white/20 transition-all text-center whitespace-nowrap shrink-0 tracking-wide w-full sm:w-auto shadow-xl"
                 >
-                  {heroData.secondaryCtaText}
+                  {activeSlide.secondaryCtaText}
                 </Link>
               </div>
+
+              {/* Carousel Slide Indicators */}
+              {activeSlides.length > 1 && (
+                <div className="flex items-center justify-center gap-2 pt-6">
+                  {activeSlides.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setCurrentSlide(idx)}
+                      className={`h-2 rounded-full transition-all duration-300 ${
+                        currentSlide === idx ? "w-8 bg-[#E50914]" : "w-2 bg-white/30 hover:bg-white/60"
+                      }`}
+                      aria-label={`Go to slide ${idx + 1}`}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </section>
