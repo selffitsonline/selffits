@@ -26,6 +26,58 @@ const PLAN_MAP: Record<string, PaymentPlanDetail> = {
   "transformation-96": { id: "transformation-96", name: "96 Day Transformation", durationMonths: 3, totalClasses: 96, priceINR: 13999, priceUSD: 169 },
 };
 
+async function getOrCreateMembershipPlan(plan: PaymentPlanDetail) {
+  let program = await db.program.findFirst();
+  if (!program) {
+    program = await db.program.create({
+      data: {
+        title: "Global Online Martial Arts & Fitness Academy",
+        slug: "global-academy",
+        category: "MARTIAL_ARTS",
+        targetAudience: "ADULTS",
+        description: "Global Online Live Fitness & Martial Arts Training",
+      },
+    });
+  }
+
+  let membershipPlan = await db.membershipPlan.findFirst({
+    where: {
+      name: plan.name,
+      totalClasses: plan.totalClasses,
+    },
+  });
+
+  if (!membershipPlan) {
+    const tierType = plan.id.includes("yellow")
+      ? "YELLOW_BELT"
+      : plan.id.includes("purple")
+      ? "PURPLE_BELT"
+      : plan.id.includes("brown")
+      ? "BROWN_BELT"
+      : plan.id.includes("challenge-8")
+      ? "CHALLENGE_8"
+      : plan.id.includes("challenge-24")
+      ? "CHALLENGE_24"
+      : plan.id.includes("transformation-96")
+      ? "TRANSFORMATION_96"
+      : "BLUE_BELT";
+
+    membershipPlan = await db.membershipPlan.create({
+      data: {
+        programId: program.id,
+        name: plan.name,
+        tierType: tierType as any,
+        durationMonths: plan.durationMonths,
+        totalClasses: plan.totalClasses,
+        priceINR: plan.priceINR,
+        priceUSD: plan.priceUSD,
+      },
+    });
+  }
+
+  return membershipPlan;
+}
+
 export async function createRazorpayOrderAction(
   planId: string,
   currency: "INR" | "USD" = "INR"
@@ -110,42 +162,7 @@ export async function verifyPaymentSignatureAction(payload: {
     const endDate = new Date();
     endDate.setMonth(endDate.getMonth() + plan.durationMonths);
 
-    // Find master Program & Plan in database matching the exact plan name
-    let program = await db.program.findFirst();
-    if (!program) {
-      program = await db.program.create({
-        data: {
-          title: "General Virtual Academy Program",
-          slug: "virtual-academy",
-          category: "MARTIAL_ARTS",
-          targetAudience: "ADULTS",
-          description: "Global Online Live Fitness & Martial Arts Training",
-        },
-      });
-    }
-
-    let membershipPlan = await db.membershipPlan.findFirst({
-      where: { name: plan.name },
-    });
-    if (!membershipPlan) {
-      membershipPlan = await db.membershipPlan.create({
-        data: {
-          programId: program.id,
-          name: plan.name,
-          tierType: plan.id.includes("yellow")
-            ? "YELLOW_BELT"
-            : plan.id.includes("purple")
-            ? "PURPLE_BELT"
-            : plan.id.includes("brown")
-            ? "BROWN_BELT"
-            : "BLUE_BELT",
-          durationMonths: plan.durationMonths,
-          totalClasses: plan.totalClasses,
-          priceINR: plan.priceINR,
-          priceUSD: plan.priceUSD,
-        },
-      });
-    }
+    const membershipPlan = await getOrCreateMembershipPlan(plan);
 
     // Execute atomic enrollment and payment update
     const result = await db.$transaction(async (tx) => {
@@ -244,19 +261,35 @@ export async function getStudentEnrollmentAction() {
         year: "numeric",
       });
 
-      const name = item.membershipPlan?.name || "Martial Arts & Fitness Program";
-      const isChallenge = name.toLowerCase().includes("challenge") || name.toLowerCase().includes("transformation");
+      const planName = item.membershipPlan?.name || "Martial Arts & Fitness Program";
+      const totalClasses = item.membershipPlan?.totalClasses || item.totalClassesGranted || 24;
+      const remainingClasses = item.remainingClasses;
+      const isChallenge =
+        planName.toLowerCase().includes("challenge") ||
+        planName.toLowerCase().includes("transformation") ||
+        planName.toLowerCase().includes("fitness");
+
+      const image = isChallenge
+        ? "/images/weight_loss_hiit.png"
+        : planName.toLowerCase().includes("kids")
+        ? "/images/kids_martial_arts.png"
+        : "/images/adults_martial_arts.png";
+
+      const category = isChallenge ? "FITNESS CHALLENGE" : "MARTIAL ARTS";
+      const beltLevel = item.membershipPlan?.tierType
+        ? item.membershipPlan.tierType.replace("_", " ")
+        : planName;
 
       return {
         id: item.id,
-        programName: name,
-        title: name,
-        category: isChallenge ? "FITNESS CHALLENGE" : "MARTIAL ARTS",
-        image: isChallenge ? "/images/weight_loss_hiit.png" : "/images/adults_martial_arts.png",
-        beltLevel: item.membershipPlan?.tierType ? item.membershipPlan.tierType.replace("_", " ") : "Belt Tier",
-        remainingClasses: item.remainingClasses,
-        totalClasses: item.totalClassesGranted,
-        duration: `${item.totalClassesGranted} Classes`,
+        programName: planName,
+        title: planName,
+        category: category,
+        image: image,
+        beltLevel: beltLevel,
+        remainingClasses: remainingClasses,
+        totalClasses: totalClasses,
+        duration: `${totalClasses} Classes`,
         daysRemaining: daysRemaining > 0 ? daysRemaining : 30,
         membershipStatus: item.status,
         status: item.status,
@@ -295,42 +328,7 @@ export async function createDirectCardEnrollmentAction(
     const endDate = new Date();
     endDate.setMonth(endDate.getMonth() + plan.durationMonths);
 
-    // Find or create Program & MembershipPlan matching exact plan.name
-    let program = await db.program.findFirst();
-    if (!program) {
-      program = await db.program.create({
-        data: {
-          title: "General Virtual Academy Program",
-          slug: "virtual-academy",
-          category: "MARTIAL_ARTS",
-          targetAudience: "ADULTS",
-          description: "Global Online Live Fitness & Martial Arts Training",
-        },
-      });
-    }
-
-    let membershipPlan = await db.membershipPlan.findFirst({
-      where: { name: plan.name },
-    });
-    if (!membershipPlan) {
-      membershipPlan = await db.membershipPlan.create({
-        data: {
-          programId: program.id,
-          name: plan.name,
-          tierType: plan.id.includes("yellow")
-            ? "YELLOW_BELT"
-            : plan.id.includes("purple")
-            ? "PURPLE_BELT"
-            : plan.id.includes("brown")
-            ? "BROWN_BELT"
-            : "BLUE_BELT",
-          durationMonths: plan.durationMonths,
-          totalClasses: plan.totalClasses,
-          priceINR: plan.priceINR,
-          priceUSD: plan.priceUSD,
-        },
-      });
-    }
+    const membershipPlan = await getOrCreateMembershipPlan(plan);
 
     // Execute atomic enrollment and payment creation in PostgreSQL
     const result = await db.$transaction(async (tx) => {
