@@ -218,16 +218,16 @@ export default function HomePage() {
           {/* Background Ambient Glow */}
           <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-tr from-[#E50914]/25 via-transparent to-[#0080FF]/20 rounded-full blur-[140px] pointer-events-none z-1" />
 
-          {/* Overlaid Hero Content Container - Expansive Content Width */}
-          <div className="max-w-6xl mx-auto relative z-10 w-full px-4 sm:px-6 text-center">
-            <div className="max-w-4xl mx-auto space-y-3.5 sm:space-y-4 flex flex-col items-center">
+          {/* Overlaid Hero Content Container - Single Line Hero Title Width */}
+          <div className="max-w-7xl mx-auto relative z-10 w-full px-4 sm:px-6 text-center">
+            <div className="max-w-6xl mx-auto space-y-3.5 sm:space-y-4 flex flex-col items-center">
               <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#0A0B0E]/80 border border-[#E50914]/60 text-[#E50914] text-xs sm:text-sm font-bold uppercase tracking-wider backdrop-blur-md shadow-lg">
                 <span className="w-2 h-2 rounded-full bg-[#10B981] animate-ping" />
                 {activeSlide.badgeText}
               </div>
 
-              <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[0.98] font-[family-name:var(--font-outfit)] text-white">
-                {activeSlide.titleMain} <br />
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight font-[family-name:var(--font-outfit)] text-white sm:whitespace-nowrap">
+                {activeSlide.titleMain}{" "}
                 <span className="text-[#E50914]">
                   {activeSlide.titleHighlight}
                 </span>
