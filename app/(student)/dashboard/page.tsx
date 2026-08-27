@@ -26,11 +26,12 @@ export default function StudentDashboardPage() {
   const userName = session?.user?.name || "Student";
   const userEmail = session?.user?.email;
 
-  // Active student account enrollment state:
-  // Shows Active Live Class Schedule, Instructor, Next Class Time & Join Live Class button for logged-in student accounts
-  const isEnrolled = true;
+  // Check if student has purchased/enrolled in a course
+  // Newly registered students default to false until they purchase a program
+  const isEnrolledParam = searchParams.get("enrolled");
+  const isEnrolled = isEnrolledParam === "true";
 
-  // Enrolled student details
+  // Enrolled student details (activated only after course purchase)
   const activeStudentData = {
     programName: "Adults Martial Arts - Blue Belt Tier",
     beltLevel: "Blue Belt",
