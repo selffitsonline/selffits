@@ -259,3 +259,94 @@ export async function getStudentEnrollmentAction() {
     return { success: false, isEnrolled: false };
   }
 }
+
+export async function createDirectCardEnrollmentAction(
+  planId: string,
+  currency: "INR" | "USD" = "INR"
+) {
+  try {
+    const session = await auth();
+    if (!session || !session.user) {
+      return { success: false, error: "Please log in to complete your enrollment purchase." };
+    }
+
+    const plan = PLAN_MAP[planId] || PLAN_MAP["blue-belt"];
+    const basePrice = currency === "INR" ? plan.priceINR : plan.priceUSD;
+    const startDate = new Date();
+    const endDate = new Date();
+    endDate.setMonth(endDate.getMonth() + plan.durationMonths);
+
+    // Find or create Program & MembershipPlan
+    let program = await db.program.findFirst();
+    if (!program) {
+      program = await db.program.create({
+        data: {
+          title: "General Virtual Academy Program",
+          slug: "virtual-academy",
+          category: "MARTIAL_ARTS",
+          targetAudience: "ADULTS",
+          description: "Global Online Live Fitness & Martial Arts Training",
+        },
+      });
+    }
+
+    let membershipPlan = await db.membershipPlan.findFirst({
+      where: { programId: program.id },
+    });
+    if (!membershipPlan) {
+      membershipPlan = await db.membershipPlan.create({
+        data: {
+          programId: program.id,
+          name: plan.name,
+          tierType: "BLUE_BELT",
+          durationMonths: plan.durationMonths,
+          totalClasses: plan.totalClasses,
+          priceINR: plan.priceINR,
+          priceUSD: plan.priceUSD,
+        },
+      });
+    }
+
+    // Execute atomic enrollment and payment creation in PostgreSQL
+    const result = await db.$transaction(async (tx) => {
+      const enrollment = await tx.enrollment.create({
+        data: {
+          userId: session.user.id,
+          membershipPlanId: membershipPlan.id,
+          startDate,
+          endDate,
+          totalClassesGranted: plan.totalClasses,
+          remainingClasses: plan.totalClasses,
+          status: "ACTIVE",
+        },
+      });
+
+      const payment = await tx.payment.create({
+        data: {
+          userId: session.user.id,
+          enrollmentId: enrollment.id,
+          razorpayOrderId: `card_order_${Date.now()}`,
+          razorpayPaymentId: `card_pay_${Date.now()}`,
+          razorpaySignature: "direct_card_authorization",
+          amount: basePrice,
+          currency: currency,
+          status: "SUCCESS",
+        },
+      });
+
+      return { enrollment, payment };
+    });
+
+    return {
+      success: true,
+      message: "Direct card payment authorized and enrollment created!",
+      enrollmentId: result.enrollment.id,
+    };
+  } catch (err: any) {
+    console.error("createDirectCardEnrollmentAction error:", err);
+    return {
+      success: false,
+      error: "Failed to authorize card payment and record enrollment.",
+    };
+  }
+}

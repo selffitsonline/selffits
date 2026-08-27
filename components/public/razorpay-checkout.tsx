@@ -3,7 +3,11 @@
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { createRazorpayOrderAction, verifyPaymentSignatureAction } from "@/actions/payments.actions";
+import {
+  createRazorpayOrderAction,
+  verifyPaymentSignatureAction,
+  createDirectCardEnrollmentAction,
+} from "@/actions/payments.actions";
 import { ShieldCheck, Lock, CreditCard, Sparkles, CheckCircle2, AlertCircle } from "lucide-react";
 
 declare global {
@@ -85,11 +89,15 @@ export function RazorpayCheckout({ planId, planName, priceINR, priceUSD }: Razor
     setIsLoading(true);
     setErrorMsg(null);
 
-    // Simulate Payment Authorization & Redirect to Thanks Page
-    setTimeout(() => {
-      router.push(`/checkout/success?plan=${planId}`);
-      router.refresh();
-    }, 1000);
+    const res = await createDirectCardEnrollmentAction(planId, currency);
+    if (!res.success) {
+      setErrorMsg(res.error || "Payment authorization failed.");
+      setIsLoading(false);
+      return;
+    }
+
+    router.push(`/checkout/success?plan=${planId}&enrolled=true`);
+    router.refresh();
   };
 
   // Modal Fallback Checkout

@@ -28,7 +28,7 @@ export default function CheckoutSuccessPage() {
   // 10-Second Auto-Redirect Countdown to Student Dashboard
   useEffect(() => {
     if (countdown <= 0) {
-      router.push("/dashboard?enrollment=success");
+      router.push("/dashboard?enrolled=true&enrollment=success");
       return;
     }
     const timer = setInterval(() => {
@@ -91,7 +91,7 @@ export default function CheckoutSuccessPage() {
             </div>
 
             <Link
-              href="/dashboard?enrollment=success"
+              href="/dashboard?enrolled=true&enrollment=success"
               className="w-full py-4 rounded-xl bg-gradient-to-r from-[#E50914] to-[#FF1E27] text-white font-black text-sm uppercase tracking-wider hover:opacity-95 transition-all shadow-xl shadow-[#E50914]/25 flex items-center justify-center gap-2"
             >
               Go to Student Dashboard Now <ArrowRight className="w-4 h-4" />
