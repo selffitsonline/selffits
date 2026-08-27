@@ -1,9 +1,44 @@
-import React from "react";
+"use client";
+
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Mail, Phone, MapPin, ShieldCheck } from "lucide-react";
 
+import { getAdminMenuItemsAction } from "@/actions/admin.actions";
+
 export function Footer() {
+  const [dynamicFooterLinks, setDynamicFooterLinks] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadFooterNav() {
+      try {
+        const res = await getAdminMenuItemsAction();
+        if (res && res.success && res.footerMenu) {
+          const activeItems = res.footerMenu
+            .filter((item: any) => item.isEnabled)
+            .map((item: any) => ({ label: item.label, href: item.href }));
+          if (activeItems.length > 0) setDynamicFooterLinks(activeItems);
+        }
+      } catch (err) {
+        console.error("Footer menu load error:", err);
+      }
+    }
+    loadFooterNav();
+  }, []);
+
+  const defaultFooterLinks = [
+    { label: "Home", href: "/" },
+    { label: "All Programs", href: "/programs" },
+    { label: "Master Coaches", href: "/coaches" },
+    { label: "About Academy", href: "/about" },
+    { label: "Success Stories", href: "/success-stories" },
+    { label: "FAQ", href: "/faq" },
+    { label: "Become a SELFFITS Coach", href: "/become-coach" },
+    { label: "Contact Support", href: "/contact" },
+  ];
+
+  const quickLinks = dynamicFooterLinks.length > 0 ? dynamicFooterLinks : defaultFooterLinks;
   const socialLinks = [
     {
       name: "Instagram",
@@ -104,33 +139,23 @@ export function Footer() {
               Quick Links
             </h3>
             <ul className="space-y-2.5 text-xs">
-              <li>
-                <Link href="/" className="hover:text-white transition-colors">Home</Link>
-              </li>
-              <li>
-                <Link href="/programs" className="hover:text-white transition-colors">All Programs</Link>
-              </li>
-              <li>
-                <Link href="/coaches" className="hover:text-white transition-colors">Master Coaches</Link>
-              </li>
-              <li>
-                <Link href="/about" className="hover:text-white transition-colors">About Academy</Link>
-              </li>
-              <li>
-                <Link href="/success-stories" className="hover:text-white transition-colors">Success Stories</Link>
-              </li>
-              <li>
-                <Link href="/faq" className="hover:text-white transition-colors">Frequently Asked Questions (FAQ)</Link>
-              </li>
-              <li>
-                <Link href="/become-coach" className="hover:text-[#E50914] font-bold text-white transition-colors flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#E50914]" />
-                  Become a SELFFITS Coach
-                </Link>
-              </li>
-              <li>
-                <Link href="/contact" className="hover:text-white transition-colors">Contact Support</Link>
-              </li>
+              {quickLinks.map((link, idx) => (
+                <li key={idx}>
+                  <Link
+                    href={link.href}
+                    className={`hover:text-white transition-colors ${
+                      link.href === "/become-coach"
+                        ? "hover:text-[#E50914] font-bold text-white flex items-center gap-1.5"
+                        : ""
+                    }`}
+                  >
+                    {link.href === "/become-coach" && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#E50914]" />
+                    )}
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 

@@ -108,50 +108,66 @@ export async function getAdminDashboardStatsAction() {
   }
 }
 
-// 2. MENU MANAGEMENT SERVER ACTIONS
+// 2. MENU MANAGEMENT SERVER ACTIONS (HEADER & FOOTER)
 export async function getAdminMenuItemsAction() {
   try {
-    const setting = await db.websiteSettings.findUnique({
-      where: { key: "header_menu" },
-    });
+    const [headerSetting, footerSetting] = await Promise.all([
+      db.websiteSettings.findUnique({ where: { key: "header_menu" } }),
+      db.websiteSettings.findUnique({ where: { key: "footer_menu" } }),
+    ]);
 
-    if (setting && setting.value) {
-      return { success: true, menuItems: setting.value as any[] };
-    }
-
-    // Default Navigation Menu Structure
-    const defaultMenu = [
-      { id: "1", label: "Home", href: "/", order: 1, isEnabled: true },
-      { id: "2", label: "Programs", href: "/programs", order: 2, isEnabled: true },
-      { id: "3", label: "Coaches", href: "/coaches", order: 3, isEnabled: true },
-      { id: "4", label: "About Us", href: "/about", order: 4, isEnabled: true },
-      { id: "5", label: "Success Stories", href: "/success-stories", order: 5, isEnabled: true },
-      { id: "6", label: "Become a Coach", href: "/become-coach", order: 6, isEnabled: true },
-      { id: "7", label: "Contact", href: "/contact", order: 7, isEnabled: true },
+    const defaultHeaderMenu = [
+      { id: "h1", label: "Home", href: "/", order: 1, isEnabled: true },
+      { id: "h2", label: "Programs", href: "/programs", order: 2, isEnabled: true },
+      { id: "h3", label: "Coaches", href: "/coaches", order: 3, isEnabled: true },
+      { id: "h4", label: "About Us", href: "/about", order: 4, isEnabled: true },
+      { id: "h5", label: "Success Stories", href: "/success-stories", order: 5, isEnabled: true },
     ];
 
-    return { success: true, menuItems: defaultMenu };
+    const defaultFooterMenu = [
+      { id: "f1", label: "Home", href: "/", order: 1, isEnabled: true },
+      { id: "f2", label: "All Programs", href: "/programs", order: 2, isEnabled: true },
+      { id: "f3", label: "Master Coaches", href: "/coaches", order: 3, isEnabled: true },
+      { id: "f4", label: "About Academy", href: "/about", order: 4, isEnabled: true },
+      { id: "f5", label: "Success Stories", href: "/success-stories", order: 5, isEnabled: true },
+      { id: "f6", label: "FAQ", href: "/faq", order: 6, isEnabled: true },
+      { id: "f7", label: "Become a Coach", href: "/become-coach", order: 7, isEnabled: true },
+      { id: "f8", label: "Contact Support", href: "/contact", order: 8, isEnabled: true },
+    ];
+
+    return {
+      success: true,
+      headerMenu: (headerSetting?.value as any[]) || defaultHeaderMenu,
+      footerMenu: (footerSetting?.value as any[]) || defaultFooterMenu,
+    };
   } catch (err: any) {
     console.error("getAdminMenuItemsAction error:", err);
-    return { success: false, error: "Failed to load menu items." };
+    return { success: false, error: "Failed to load header and footer menus." };
   }
 }
 
-export async function updateAdminMenuItemsAction(menuItems: any[]) {
+export async function updateAdminMenuItemsAction(headerMenu: any[], footerMenu: any[]) {
   try {
     const session = await auth();
     if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
       return { success: false, error: "Unauthorized access." };
     }
 
-    await db.websiteSettings.upsert({
-      where: { key: "header_menu" },
-      update: { value: menuItems },
-      create: { key: "header_menu", value: menuItems },
-    });
+    await Promise.all([
+      db.websiteSettings.upsert({
+        where: { key: "header_menu" },
+        update: { value: headerMenu },
+        create: { key: "header_menu", value: headerMenu },
+      }),
+      db.websiteSettings.upsert({
+        where: { key: "footer_menu" },
+        update: { value: footerMenu },
+        create: { key: "footer_menu", value: footerMenu },
+      }),
+    ]);
 
     revalidatePath("/", "layout");
-    return { success: true, message: "Website menu navigation updated successfully!" };
+    return { success: true, message: "Header & Footer navigation menus saved successfully!" };
   } catch (err: any) {
     console.error("updateAdminMenuItemsAction error:", err);
     return { success: false, error: "Failed to update menu navigation." };
