@@ -18,7 +18,7 @@ export default function StudentProgramsPage() {
   React.useEffect(() => {
     async function loadPrograms() {
       const res = await getStudentEnrollmentAction();
-      if (res && res.isEnrolled && res.enrollments && res.enrollments.length > 0) {
+      if (res && res.enrollments && res.enrollments.length > 0) {
         setEnrolledCourses(res.enrollments);
       } else if (searchParams.get("enrolled") === "true" || searchParams.get("enrollment") === "success") {
         setEnrolledCourses([
