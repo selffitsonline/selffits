@@ -13,6 +13,7 @@ import {
   Edit,
   Eye,
   EyeOff,
+  RotateCcw,
 } from "lucide-react";
 import { getAdminProgramsCatalogAction, updateAdminProgramsCatalogAction } from "@/actions/admin.actions";
 
@@ -462,6 +463,40 @@ const FULL_HIIT_DATA = [
   },
 ];
 
+// Helper to ensure all 15 courses are merged into state
+function mergeWithFullDefaults(storedCatalog: any) {
+  const mergedMma = { ...FULL_MMA_DATA };
+  const mergedHiit = [...FULL_HIIT_DATA];
+
+  if (!storedCatalog) {
+    return { mmaData: mergedMma, hiitData: mergedHiit };
+  }
+
+  // Merge MMA Categories (kids, adults, ladies)
+  const subCats = ["kids", "adults", "ladies"] as const;
+  subCats.forEach((catKey) => {
+    const defaultCourses = FULL_MMA_DATA[catKey].courses;
+    const storedCourses = storedCatalog.mmaData?.[catKey]?.courses || [];
+
+    // Map existing stored courses, then append any missing default course IDs
+    const existingIds = new Set(storedCourses.map((c: any) => c.id));
+    const missingDefaults = defaultCourses.filter((c: any) => !existingIds.has(c.id));
+
+    mergedMma[catKey] = {
+      ...FULL_MMA_DATA[catKey],
+      courses: [...storedCourses, ...missingDefaults],
+    };
+  });
+
+  // Merge HIIT Challenges
+  const storedHiit = storedCatalog.hiitData || [];
+  const existingHiitIds = new Set(storedHiit.map((c: any) => c.id));
+  const missingHiit = FULL_HIIT_DATA.filter((c: any) => !existingHiitIds.has(c.id));
+  const mergedHiitFinal = [...storedHiit, ...missingHiit];
+
+  return { mmaData: mergedMma, hiitData: mergedHiitFinal };
+}
+
 export function AdminProgramsView() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -479,10 +514,10 @@ export function AdminProgramsView() {
     async function loadCatalog() {
       try {
         const res = await getAdminProgramsCatalogAction();
-        if (res && res.success && res.catalog) {
-          const cat = res.catalog as any;
-          if (cat.mmaData) setMmaData(cat.mmaData);
-          if (cat.hiitData) setHiitData(cat.hiitData);
+        if (res && res.success) {
+          const merged = mergeWithFullDefaults(res.catalog);
+          setMmaData(merged.mmaData);
+          setHiitData(merged.hiitData);
         }
       } catch (err) {
         console.error("Failed to load catalog:", err);
@@ -492,6 +527,13 @@ export function AdminProgramsView() {
     }
     loadCatalog();
   }, []);
+
+  const handleResetToDefaults = () => {
+    setMmaData(FULL_MMA_DATA);
+    setHiitData(FULL_HIIT_DATA);
+    setEditingCourse(null);
+    setMsg({ type: "success", text: "Reset catalog to all 15 default courses! Click 'Publish Catalog Updates' to save." });
+  };
 
   const handleSaveCatalog = async () => {
     setIsSaving(true);
@@ -666,7 +708,16 @@ export function AdminProgramsView() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={handleResetToDefaults}
+              className="px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white font-bold text-xs transition-all flex items-center gap-1.5 cursor-pointer"
+              title="Reset catalog to default 15 courses"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-amber-400" /> Reset All 15 Courses
+            </button>
+
             <button
               type="button"
               onClick={handleAddCourse}
@@ -712,7 +763,7 @@ export function AdminProgramsView() {
                 activeTab === "mma" ? "bg-[#E50914] text-white shadow-lg shadow-[#E50914]/25" : "text-gray-400 hover:text-white"
               }`}
             >
-              <Award className="w-4 h-4" /> Mixed Martial Arts ({mmaSubCat === "kids" ? "4 Courses" : mmaSubCat === "adults" ? "4 Courses" : "4 Courses"})
+              <Award className="w-4 h-4" /> Mixed Martial Arts
             </button>
 
             <button
@@ -725,7 +776,7 @@ export function AdminProgramsView() {
                 activeTab === "hiit" ? "bg-[#E50914] text-white shadow-lg shadow-[#E50914]/25" : "text-gray-400 hover:text-white"
               }`}
             >
-              <Sparkles className="w-4 h-4" /> HIIT & Weight Loss Challenges (3 Courses)
+              <Sparkles className="w-4 h-4" /> HIIT & Weight Loss Challenges ({hiitData.length} Courses)
             </button>
           </div>
 
@@ -734,9 +785,9 @@ export function AdminProgramsView() {
             <div className="flex items-center gap-2 bg-[#0F1117] p-1.5 rounded-xl border border-white/10">
               {(
                 [
-                  { label: "Kids (4 Courses)", key: "kids" },
-                  { label: "Adults (4 Courses)", key: "adults" },
-                  { label: "Ladies Only (4 Courses)", key: "ladies" },
+                  { label: `Kids (${(mmaData.kids?.courses || []).length} Courses)`, key: "kids" },
+                  { label: `Adults (${(mmaData.adults?.courses || []).length} Courses)`, key: "adults" },
+                  { label: `Ladies Only (${(mmaData.ladies?.courses || []).length} Courses)`, key: "ladies" },
                 ] as const
               ).map((sub) => (
                 <button
