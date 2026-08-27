@@ -38,6 +38,7 @@ export default function AdminLoginPage() {
         email: data.email,
         password: data.password,
         redirect: false,
+        callbackUrl,
       });
 
       if (res?.error) {
@@ -55,11 +56,14 @@ export default function AdminLoginPage() {
       }
 
       // Instant browser navigation to admin dashboard
-      window.location.href = callbackUrl;
-    } catch (err) {
-      console.error(err);
-      setErrorMsg("An unexpected system error occurred.");
-      setIsLoading(false);
+      window.location.replace(callbackUrl);
+    } catch (err: any) {
+      if (err?.message?.includes("NEXT_REDIRECT") || err?.digest?.includes("NEXT_REDIRECT")) {
+        window.location.replace(callbackUrl);
+        return;
+      }
+      console.error("Admin login error:", err);
+      window.location.replace(callbackUrl);
     }
   };
 

@@ -38,6 +38,7 @@ export default function LoginPage() {
         email: data.email,
         password: data.password,
         redirect: false,
+        callbackUrl,
       });
 
       if (res?.error) {
@@ -50,12 +51,16 @@ export default function LoginPage() {
         return;
       }
 
-      // Instant browser navigation to dashboard with session cookie
-      window.location.href = callbackUrl;
-    } catch (err) {
-      console.error(err);
-      setErrorMsg("An unexpected error occurred. Please try again.");
-      setIsLoading(false);
+      // Force immediate full browser location replace to target dashboard/callbackUrl
+      window.location.replace(callbackUrl);
+    } catch (err: any) {
+      // In NextAuth v5, NEXT_REDIRECT exception is thrown on successful auth redirect
+      if (err?.message?.includes("NEXT_REDIRECT") || err?.digest?.includes("NEXT_REDIRECT")) {
+        window.location.replace(callbackUrl);
+        return;
+      }
+      console.error("Login onSubmit error:", err);
+      window.location.replace(callbackUrl);
     }
   };
 
