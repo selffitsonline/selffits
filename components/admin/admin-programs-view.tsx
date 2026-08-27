@@ -9,12 +9,6 @@ import {
   Plus,
   Trash2,
   Award,
-  Layers,
-  Users,
-  Video,
-  Clock,
-  BookOpen,
-  Calendar,
   Sparkles,
   Edit,
   Eye,
@@ -22,8 +16,8 @@ import {
 } from "lucide-react";
 import { getAdminProgramsCatalogAction, updateAdminProgramsCatalogAction } from "@/actions/admin.actions";
 
-// Default Catalog Structure (matching website defaults)
-const DEFAULT_MMA_DATA = {
+// COMPLETE 15-COURSE DEFAULT CATALOG MATCHING THE WEBSITE EXACTLY
+const FULL_MMA_DATA = {
   kids: {
     age: "Age: 08 Years to 20 Years",
     categoryTitle: "Kids Martial Arts",
@@ -84,6 +78,63 @@ const DEFAULT_MMA_DATA = {
           availableTimings: ["03:30 PM to 04:30 PM (GMT)", "05:15 PM to 06:15 PM (GMT)"],
         },
       },
+      {
+        id: "mma-kids-6m",
+        planId: "purple-belt",
+        title: "6 Month Course — Purple Belt",
+        belt: "Purple Belt",
+        beltColor: "purple",
+        priceINR: "13999",
+        priceUSD: "179",
+        provision: "Belt and certificate will be provided.",
+        inclusions: "Everything listed below is included.",
+        platform: "Zoom Classes",
+        classInfo: "1-hour online class — 48 days",
+        isActive: true,
+        curriculum: [
+          "Advanced level meditation",
+          "Advanced level breathing",
+          "5-minute cardio workout",
+          "Advanced level martial arts movements",
+          "Animal stances, catches, blocks, and attacks",
+          "Basic level martial arts fighting",
+        ],
+        schedule: {
+          classesWeekly: "2 days",
+          duration: "90 minutes",
+          availableDays: ["Sunday", "Wednesday", "Saturday"],
+          availableTimings: ["03:30 PM to 05:00 PM (GMT)", "05:15 PM to 06:45 PM (GMT)"],
+        },
+      },
+      {
+        id: "mma-kids-12m",
+        planId: "brown-belt",
+        title: "12 Months Course — Brown Belt",
+        belt: "Brown Belt",
+        beltColor: "brown",
+        priceINR: "24999",
+        priceUSD: "319",
+        provision: "Belt and certificate will be provided.",
+        inclusions: "Everything listed below is included.",
+        platform: "Zoom Classes",
+        classInfo: "1-hour online class — 96 days",
+        isActive: true,
+        curriculum: [
+          "Master level meditation",
+          "Master level breathing",
+          "10-minute cardio workout",
+          "Master level animal stances, catches, blocks, and attacks",
+          "Kung-fu tiger, eagle, and snake movements",
+          "Advanced level martial arts fighting",
+          "Basic level martial arts weapons",
+        ],
+        schedule: {
+          classesWeekly: "2 days",
+          duration: "90 minutes",
+          availableDays: ["Sunday", "Wednesday", "Saturday"],
+          availableTimings: ["03:30 PM to 05:00 PM (GMT)", "05:15 PM to 06:45 PM (GMT)"],
+        },
+      },
     ],
   },
   adults: {
@@ -115,7 +166,96 @@ const DEFAULT_MMA_DATA = {
           classesWeekly: "2 days",
           duration: "45 minutes",
           availableDays: ["Sunday", "Wednesday", "Saturday"],
-          availableTimings: ["07:00 PM to 07:45 PM (GMT)"],
+          morningBatch: ["04:30 AM to 05:15 AM (GMT)", "06:00 AM to 06:45 AM (GMT)"],
+          eveningBatch: ["07:00 PM to 07:45 PM (GMT)", "08:30 PM to 09:15 PM (GMT)"],
+        },
+      },
+      {
+        id: "mma-adults-3m",
+        planId: "blue-belt",
+        title: "3 Months Course — Blue Belt",
+        belt: "Blue Belt",
+        beltColor: "blue",
+        priceINR: "7999",
+        priceUSD: "99",
+        provision: "Certificate will be provided.",
+        inclusions: "Everything listed below is included.",
+        platform: "Zoom Classes",
+        classInfo: "1-hour online class — 24 days",
+        isActive: true,
+        curriculum: [
+          "Breathing exercises for intermediate level",
+          "Dynamic warm-up",
+          "All joints exercises for intermediate level",
+          "Stretching exercises for intermediate level",
+          "Martial arts basic movements for intermediate level",
+          "Martial arts basic blocks, kicks, punches, and push-ups",
+        ],
+        schedule: {
+          classesWeekly: "2 days",
+          duration: "60 minutes",
+          availableDays: ["Sunday", "Wednesday", "Saturday"],
+          morningBatch: ["04:30 AM to 05:30 AM (GMT)", "06:00 AM to 07:00 AM (GMT)"],
+          eveningBatch: ["07:00 PM to 08:00 PM (GMT)", "08:30 PM to 09:30 PM (GMT)"],
+        },
+      },
+      {
+        id: "mma-adults-6m",
+        planId: "purple-belt",
+        title: "6 Month Course — Purple Belt",
+        belt: "Purple Belt",
+        beltColor: "purple",
+        priceINR: "13999",
+        priceUSD: "179",
+        provision: "Belt and certificate will be provided.",
+        inclusions: "Everything listed below is included.",
+        platform: "Zoom Classes",
+        classInfo: "1-hour online class — 48 days",
+        isActive: true,
+        curriculum: [
+          "Advanced level meditation",
+          "Advanced level breathing",
+          "5-minute cardio workout",
+          "Advanced level martial arts movements",
+          "Animal stances, catches, blocks, and attacks",
+          "Basic level martial arts fighting",
+        ],
+        schedule: {
+          classesWeekly: "2 days",
+          duration: "90 minutes",
+          availableDays: ["Sunday", "Wednesday", "Saturday"],
+          morningBatch: ["04:30 AM to 06:00 AM (GMT)", "06:00 AM to 07:30 AM (GMT)"],
+          eveningBatch: ["07:00 PM to 08:30 PM (GMT)", "08:30 PM to 10:00 PM (GMT)"],
+        },
+      },
+      {
+        id: "mma-adults-12m",
+        planId: "brown-belt",
+        title: "12 Months Course — Brown Belt",
+        belt: "Brown Belt",
+        beltColor: "brown",
+        priceINR: "24999",
+        priceUSD: "319",
+        provision: "Belt and certificate will be provided.",
+        inclusions: "Everything listed below is included.",
+        platform: "Zoom Classes",
+        classInfo: "1-hour online class — 96 days",
+        isActive: true,
+        curriculum: [
+          "Master level meditation",
+          "Master level breathing",
+          "10-minute cardio workout",
+          "Master level animal stances, catches, blocks, and attacks",
+          "Kung-fu tiger, eagle, and snake movements",
+          "Advanced level martial arts fighting",
+          "Basic level martial arts weapons",
+        ],
+        schedule: {
+          classesWeekly: "2 days",
+          duration: "90 minutes",
+          availableDays: ["Sunday", "Wednesday", "Saturday"],
+          morningBatch: ["04:30 AM to 06:00 AM (GMT)", "06:00 AM to 07:30 AM (GMT)"],
+          eveningBatch: ["07:00 PM to 08:30 PM (GMT)", "08:30 PM to 10:00 PM (GMT)"],
         },
       },
     ],
@@ -149,14 +289,103 @@ const DEFAULT_MMA_DATA = {
           classesWeekly: "2 days",
           duration: "45 minutes",
           availableDays: ["Sunday", "Wednesday", "Saturday"],
-          availableTimings: ["08:00 AM to 08:45 AM (GMT)"],
+          morningBatch: ["08:00 AM to 08:45 AM (GMT)", "09:30 AM to 10:15 AM (GMT)"],
+          eveningBatch: ["07:00 PM to 07:45 PM (GMT)", "08:30 PM to 09:15 PM (GMT)"],
+        },
+      },
+      {
+        id: "mma-ladies-3m",
+        planId: "blue-belt",
+        title: "3 Months Course — Blue Belt",
+        belt: "Blue Belt",
+        beltColor: "blue",
+        priceINR: "7999",
+        priceUSD: "99",
+        provision: "Certificate will be provided.",
+        inclusions: "Everything listed below is included.",
+        platform: "Zoom Classes",
+        classInfo: "1-hour online class — 24 days",
+        isActive: true,
+        curriculum: [
+          "Breathing exercises for intermediate level",
+          "Dynamic warm-up",
+          "All joints exercises for intermediate level",
+          "Stretching exercises for intermediate level",
+          "Martial arts basic movements for intermediate level",
+          "Martial arts basic blocks, kicks, punches, and push-ups",
+        ],
+        schedule: {
+          classesWeekly: "2 days",
+          duration: "60 minutes",
+          availableDays: ["Sunday", "Wednesday", "Saturday"],
+          morningBatch: ["08:00 AM to 09:00 AM (GMT)", "09:30 AM to 10:30 AM (GMT)"],
+          eveningBatch: ["07:00 PM to 08:00 PM (GMT)", "08:30 PM to 09:30 PM (GMT)"],
+        },
+      },
+      {
+        id: "mma-ladies-6m",
+        planId: "purple-belt",
+        title: "6 Month Course — Purple Belt",
+        belt: "Purple Belt",
+        beltColor: "purple",
+        priceINR: "13999",
+        priceUSD: "179",
+        provision: "Belt and certificate will be provided.",
+        inclusions: "Everything listed below is included.",
+        platform: "Zoom Classes",
+        classInfo: "1-hour online class — 48 days",
+        isActive: true,
+        curriculum: [
+          "Advanced level meditation",
+          "Advanced level breathing",
+          "5-minute cardio workout",
+          "Advanced level martial arts movements",
+          "Animal stances, catches, blocks, and attacks",
+          "Basic level martial arts fighting",
+        ],
+        schedule: {
+          classesWeekly: "2 days",
+          duration: "90 minutes",
+          availableDays: ["Sunday", "Wednesday", "Saturday"],
+          morningBatch: ["08:00 AM to 09:30 AM (GMT)", "09:30 AM to 11:00 AM (GMT)"],
+          eveningBatch: ["07:00 PM to 08:30 PM (GMT)", "08:30 PM to 10:00 PM (GMT)"],
+        },
+      },
+      {
+        id: "mma-ladies-12m",
+        planId: "brown-belt",
+        title: "12 Months Course — Brown Belt",
+        belt: "Brown Belt",
+        beltColor: "brown",
+        priceINR: "24999",
+        priceUSD: "319",
+        provision: "Belt and certificate will be provided.",
+        inclusions: "Everything listed below is included.",
+        platform: "Zoom Classes",
+        classInfo: "1-hour online class — 96 days",
+        isActive: true,
+        curriculum: [
+          "Master level meditation",
+          "Master level breathing",
+          "10-minute cardio workout",
+          "Master level animal stances, catches, blocks, and attacks",
+          "Kung-fu tiger, eagle, and snake movements",
+          "Advanced level martial arts fighting",
+          "Basic level martial arts weapons",
+        ],
+        schedule: {
+          classesWeekly: "2 days",
+          duration: "90 minutes",
+          availableDays: ["Sunday", "Wednesday", "Saturday"],
+          morningBatch: ["08:00 AM to 09:30 AM (GMT)", "09:30 AM to 11:00 AM (GMT)"],
+          eveningBatch: ["07:00 PM to 08:30 PM (GMT)", "08:30 PM to 10:00 PM (GMT)"],
         },
       },
     ],
   },
 };
 
-const DEFAULT_HIIT_DATA = [
+const FULL_HIIT_DATA = [
   {
     id: "hiit-8d",
     planId: "challenge-8",
@@ -172,10 +401,62 @@ const DEFAULT_HIIT_DATA = [
       "Light and easy warm-up sessions",
       "2 days quick full body dynamic workout",
       "3 days back-to-back progressive challenge",
+      "3 days high-volume fat-burning and strengthening challenge",
     ],
     schedule: {
       classesWeekly: "2 days",
       availableDays: ["Sunday", "Wednesday"],
+      timing: "03:30 PM to 04:30 PM (GMT)",
+    },
+  },
+  {
+    id: "hiit-24d",
+    planId: "challenge-24",
+    title: "24 Days Challenge for Kids",
+    priceINR: "3999",
+    priceUSD: "49",
+    inclusions: "Everything listed below is included.",
+    platform: "Zoom Classes",
+    classInfo: "1-hour online class — 24 days",
+    isActive: true,
+    program: [
+      "Advanced level meditation and breathing exercises",
+      "Light and easy warm-up sessions",
+      "2 days quick full body dynamic workout",
+      "3 days back-to-back progressive challenge",
+      "3 days high-volume fat-burning and strengthening challenge",
+      "8 days fat loss and cardio workouts",
+      "8 days intense calorie-burning workouts",
+    ],
+    schedule: {
+      classesWeekly: "2 days",
+      timing: "03:30 PM to 04:30 PM (GMT)",
+    },
+  },
+  {
+    id: "hiit-48d",
+    planId: "challenge-48",
+    title: "48 Days Challenge for Kids",
+    priceINR: "7999",
+    priceUSD: "99",
+    inclusions: "Everything listed below is included.",
+    platform: "Zoom Classes",
+    classInfo: "1-hour online class — 48 days",
+    isActive: true,
+    program: [
+      "Advanced level meditation and breathing exercises",
+      "Light and easy warm-up sessions",
+      "2 days quick full body dynamic workout",
+      "3 days back-to-back progressive challenge",
+      "3 days high-volume fat-burning and strengthening challenge",
+      "8 days fat loss and cardio workouts",
+      "8 days intense calorie-burning workouts",
+      "8 days intermediate ABC and core",
+      "8 days advanced bodyweight loss challenge",
+      "8 days yoga classes",
+    ],
+    schedule: {
+      classesWeekly: "2 days",
       timing: "03:30 PM to 04:30 PM (GMT)",
     },
   },
@@ -189,8 +470,8 @@ export function AdminProgramsView() {
   const [activeTab, setActiveTab] = useState<"mma" | "hiit">("mma");
   const [mmaSubCat, setMmaSubCat] = useState<"kids" | "adults" | "ladies">("kids");
 
-  const [mmaData, setMmaData] = useState<any>(DEFAULT_MMA_DATA);
-  const [hiitData, setHiitData] = useState<any[]>(DEFAULT_HIIT_DATA);
+  const [mmaData, setMmaData] = useState<any>(FULL_MMA_DATA);
+  const [hiitData, setHiitData] = useState<any[]>(FULL_HIIT_DATA);
 
   const [editingCourse, setEditingCourse] = useState<any | null>(null);
 
@@ -220,7 +501,7 @@ export function AdminProgramsView() {
       const catalogPayload = { mmaData, hiitData };
       const res = await updateAdminProgramsCatalogAction(catalogPayload);
       if (res && res.success) {
-        setMsg({ type: "success", text: "All course catalog updates published successfully to live site!" });
+        setMsg({ type: "success", text: "All 15 course catalog updates published successfully to live website!" });
       } else {
         setMsg({ type: "error", text: res?.error || "Failed to update catalog." });
       }
@@ -363,7 +644,7 @@ export function AdminProgramsView() {
   if (isLoading) {
     return (
       <AdminShell>
-        <div className="p-8 text-center text-gray-400">Loading complete course catalog & pricing...</div>
+        <div className="p-8 text-center text-gray-400">Loading complete 15-course catalog & pricing...</div>
       </AdminShell>
     );
   }
@@ -381,7 +662,7 @@ export function AdminProgramsView() {
               Complete Course & Program Pricing Management
             </h1>
             <p className="text-xs text-gray-400 mt-1">
-              Add new courses, edit titles, belt ranks, INR & USD pricing, curriculum topics, class formats, and schedules.
+              Pre-loaded with all 15 courses across Kids (4), Adults (4), Ladies Only (4), and HIIT Weight Loss (3).
             </p>
           </div>
 
@@ -431,7 +712,7 @@ export function AdminProgramsView() {
                 activeTab === "mma" ? "bg-[#E50914] text-white shadow-lg shadow-[#E50914]/25" : "text-gray-400 hover:text-white"
               }`}
             >
-              <Award className="w-4 h-4" /> Mixed Martial Arts
+              <Award className="w-4 h-4" /> Mixed Martial Arts ({mmaSubCat === "kids" ? "4 Courses" : mmaSubCat === "adults" ? "4 Courses" : "4 Courses"})
             </button>
 
             <button
@@ -444,7 +725,7 @@ export function AdminProgramsView() {
                 activeTab === "hiit" ? "bg-[#E50914] text-white shadow-lg shadow-[#E50914]/25" : "text-gray-400 hover:text-white"
               }`}
             >
-              <Sparkles className="w-4 h-4" /> HIIT & Weight Loss Challenges
+              <Sparkles className="w-4 h-4" /> HIIT & Weight Loss Challenges (3 Courses)
             </button>
           </div>
 
@@ -453,9 +734,9 @@ export function AdminProgramsView() {
             <div className="flex items-center gap-2 bg-[#0F1117] p-1.5 rounded-xl border border-white/10">
               {(
                 [
-                  { label: "Kids", key: "kids" },
-                  { label: "Adults", key: "adults" },
-                  { label: "Ladies Only", key: "ladies" },
+                  { label: "Kids (4 Courses)", key: "kids" },
+                  { label: "Adults (4 Courses)", key: "adults" },
+                  { label: "Ladies Only (4 Courses)", key: "ladies" },
                 ] as const
               ).map((sub) => (
                 <button
