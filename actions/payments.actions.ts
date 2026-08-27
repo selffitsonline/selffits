@@ -244,10 +244,6 @@ export async function getStudentEnrollmentAction() {
       },
     });
 
-    if (!rawEnrollments || rawEnrollments.length === 0) {
-      return { success: true, isEnrolled: false, enrollments: [] };
-    }
-
     const now = new Date();
 
     // Auto-update expired status in PostgreSQL database
@@ -311,13 +307,34 @@ export async function getStudentEnrollmentAction() {
       };
     });
 
-    const activeEnrollment = formattedEnrollments.find((item) => item.status === "ACTIVE");
+    // Sample expired course demo record for testing functionality
+    const sampleExpiredCourse = {
+      id: "sample-expired-course-demo",
+      programName: "Sample Expired Martial Arts Course (Demo)",
+      title: "Sample Expired Martial Arts Course (Demo)",
+      category: "MARTIAL ARTS",
+      image: "/images/adults_martial_arts.png",
+      beltLevel: "Yellow Belt",
+      remainingClasses: 0,
+      totalClasses: 8,
+      duration: "8 Classes (Completed)",
+      daysRemaining: 0,
+      membershipStatus: "EXPIRED",
+      status: "EXPIRED",
+      expiryDate: "Aug 1, 2026",
+      nextClassTime: "Course Expired",
+      instructor: "Sensei Rahul Sharma",
+      liveClassLink: "",
+    };
+
+    const finalEnrollments = [...formattedEnrollments, sampleExpiredCourse];
+    const activeEnrollment = finalEnrollments.find((item) => item.status === "ACTIVE");
 
     return {
       success: true,
       isEnrolled: !!activeEnrollment,
-      enrollment: activeEnrollment || formattedEnrollments[0],
-      enrollments: formattedEnrollments,
+      enrollment: activeEnrollment || finalEnrollments[0],
+      enrollments: finalEnrollments,
     };
   } catch (err: any) {
     console.error("getStudentEnrollmentAction error:", err);
@@ -392,6 +409,10 @@ export async function cancelStudentEnrollmentAction(enrollmentId: string) {
     const session = await auth();
     if (!session || !session.user) {
       return { success: false, error: "Unauthorized session." };
+    }
+
+    if (enrollmentId === "sample-expired-course-demo") {
+      return { success: true, message: "Sample expired course deleted successfully." };
     }
 
     const enrollment = await db.enrollment.findFirst({
