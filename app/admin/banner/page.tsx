@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
-import Image from "next/image";
+import React, { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Image as ImageIcon, Save, CheckCircle2, AlertCircle, Plus, Trash2, Upload, Layers, Tag } from "lucide-react";
 import { getAdminBannerContentAction, updateAdminBannerContentAction, uploadBannerImageAction } from "@/actions/admin.actions";
@@ -14,9 +13,6 @@ export default function AdminBannerManagementPage() {
 
   const [slides, setSlides] = useState<any[]>([]);
   const [activeSlideIndex, setActiveSlideIndex] = useState(0);
-
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const [targetSlideIdForUpload, setTargetSlideIdForUpload] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadBanner() {
@@ -69,56 +65,39 @@ export default function AdminBannerManagementPage() {
     );
   };
 
-  const TriggerImageUpload = (slideId: string) => {
-    setTargetSlideIdForUpload(slideId);
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleDirectFileUpload = (slideId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !targetSlideIdForUpload) return;
+    if (!file) return;
 
-    const slideId = targetSlideIdForUpload;
     setUploadingSlideId(slideId);
     setMsg(null);
 
-    try {
-      // 1. Read file as Data URL on client for 100% instant preview and Vercel compatibility
-      const reader = new FileReader();
-      reader.onload = async () => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (reader.result) {
         const dataUrl = reader.result as string;
-        if (dataUrl) {
-          handleUpdateSlide(slideId, "imageUrl", dataUrl);
-          setMsg({ type: "success", text: "Image file uploaded and applied to banner slide!" });
-        }
-        setUploadingSlideId(null);
-        setTargetSlideIdForUpload(null);
-      };
-      reader.onerror = () => {
-        setMsg({ type: "error", text: "Failed to read selected image file." });
-        setUploadingSlideId(null);
-        setTargetSlideIdForUpload(null);
-      };
-      reader.readAsDataURL(file);
-
-      // 2. Also attempt server storage upload
-      const formData = new FormData();
-      formData.append("file", file);
-      uploadBannerImageAction(formData)
-        .then((res) => {
-          if (res && res.success && res.url) {
-            handleUpdateSlide(slideId, "imageUrl", res.url);
-          }
-        })
-        .catch(() => {});
-    } catch (err: any) {
-      console.error("Image upload error:", err);
-      setMsg({ type: "error", text: "Failed to process image file." });
+        handleUpdateSlide(slideId, "imageUrl", dataUrl);
+        setMsg({ type: "success", text: "Image file uploaded and applied to banner slide!" });
+      }
       setUploadingSlideId(null);
-      setTargetSlideIdForUpload(null);
-    }
+    };
+    reader.onerror = () => {
+      setMsg({ type: "error", text: "Failed to read selected image file." });
+      setUploadingSlideId(null);
+    };
+    reader.readAsDataURL(file);
+
+    // Background server storage upload
+    const formData = new FormData();
+    formData.append("file", file);
+    uploadBannerImageAction(formData)
+      .then((res) => {
+        if (res && res.success && res.url) {
+          handleUpdateSlide(slideId, "imageUrl", res.url);
+        }
+      })
+      .catch(() => {});
+
     e.target.value = "";
   };
 
@@ -152,15 +131,6 @@ export default function AdminBannerManagementPage() {
   return (
     <AdminShell>
       <div className="space-y-6 max-w-5xl mx-auto">
-        {/* Hidden File Input */}
-        <input
-          type="file"
-          ref={fileInputRef}
-          onChange={handleFileChange}
-          accept="image/*"
-          className="hidden"
-        />
-
         {/* Title & Actions */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
@@ -380,21 +350,27 @@ export default function AdminBannerManagementPage() {
                     placeholder="Image URL or Path (e.g. /images/hero1.jpg)"
                   />
 
-                  <button
-                    type="button"
-                    onClick={() => TriggerImageUpload(currentSlide.id)}
-                    disabled={uploadingSlideId === currentSlide.id}
-                    className="px-5 py-2.5 rounded-xl bg-[#0080FF] hover:bg-[#0080FF]/80 text-white font-extrabold text-xs transition-all shadow-md flex items-center justify-center gap-2 shrink-0 cursor-pointer disabled:opacity-50"
+                  <input
+                    type="file"
+                    id={`file-input-${currentSlide.id}`}
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleDirectFileUpload(currentSlide.id, e)}
+                  />
+
+                  <label
+                    htmlFor={`file-input-${currentSlide.id}`}
+                    className="px-5 py-2.5 rounded-xl bg-[#0080FF] hover:bg-[#0080FF]/80 text-white font-extrabold text-xs transition-all shadow-md flex items-center justify-center gap-2 shrink-0 cursor-pointer active:scale-95"
                   >
                     <Upload className="w-4 h-4" />
                     {uploadingSlideId === currentSlide.id ? "Uploading Image..." : "Upload Image File"}
-                  </button>
+                  </label>
                 </div>
 
                 {/* Image Preview Thumbnail */}
                 {currentSlide.imageUrl && (
                   <div className="relative w-full h-44 rounded-xl overflow-hidden border border-white/10 bg-[#0F1117] mt-2 shadow-inner">
-                    {/* Standard HTML img tag to guarantee Data URL & server URL preview rendering */}
+                    {/* Standard HTML img tag for 0ms rendering */}
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={currentSlide.imageUrl}
