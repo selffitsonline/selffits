@@ -80,23 +80,22 @@ export async function registerStudentAction(
       return user;
     });
 
-    // Generate Verification Token (expires in 24 hrs)
-    const token = crypto.randomBytes(32).toString("hex");
-    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
-
-    await db.verificationToken.create({
-      data: {
-        email: normalizedEmail,
-        token,
-        expires,
-      },
-    });
-
-    // Send Verification Email via Resend
-    const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-    const verificationUrl = `${baseUrl}/verify-email?token=${token}`;
-
+    // Safe optional verification token generation & email dispatch
     try {
+      const token = crypto.randomBytes(32).toString("hex");
+      const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+      await db.verificationToken.create({
+        data: {
+          email: normalizedEmail,
+          token,
+          expires,
+        },
+      });
+
+      const baseUrl = process.env.NEXTAUTH_URL || "https://selffits.vercel.app";
+      const verificationUrl = `${baseUrl}/verify-email?token=${token}`;
+
       await resend.emails.send({
         from: EMAIL_FROM,
         to: normalizedEmail,
@@ -106,19 +105,20 @@ export async function registerStudentAction(
           verificationUrl,
         }),
       });
-    } catch (resendErr) {
-      console.error("Failed to send verification email via Resend:", resendErr);
+    } catch (emailErr) {
+      console.error("Non-blocking verification email/token error:", emailErr);
     }
 
     return {
       success: true,
-      message: "Registration successful! Please check your email inbox to verify your account before logging in.",
+      message: "Registration successful! Your student account has been created.",
     };
   } catch (err: any) {
     console.error("registerStudentAction error:", err);
+    const detailMsg = err?.message || "Internal database processing error";
     return {
       success: false,
-      error: "An unexpected error occurred during registration. Please try again.",
+      error: `Registration error: ${detailMsg.slice(0, 150)}`,
     };
   }
 }
