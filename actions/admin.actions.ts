@@ -181,18 +181,22 @@ export async function getAdminBannerContentAction() {
       where: { key: "homepage_banner" },
     });
 
-    if (setting && setting.value) {
-      return { success: true, banner: setting.value as any };
-    }
-
     const defaultBanner = {
-      title: "Master Authentic Martial Arts & Virtual Fitness",
-      subtitle: "Join India's premier online martial arts academy. Live interactive training with certified master instructors from the comfort of your home.",
-      ctaText: "Enroll & Start Training",
-      ctaLink: "/programs",
-      imageUrl: "/images/hero_banner.jpg",
+      badgeText: "ONLINE FITNESS & MARTIAL ARTS ACADEMY",
+      titleMain: "Train Anywhere.",
+      titleHighlight: "Transform Yourself!",
+      subtitle: "Join live, interactive Martial Arts Belts & Fitness Transformation classes from anywhere in the world. Real-time form correction, official belt certifications, and world-class instructors.",
+      primaryCtaText: "Join Academy Now",
+      primaryCtaLink: "/programs",
+      secondaryCtaText: "View Programs",
+      secondaryCtaLink: "/programs",
+      imageUrl: "/images/hero1.jpg",
       isEnabled: true,
     };
+
+    if (setting && setting.value) {
+      return { success: true, banner: { ...defaultBanner, ...(setting.value as object) } };
+    }
 
     return { success: true, banner: defaultBanner };
   } catch (err: any) {

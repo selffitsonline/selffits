@@ -24,6 +24,8 @@ import { FAQAccordion } from "@/components/public/faq-accordion";
 import { CoachesCarousel } from "@/components/public/coaches-carousel";
 import { ScrollProgressButton } from "@/components/public/scroll-progress-button";
 
+import { getAdminBannerContentAction } from "@/actions/admin.actions";
+
 const HERO_IMAGES = [
   "/images/hero1.jpg",
   "/images/hero2.jpg",
@@ -31,6 +33,32 @@ const HERO_IMAGES = [
 
 export default function HomePage() {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [heroData, setHeroData] = useState({
+    badgeText: "ONLINE FITNESS & MARTIAL ARTS ACADEMY",
+    titleMain: "Train Anywhere.",
+    titleHighlight: "Transform Yourself!",
+    subtitle: "Join live, interactive Martial Arts Belts & Fitness Transformation classes from anywhere in the world. Real-time form correction, official belt certifications, and world-class instructors.",
+    primaryCtaText: "Join Academy Now",
+    primaryCtaLink: "/programs",
+    secondaryCtaText: "View Programs",
+    secondaryCtaLink: "/programs",
+    imageUrl: "/images/hero1.jpg",
+    isEnabled: true,
+  });
+
+  useEffect(() => {
+    async function loadBanner() {
+      try {
+        const res = await getAdminBannerContentAction();
+        if (res && res.success && res.banner) {
+          setHeroData((prev) => ({ ...prev, ...res.banner }));
+        }
+      } catch (err) {
+        console.error("Hero banner fetch error:", err);
+      }
+    }
+    loadBanner();
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -170,35 +198,35 @@ export default function HomePage() {
           {/* Overlaid Hero Content Container - Large Text with Tight Line Spacing */}
           <div className="max-w-4xl mx-auto relative z-10 w-full px-4 sm:px-6 text-center">
             <div className="max-w-2xl mx-auto space-y-2.5 sm:space-y-3 flex flex-col items-center">
-              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#0A0B0E]/80 border border-[#E50914]/60 text-[#E50914] text-xs sm:text-sm font-semibold uppercase tracking-wider backdrop-blur-md shadow-lg">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#0A0B0E]/80 border border-[#E50914]/60 text-[#E50914] text-xs sm:text-sm font-bold uppercase tracking-wider backdrop-blur-md shadow-lg">
                 <span className="w-2 h-2 rounded-full bg-[#10B981] animate-ping" />
-                Online Fitness & Martial Arts Academy
+                {heroData.badgeText}
               </div>
 
               <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[0.98] font-[family-name:var(--font-outfit)] text-white">
-                Train Anywhere. <br />
+                {heroData.titleMain} <br />
                 <span className="text-[#E50914]">
-                  Transform Yourself.
+                  {heroData.titleHighlight}
                 </span>
               </h1>
 
               <p className="text-gray-100 text-base sm:text-lg font-semibold max-w-xl mx-auto leading-normal">
-                Join live, interactive Martial Arts Belts & Fitness Transformation classes from anywhere in the world. Real-time form correction, official belt certifications, and world-class instructors.
+                {heroData.subtitle}
               </p>
 
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-3 w-full max-w-xl mx-auto">
                 <Link
-                  href="/programs"
+                  href={heroData.primaryCtaLink || "/programs"}
                   className="px-8 py-3.5 sm:px-9 sm:py-4 rounded-2xl bg-gradient-to-r from-[#E50914] to-[#FF1E27] text-white font-extrabold text-base sm:text-lg hover:opacity-95 transition-all shadow-2xl shadow-[#E50914]/50 hover:translate-y-[-2px] flex items-center justify-center gap-2.5 text-center whitespace-nowrap shrink-0 tracking-wide w-full sm:w-auto"
                 >
-                  Join Academy Now
+                  {heroData.primaryCtaText}
                   <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" />
                 </Link>
                 <Link
-                  href="/programs"
+                  href={heroData.secondaryCtaLink || "/programs"}
                   className="px-8 py-3.5 sm:px-9 sm:py-4 rounded-2xl bg-[#0A0B0E]/85 backdrop-blur-md border border-white/35 text-white font-bold text-base sm:text-lg hover:bg-white/20 transition-all text-center whitespace-nowrap shrink-0 tracking-wide w-full sm:w-auto shadow-xl"
                 >
-                  View Programs
+                  {heroData.secondaryCtaText}
                 </Link>
               </div>
             </div>
