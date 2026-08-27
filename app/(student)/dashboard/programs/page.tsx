@@ -8,36 +8,53 @@ import { StudentShell } from "@/components/student/student-shell";
 import { Video, Calendar, User, ArrowRight, ShieldCheck, BookOpen, Trash2, AlertTriangle, X } from "lucide-react";
 
 import { getStudentEnrollmentAction, cancelStudentEnrollmentAction } from "@/actions/payments.actions";
+import { fetchStudentEnrollmentWithCache, clearStudentEnrollmentCache } from "@/lib/enrollment-cache";
+import { ProgramsSkeleton } from "@/components/student/programs-skeleton";
 
 export default function StudentProgramsPage() {
   const searchParams = useSearchParams();
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [enrolledCourses, setEnrolledCourses] = useState<any[]>([]);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
   const [courseToDelete, setCourseToDelete] = useState<{ id: string; title: string } | null>(null);
 
   React.useEffect(() => {
+    let isMounted = true;
     async function loadPrograms() {
-      const res = await getStudentEnrollmentAction();
-      if (res && res.enrollments && res.enrollments.length > 0) {
-        setEnrolledCourses(res.enrollments);
-      } else if (searchParams.get("enrolled") === "true" || searchParams.get("enrollment") === "success") {
-        setEnrolledCourses([
-          {
-            id: "purchased-belt-course",
-            title: "Martial Arts & Fitness Program",
-            category: "MARTIAL ARTS",
-            image: "/images/adults_martial_arts.png",
-            duration: "Active Enrollment",
-            instructor: "Sensei Rahul Sharma",
-            remainingClasses: 24,
-            totalClasses: 24,
-            status: "ACTIVE",
-            expiryDate: "Active",
-          },
-        ]);
+      try {
+        const res = await fetchStudentEnrollmentWithCache();
+        if (isMounted) {
+          if (res && res.enrollments && res.enrollments.length > 0) {
+            setEnrolledCourses(res.enrollments);
+          } else if (searchParams.get("enrolled") === "true" || searchParams.get("enrollment") === "success") {
+            setEnrolledCourses([
+              {
+                id: "purchased-belt-course",
+                title: "Martial Arts & Fitness Program",
+                category: "MARTIAL ARTS",
+                image: "/images/adults_martial_arts.png",
+                duration: "Active Enrollment",
+                instructor: "Sensei Rahul Sharma",
+                remainingClasses: 24,
+                totalClasses: 24,
+                status: "ACTIVE",
+                expiryDate: "Active",
+              },
+            ]);
+          }
+        }
+      } catch (err) {
+        console.error("Programs load error:", err);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     }
     loadPrograms();
+    return () => {
+      isMounted = false;
+    };
   }, [searchParams]);
 
   const confirmDeleteProgram = async () => {
@@ -46,6 +63,7 @@ export default function StudentProgramsPage() {
     setIsDeleting(true);
     const res = await cancelStudentEnrollmentAction(courseToDelete.id);
     if (res.success) {
+      clearStudentEnrollmentCache();
       setEnrolledCourses((prev) => prev.filter((item) => item.id !== courseToDelete.id));
       setCourseToDelete(null);
     } else {
@@ -53,6 +71,10 @@ export default function StudentProgramsPage() {
     }
     setIsDeleting(false);
   };
+
+  if (isLoading) {
+    return <ProgramsSkeleton />;
+  }
 
   return (
     <StudentShell>

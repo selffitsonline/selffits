@@ -246,16 +246,19 @@ export async function getStudentEnrollmentAction() {
 
     const now = new Date();
 
-    // Auto-update expired status in PostgreSQL database
-    for (const item of rawEnrollments) {
-      const isExpired = new Date(item.endDate) < now || item.remainingClasses <= 0;
-      if (isExpired && item.status === "ACTIVE") {
-        await db.enrollment.update({
-          where: { id: item.id },
-          data: { status: "EXPIRED" },
-        });
-        item.status = "EXPIRED";
-      }
+    // Batch update expired status in PostgreSQL database in a single query
+    const expiredIds = rawEnrollments
+      .filter((item) => (new Date(item.endDate) < now || item.remainingClasses <= 0) && item.status === "ACTIVE")
+      .map((item) => item.id);
+
+    if (expiredIds.length > 0) {
+      await db.enrollment.updateMany({
+        where: { id: { in: expiredIds } },
+        data: { status: "EXPIRED" },
+      });
+      rawEnrollments.forEach((item) => {
+        if (expiredIds.includes(item.id)) item.status = "EXPIRED";
+      });
     }
 
     const formattedEnrollments = rawEnrollments.map((item) => {

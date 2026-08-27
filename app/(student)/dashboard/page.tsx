@@ -20,7 +20,8 @@ import {
   HelpCircle,
 } from "lucide-react";
 
-import { getStudentEnrollmentAction } from "@/actions/payments.actions";
+import { fetchStudentEnrollmentWithCache } from "@/lib/enrollment-cache";
+import { DashboardSkeleton } from "@/components/student/dashboard-skeleton";
 
 export default function StudentDashboardPage() {
   const { data: session } = useSession();
@@ -28,6 +29,7 @@ export default function StudentDashboardPage() {
   const userName = session?.user?.name || "Student";
   const userEmail = session?.user?.email;
 
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isEnrolled, setIsEnrolled] = useState<boolean>(
     () => searchParams.get("enrolled") === "true" || searchParams.get("enrollment") === "success"
   );
@@ -45,18 +47,38 @@ export default function StudentDashboardPage() {
   });
 
   React.useEffect(() => {
+    let isMounted = true;
     async function loadEnrollment() {
       if (searchParams.get("enrolled") === "true" || searchParams.get("enrollment") === "success") {
         setIsEnrolled(true);
       }
-      const res = await getStudentEnrollmentAction();
-      if (res && res.isEnrolled && res.enrollment) {
-        setIsEnrolled(true);
-        setActiveStudentData(res.enrollment);
+      try {
+        const res = await fetchStudentEnrollmentWithCache();
+        if (isMounted) {
+          if (res && res.isEnrolled && res.enrollment) {
+            setIsEnrolled(true);
+            setActiveStudentData(res.enrollment);
+          } else if (!searchParams.get("enrolled") && !searchParams.get("enrollment")) {
+            setIsEnrolled(false);
+          }
+        }
+      } catch (err) {
+        console.error("Dashboard enrollment load error:", err);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     }
     loadEnrollment();
+    return () => {
+      isMounted = false;
+    };
   }, [searchParams]);
+
+  if (isLoading) {
+    return <DashboardSkeleton />;
+  }
 
   return (
     <StudentShell>
