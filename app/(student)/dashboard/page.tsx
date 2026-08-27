@@ -20,19 +20,18 @@ import {
   HelpCircle,
 } from "lucide-react";
 
+import { getStudentEnrollmentAction } from "@/actions/payments.actions";
+
 export default function StudentDashboardPage() {
   const { data: session } = useSession();
   const searchParams = useSearchParams();
   const userName = session?.user?.name || "Student";
   const userEmail = session?.user?.email;
 
-  // Check if student has purchased/enrolled in a course
-  // Newly registered students default to false until they purchase a program
-  const isEnrolledParam = searchParams.get("enrolled");
-  const isEnrolled = isEnrolledParam === "true";
-
-  // Enrolled student details (activated only after course purchase)
-  const activeStudentData = {
+  const [isEnrolled, setIsEnrolled] = useState<boolean>(
+    () => searchParams.get("enrolled") === "true" || searchParams.get("enrollment") === "success"
+  );
+  const [activeStudentData, setActiveStudentData] = useState({
     programName: "Adults Martial Arts - Blue Belt Tier",
     beltLevel: "Blue Belt",
     remainingClasses: 18,
@@ -43,7 +42,21 @@ export default function StudentDashboardPage() {
     nextClassTime: "Today at 7:00 PM IST",
     instructor: "Sensei Rahul Sharma",
     liveClassLink: "https://meet.google.com/selffits-live-class",
-  };
+  });
+
+  React.useEffect(() => {
+    async function loadEnrollment() {
+      if (searchParams.get("enrolled") === "true" || searchParams.get("enrollment") === "success") {
+        setIsEnrolled(true);
+      }
+      const res = await getStudentEnrollmentAction();
+      if (res && res.isEnrolled && res.enrollment) {
+        setIsEnrolled(true);
+        setActiveStudentData(res.enrollment);
+      }
+    }
+    loadEnrollment();
+  }, [searchParams]);
 
   return (
     <StudentShell>

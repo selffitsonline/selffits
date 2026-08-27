@@ -7,27 +7,49 @@ import { useSearchParams } from "next/navigation";
 import { StudentShell } from "@/components/student/student-shell";
 import { Video, Calendar, User, ArrowRight, ShieldCheck, BookOpen } from "lucide-react";
 
+import { getStudentEnrollmentAction } from "@/actions/payments.actions";
+
 export default function StudentProgramsPage() {
   const searchParams = useSearchParams();
-  const isEnrolledParam = searchParams.get("enrolled");
-  const isEnrolled = isEnrolledParam === "true";
+  const [enrolledCourses, setEnrolledCourses] = React.useState<any[]>([]);
 
-  const enrolledCourses = isEnrolled
-    ? [
-        {
-          id: "blue-belt-course",
-          title: "Adults Martial Arts - Blue Belt Tier",
-          category: "MARTIAL ARTS",
-          image: "/images/adults_martial_arts.png",
-          duration: "3 Months (24 Classes)",
-          instructor: "Sensei Rahul Sharma",
-          remainingClasses: 18,
-          totalClasses: 24,
-          status: "ACTIVE",
-          expiryDate: "Oct 15, 2026",
-        },
-      ]
-    : [];
+  React.useEffect(() => {
+    async function loadPrograms() {
+      const res = await getStudentEnrollmentAction();
+      if (res && res.isEnrolled && res.enrollment) {
+        setEnrolledCourses([
+          {
+            id: res.enrollment.id,
+            title: res.enrollment.programName,
+            category: "MARTIAL ARTS",
+            image: "/images/adults_martial_arts.png",
+            duration: `${res.enrollment.totalClasses} Classes`,
+            instructor: res.enrollment.instructor,
+            remainingClasses: res.enrollment.remainingClasses,
+            totalClasses: res.enrollment.totalClasses,
+            status: res.enrollment.membershipStatus,
+            expiryDate: res.enrollment.expiryDate,
+          },
+        ]);
+      } else if (searchParams.get("enrolled") === "true" || searchParams.get("enrollment") === "success") {
+        setEnrolledCourses([
+          {
+            id: "blue-belt-course",
+            title: "Adults Martial Arts - Blue Belt Tier",
+            category: "MARTIAL ARTS",
+            image: "/images/adults_martial_arts.png",
+            duration: "3 Months (24 Classes)",
+            instructor: "Sensei Rahul Sharma",
+            remainingClasses: 18,
+            totalClasses: 24,
+            status: "ACTIVE",
+            expiryDate: "Oct 15, 2026",
+          },
+        ]);
+      }
+    }
+    loadPrograms();
+  }, [searchParams]);
 
   return (
     <StudentShell>

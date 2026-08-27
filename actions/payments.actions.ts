@@ -201,3 +201,61 @@ export async function verifyPaymentSignatureAction(payload: {
     };
   }
 }
+
+export async function getStudentEnrollmentAction() {
+  try {
+    const session = await auth();
+    if (!session || !session.user) {
+      return { success: false, isEnrolled: false };
+    }
+
+    const enrollment = await db.enrollment.findFirst({
+      where: {
+        userId: session.user.id,
+        status: "ACTIVE",
+      },
+      include: {
+        membershipPlan: true,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
+
+    if (!enrollment) {
+      return { success: true, isEnrolled: false };
+    }
+
+    const now = new Date();
+    const endDate = new Date(enrollment.endDate);
+    const diffTime = endDate.getTime() - now.getTime();
+    const daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+
+    const formattedDate = enrollment.endDate.toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+
+    return {
+      success: true,
+      isEnrolled: true,
+      enrollment: {
+        id: enrollment.id,
+        programName: enrollment.membershipPlan?.name || "Adults Martial Arts - Blue Belt Tier",
+        beltLevel: enrollment.membershipPlan?.tierType ? enrollment.membershipPlan.tierType.replace("_", " ") : "Blue Belt",
+        remainingClasses: enrollment.remainingClasses,
+        totalClasses: enrollment.totalClassesGranted,
+        daysRemaining: daysRemaining > 0 ? daysRemaining : 30,
+        membershipStatus: enrollment.status,
+        expiryDate: formattedDate,
+        nextClassTime: "Today at 7:00 PM IST",
+        instructor: "Sensei Rahul Sharma",
+        liveClassLink: "https://meet.google.com/selffits-live-class",
+      },
+    };
+  } catch (err: any) {
+    console.error("getStudentEnrollmentAction error:", err);
+    return { success: false, isEnrolled: false };
+  }
+}
