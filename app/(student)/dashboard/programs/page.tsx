@@ -16,34 +16,21 @@ export default function StudentProgramsPage() {
   React.useEffect(() => {
     async function loadPrograms() {
       const res = await getStudentEnrollmentAction();
-      if (res && res.isEnrolled && res.enrollment) {
-        setEnrolledCourses([
-          {
-            id: res.enrollment.id,
-            title: res.enrollment.programName,
-            category: "MARTIAL ARTS",
-            image: "/images/adults_martial_arts.png",
-            duration: `${res.enrollment.totalClasses} Classes`,
-            instructor: res.enrollment.instructor,
-            remainingClasses: res.enrollment.remainingClasses,
-            totalClasses: res.enrollment.totalClasses,
-            status: res.enrollment.membershipStatus,
-            expiryDate: res.enrollment.expiryDate,
-          },
-        ]);
+      if (res && res.isEnrolled && res.enrollments && res.enrollments.length > 0) {
+        setEnrolledCourses(res.enrollments);
       } else if (searchParams.get("enrolled") === "true" || searchParams.get("enrollment") === "success") {
         setEnrolledCourses([
           {
-            id: "blue-belt-course",
-            title: "Adults Martial Arts - Blue Belt Tier",
+            id: "purchased-belt-course",
+            title: "Martial Arts & Fitness Program",
             category: "MARTIAL ARTS",
             image: "/images/adults_martial_arts.png",
-            duration: "3 Months (24 Classes)",
+            duration: "Active Enrollment",
             instructor: "Sensei Rahul Sharma",
-            remainingClasses: 18,
+            remainingClasses: 24,
             totalClasses: 24,
             status: "ACTIVE",
-            expiryDate: "Oct 15, 2026",
+            expiryDate: "Active",
           },
         ]);
       }

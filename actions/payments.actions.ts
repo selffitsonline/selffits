@@ -110,7 +110,7 @@ export async function verifyPaymentSignatureAction(payload: {
     const endDate = new Date();
     endDate.setMonth(endDate.getMonth() + plan.durationMonths);
 
-    // Find master Program & Plan in database or upsert default
+    // Find master Program & Plan in database matching the exact plan name
     let program = await db.program.findFirst();
     if (!program) {
       program = await db.program.create({
@@ -125,14 +125,20 @@ export async function verifyPaymentSignatureAction(payload: {
     }
 
     let membershipPlan = await db.membershipPlan.findFirst({
-      where: { programId: program.id },
+      where: { name: plan.name },
     });
     if (!membershipPlan) {
       membershipPlan = await db.membershipPlan.create({
         data: {
           programId: program.id,
           name: plan.name,
-          tierType: "BLUE_BELT",
+          tierType: plan.id.includes("yellow")
+            ? "YELLOW_BELT"
+            : plan.id.includes("purple")
+            ? "PURPLE_BELT"
+            : plan.id.includes("brown")
+            ? "BROWN_BELT"
+            : "BLUE_BELT",
           durationMonths: plan.durationMonths,
           totalClasses: plan.totalClasses,
           priceINR: plan.priceINR,
@@ -206,10 +212,10 @@ export async function getStudentEnrollmentAction() {
   try {
     const session = await auth();
     if (!session || !session.user) {
-      return { success: false, isEnrolled: false };
+      return { success: false, isEnrolled: false, enrollments: [] };
     }
 
-    const enrollment = await db.enrollment.findFirst({
+    const rawEnrollments = await db.enrollment.findMany({
       where: {
         userId: session.user.id,
         status: "ACTIVE",
@@ -222,41 +228,54 @@ export async function getStudentEnrollmentAction() {
       },
     });
 
-    if (!enrollment) {
-      return { success: true, isEnrolled: false };
+    if (!rawEnrollments || rawEnrollments.length === 0) {
+      return { success: true, isEnrolled: false, enrollments: [] };
     }
 
     const now = new Date();
-    const endDate = new Date(enrollment.endDate);
-    const diffTime = endDate.getTime() - now.getTime();
-    const daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
 
-    const formattedDate = enrollment.endDate.toLocaleDateString("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
+    const formattedEnrollments = rawEnrollments.map((item) => {
+      const endDate = new Date(item.endDate);
+      const diffTime = endDate.getTime() - now.getTime();
+      const daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+      const formattedDate = item.endDate.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+
+      const name = item.membershipPlan?.name || "Martial Arts & Fitness Program";
+      const isChallenge = name.toLowerCase().includes("challenge") || name.toLowerCase().includes("transformation");
+
+      return {
+        id: item.id,
+        programName: name,
+        title: name,
+        category: isChallenge ? "FITNESS CHALLENGE" : "MARTIAL ARTS",
+        image: isChallenge ? "/images/weight_loss_hiit.png" : "/images/adults_martial_arts.png",
+        beltLevel: item.membershipPlan?.tierType ? item.membershipPlan.tierType.replace("_", " ") : "Belt Tier",
+        remainingClasses: item.remainingClasses,
+        totalClasses: item.totalClassesGranted,
+        duration: `${item.totalClassesGranted} Classes`,
+        daysRemaining: daysRemaining > 0 ? daysRemaining : 30,
+        membershipStatus: item.status,
+        status: item.status,
+        expiryDate: formattedDate,
+        nextClassTime: "Today at 7:00 PM IST",
+        instructor: "Sensei Rahul Sharma",
+        liveClassLink: "https://meet.google.com/selffits-live-class",
+      };
     });
 
     return {
       success: true,
       isEnrolled: true,
-      enrollment: {
-        id: enrollment.id,
-        programName: enrollment.membershipPlan?.name || "Adults Martial Arts - Blue Belt Tier",
-        beltLevel: enrollment.membershipPlan?.tierType ? enrollment.membershipPlan.tierType.replace("_", " ") : "Blue Belt",
-        remainingClasses: enrollment.remainingClasses,
-        totalClasses: enrollment.totalClassesGranted,
-        daysRemaining: daysRemaining > 0 ? daysRemaining : 30,
-        membershipStatus: enrollment.status,
-        expiryDate: formattedDate,
-        nextClassTime: "Today at 7:00 PM IST",
-        instructor: "Sensei Rahul Sharma",
-        liveClassLink: "https://meet.google.com/selffits-live-class",
-      },
+      enrollment: formattedEnrollments[0],
+      enrollments: formattedEnrollments,
     };
   } catch (err: any) {
     console.error("getStudentEnrollmentAction error:", err);
-    return { success: false, isEnrolled: false };
+    return { success: false, isEnrolled: false, enrollments: [] };
   }
 }
 
@@ -276,7 +295,7 @@ export async function createDirectCardEnrollmentAction(
     const endDate = new Date();
     endDate.setMonth(endDate.getMonth() + plan.durationMonths);
 
-    // Find or create Program & MembershipPlan
+    // Find or create Program & MembershipPlan matching exact plan.name
     let program = await db.program.findFirst();
     if (!program) {
       program = await db.program.create({
@@ -291,14 +310,20 @@ export async function createDirectCardEnrollmentAction(
     }
 
     let membershipPlan = await db.membershipPlan.findFirst({
-      where: { programId: program.id },
+      where: { name: plan.name },
     });
     if (!membershipPlan) {
       membershipPlan = await db.membershipPlan.create({
         data: {
           programId: program.id,
           name: plan.name,
-          tierType: "BLUE_BELT",
+          tierType: plan.id.includes("yellow")
+            ? "YELLOW_BELT"
+            : plan.id.includes("purple")
+            ? "PURPLE_BELT"
+            : plan.id.includes("brown")
+            ? "BROWN_BELT"
+            : "BLUE_BELT",
           durationMonths: plan.durationMonths,
           totalClasses: plan.totalClasses,
           priceINR: plan.priceINR,
