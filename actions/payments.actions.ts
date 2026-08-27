@@ -235,7 +235,6 @@ export async function getStudentEnrollmentAction() {
     const rawEnrollments = await db.enrollment.findMany({
       where: {
         userId: session.user.id,
-        status: "ACTIVE",
       },
       include: {
         membershipPlan: true,
@@ -250,6 +249,18 @@ export async function getStudentEnrollmentAction() {
     }
 
     const now = new Date();
+
+    // Auto-update expired status in PostgreSQL database
+    for (const item of rawEnrollments) {
+      const isExpired = new Date(item.endDate) < now || item.remainingClasses <= 0;
+      if (isExpired && item.status === "ACTIVE") {
+        await db.enrollment.update({
+          where: { id: item.id },
+          data: { status: "EXPIRED" },
+        });
+        item.status = "EXPIRED";
+      }
+    }
 
     const formattedEnrollments = rawEnrollments.map((item) => {
       const endDate = new Date(item.endDate);
@@ -290,7 +301,7 @@ export async function getStudentEnrollmentAction() {
         remainingClasses: remainingClasses,
         totalClasses: totalClasses,
         duration: `${totalClasses} Classes`,
-        daysRemaining: daysRemaining > 0 ? daysRemaining : 30,
+        daysRemaining: daysRemaining > 0 ? daysRemaining : 0,
         membershipStatus: item.status,
         status: item.status,
         expiryDate: formattedDate,
@@ -300,10 +311,12 @@ export async function getStudentEnrollmentAction() {
       };
     });
 
+    const activeEnrollment = formattedEnrollments.find((item) => item.status === "ACTIVE");
+
     return {
       success: true,
-      isEnrolled: true,
-      enrollment: formattedEnrollments[0],
+      isEnrolled: !!activeEnrollment,
+      enrollment: activeEnrollment || formattedEnrollments[0],
       enrollments: formattedEnrollments,
     };
   } catch (err: any) {
