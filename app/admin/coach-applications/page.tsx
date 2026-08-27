@@ -2,8 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/admin-shell";
-import { FileText, Download, CheckCircle2, XCircle, Mail, Phone, Calendar, Clock, AlertCircle } from "lucide-react";
+import { AdminCardsSkeleton } from "@/components/admin/admin-skeletons";
+import { FileText, Download, CheckCircle2, XCircle, Mail, Phone, Calendar, AlertCircle } from "lucide-react";
 import { getAdminCoachApplicationsAction, updateCoachApplicationStatusAction } from "@/actions/admin.actions";
+import { fetchAdminDataWithCache, clearAdminCacheKey } from "@/lib/admin-cache";
 
 export default function AdminCoachApplicationsPage() {
   const [applications, setApplications] = useState<any[]>([]);
@@ -11,20 +13,33 @@ export default function AdminCoachApplicationsPage() {
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
     async function loadApps() {
-      const res = await getAdminCoachApplicationsAction();
-      if (res && res.success && res.applications) {
-        setApplications(res.applications);
+      try {
+        const res = await fetchAdminDataWithCache("admin_coach_apps", getAdminCoachApplicationsAction);
+        if (isMounted && res && res.success && res.applications) {
+          setApplications(res.applications);
+        }
+      } catch (err) {
+        console.error("Admin coach apps load error:", err);
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
-      setIsLoading(false);
     }
     loadApps();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleStatusUpdate = async (id: string, newStatus: "APPROVED" | "REJECTED") => {
     setMsg(null);
     const res = await updateCoachApplicationStatusAction(id, newStatus);
     if (res.success) {
+      clearAdminCacheKey("admin_coach_apps");
+      clearAdminCacheKey("admin_coaches");
+      clearAdminCacheKey("admin_dashboard_stats");
+
       setApplications((prev) =>
         prev.map((item) => (item.id === id ? { ...item, status: newStatus } : item))
       );
@@ -35,11 +50,7 @@ export default function AdminCoachApplicationsPage() {
   };
 
   if (isLoading) {
-    return (
-      <AdminShell>
-        <div className="p-8 text-center text-gray-400">Loading coach application registration leads...</div>
-      </AdminShell>
-    );
+    return <AdminCardsSkeleton />;
   }
 
   return (
@@ -67,7 +78,7 @@ export default function AdminCoachApplicationsPage() {
           </div>
         )}
 
-        {applications.length === 0 ? (
+        {!isLoading && applications.length === 0 ? (
           <div className="rounded-3xl p-12 bg-[#14161D] border border-white/10 text-center space-y-3 max-w-md mx-auto">
             <FileText className="w-10 h-10 text-gray-500 mx-auto" />
             <h3 className="text-base font-bold text-white">No Coach Applications Received Yet</h3>

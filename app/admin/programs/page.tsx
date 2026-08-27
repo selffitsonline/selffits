@@ -2,8 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/admin-shell";
-import { BookOpen, Save, CheckCircle2, AlertCircle, DollarSign } from "lucide-react";
+import { AdminCardsSkeleton } from "@/components/admin/admin-skeletons";
+import { Save, CheckCircle2, AlertCircle } from "lucide-react";
 import { getAdminProgramsAction, updateAdminProgramPricingAction } from "@/actions/admin.actions";
+import { fetchAdminDataWithCache, clearAdminCacheKey } from "@/lib/admin-cache";
 
 export default function AdminProgramsManagementPage() {
   const [programs, setPrograms] = useState<any[]>([]);
@@ -12,14 +14,23 @@ export default function AdminProgramsManagementPage() {
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
     async function loadPrograms() {
-      const res = await getAdminProgramsAction();
-      if (res && res.success && res.programs) {
-        setPrograms(res.programs);
+      try {
+        const res = await fetchAdminDataWithCache("admin_programs", getAdminProgramsAction);
+        if (isMounted && res && res.success && res.programs) {
+          setPrograms(res.programs);
+        }
+      } catch (err) {
+        console.error("Admin programs load error:", err);
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
-      setIsLoading(false);
     }
     loadPrograms();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handlePriceChange = (id: string, field: "priceINR" | "priceUSD" | "isActive", value: any) => {
@@ -40,6 +51,7 @@ export default function AdminProgramsManagementPage() {
     );
 
     if (res.success) {
+      clearAdminCacheKey("admin_programs");
       setMsg({ type: "success", text: `${program.name} updated successfully!` });
     } else {
       setMsg({ type: "error", text: res.error || "Failed to update program." });
@@ -48,11 +60,7 @@ export default function AdminProgramsManagementPage() {
   };
 
   if (isLoading) {
-    return (
-      <AdminShell>
-        <div className="p-8 text-center text-gray-400">Loading programs and pricing directory...</div>
-      </AdminShell>
-    );
+    return <AdminCardsSkeleton />;
   }
 
   return (
@@ -103,7 +111,6 @@ export default function AdminProgramsManagementPage() {
                 </p>
               </div>
 
-              {/* Pricing Controls & Save */}
               <div className="flex flex-wrap items-center gap-4 shrink-0">
                 <div>
                   <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">

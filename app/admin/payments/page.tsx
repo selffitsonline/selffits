@@ -2,8 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/admin-shell";
-import { CreditCard, Search, CheckCircle2, Clock, ShieldCheck } from "lucide-react";
+import { AdminTableSkeleton } from "@/components/admin/admin-skeletons";
+import { Search } from "lucide-react";
 import { getAdminPaymentsAction } from "@/actions/admin.actions";
+import { fetchAdminDataWithCache } from "@/lib/admin-cache";
 
 export default function AdminPaymentsPage() {
   const [payments, setPayments] = useState<any[]>([]);
@@ -11,15 +13,28 @@ export default function AdminPaymentsPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
     async function loadPayments() {
-      const res = await getAdminPaymentsAction();
-      if (res && res.success && res.payments) {
-        setPayments(res.payments);
+      try {
+        const res = await fetchAdminDataWithCache("admin_payments", getAdminPaymentsAction);
+        if (isMounted && res && res.success && res.payments) {
+          setPayments(res.payments);
+        }
+      } catch (err) {
+        console.error("Admin payments load error:", err);
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
-      setIsLoading(false);
     }
     loadPayments();
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
+  if (isLoading) {
+    return <AdminTableSkeleton title="Payment Transactions" />;
+  }
 
   const filteredPayments = payments.filter(
     (p) =>
@@ -27,14 +42,6 @@ export default function AdminPaymentsPage() {
       p.studentEmail?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.razorpayOrderId?.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  if (isLoading) {
-    return (
-      <AdminShell>
-        <div className="p-8 text-center text-gray-400">Loading payment transaction records...</div>
-      </AdminShell>
-    );
-  }
 
   return (
     <AdminShell>
@@ -75,7 +82,7 @@ export default function AdminPaymentsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {filteredPayments.length === 0 ? (
+                {!isLoading && filteredPayments.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="p-8 text-center text-gray-500">
                       No payment transactions recorded yet.

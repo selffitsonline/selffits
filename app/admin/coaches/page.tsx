@@ -3,30 +3,37 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { AdminCardsSkeleton } from "@/components/admin/admin-skeletons";
 import { UserCheck, Mail, Phone, Award, ShieldCheck, FileText } from "lucide-react";
 import { getAdminCoachesAction } from "@/actions/admin.actions";
+import { fetchAdminDataWithCache } from "@/lib/admin-cache";
 
 export default function AdminCoachesPage() {
   const [coaches, setCoaches] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
     async function loadCoaches() {
-      const res = await getAdminCoachesAction();
-      if (res && res.success && res.coaches) {
-        setCoaches(res.coaches);
+      try {
+        const res = await fetchAdminDataWithCache("admin_coaches", getAdminCoachesAction);
+        if (isMounted && res && res.success && res.coaches) {
+          setCoaches(res.coaches);
+        }
+      } catch (err) {
+        console.error("Admin coaches load error:", err);
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
-      setIsLoading(false);
     }
     loadCoaches();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   if (isLoading) {
-    return (
-      <AdminShell>
-        <div className="p-8 text-center text-gray-400">Loading approved coaches directory...</div>
-      </AdminShell>
-    );
+    return <AdminCardsSkeleton />;
   }
 
   return (
@@ -50,7 +57,7 @@ export default function AdminCoachesPage() {
           </Link>
         </div>
 
-        {coaches.length === 0 ? (
+        {!isLoading && coaches.length === 0 ? (
           <div className="rounded-3xl p-12 bg-[#14161D] border border-white/10 text-center space-y-4 max-w-xl mx-auto">
             <UserCheck className="w-12 h-12 text-gray-500 mx-auto" />
             <h3 className="text-lg font-bold text-white">No Approved Coaches Yet</h3>

@@ -3,48 +3,45 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { AdminShell } from "@/components/admin/admin-shell";
+import { AdminDashboardSkeleton } from "@/components/admin/admin-skeletons";
 import {
   Users,
   BookOpen,
-  UserCheck,
-  FileText,
   CreditCard,
   TrendingUp,
   ArrowRight,
   Sparkles,
-  CheckCircle2,
-  Clock,
+  FileText,
 } from "lucide-react";
 import { getAdminDashboardStatsAction } from "@/actions/admin.actions";
+import { fetchAdminDataWithCache } from "@/lib/admin-cache";
 
 export default function AdminDashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [statsData, setStatsData] = useState<any>(null);
 
   useEffect(() => {
+    let isMounted = true;
     async function loadStats() {
-      const res = await getAdminDashboardStatsAction();
-      if (res && res.success) {
-        setStatsData(res.stats);
+      try {
+        const res = await fetchAdminDataWithCache("admin_dashboard_stats", getAdminDashboardStatsAction);
+        if (isMounted && res && res.success) {
+          setStatsData(res.stats);
+        }
+      } catch (err) {
+        console.error("Admin dashboard load error:", err);
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
-      setIsLoading(false);
     }
     loadStats();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   if (isLoading) {
-    return (
-      <AdminShell>
-        <div className="space-y-6 animate-pulse">
-          <div className="w-64 h-8 rounded-xl bg-white/10" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-28 rounded-2xl bg-[#14161D] border border-white/10" />
-            ))}
-          </div>
-        </div>
-      </AdminShell>
-    );
+    return <AdminDashboardSkeleton />;
   }
 
   const {
@@ -52,7 +49,6 @@ export default function AdminDashboardPage() {
     activeEnrollments = 0,
     totalRevenueINR = 0,
     pendingCoachApps = 0,
-    approvedCoaches = 0,
     recentPayments = [],
     recentEnrollments = [],
   } = statsData || {};
@@ -148,7 +144,7 @@ export default function AdminDashboardPage() {
               </Link>
             </div>
 
-            {recentPayments.length === 0 ? (
+            {!isLoading && recentPayments.length === 0 ? (
               <p className="text-xs text-gray-400 py-6 text-center">No payment transactions recorded yet.</p>
             ) : (
               <div className="space-y-3">
@@ -182,7 +178,7 @@ export default function AdminDashboardPage() {
               </Link>
             </div>
 
-            {recentEnrollments.length === 0 ? (
+            {!isLoading && recentEnrollments.length === 0 ? (
               <p className="text-xs text-gray-400 py-6 text-center">No student enrollments recorded yet.</p>
             ) : (
               <div className="space-y-3">

@@ -2,8 +2,10 @@
 
 import React, { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/admin-shell";
-import { Users, Mail, BookOpen, CreditCard, Search } from "lucide-react";
+import { AdminTableSkeleton } from "@/components/admin/admin-skeletons";
+import { Search } from "lucide-react";
 import { getAdminStudentsAction } from "@/actions/admin.actions";
+import { fetchAdminDataWithCache } from "@/lib/admin-cache";
 
 export default function AdminStudentsPage() {
   const [students, setStudents] = useState<any[]>([]);
@@ -11,29 +13,34 @@ export default function AdminStudentsPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
     async function loadStudents() {
-      const res = await getAdminStudentsAction();
-      if (res && res.success && res.students) {
-        setStudents(res.students);
+      try {
+        const res = await fetchAdminDataWithCache("admin_students", getAdminStudentsAction);
+        if (isMounted && res && res.success && res.students) {
+          setStudents(res.students);
+        }
+      } catch (err) {
+        console.error("Admin students load error:", err);
+      } finally {
+        if (isMounted) setIsLoading(false);
       }
-      setIsLoading(false);
     }
     loadStudents();
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
+  if (isLoading) {
+    return <AdminTableSkeleton title="Registered Student Accounts" />;
+  }
 
   const filteredStudents = students.filter(
     (s) =>
       s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
-  if (isLoading) {
-    return (
-      <AdminShell>
-        <div className="p-8 text-center text-gray-400">Loading registered student accounts...</div>
-      </AdminShell>
-    );
-  }
 
   return (
     <AdminShell>
@@ -48,7 +55,6 @@ export default function AdminStudentsPage() {
             </p>
           </div>
 
-          {/* Search Box */}
           <div className="relative w-full sm:w-64">
             <input
               type="text"
@@ -75,7 +81,7 @@ export default function AdminStudentsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {filteredStudents.length === 0 ? (
+                {!isLoading && filteredStudents.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="p-8 text-center text-gray-500">
                       No matching student registrations found.
