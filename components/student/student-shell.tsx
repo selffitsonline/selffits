@@ -50,9 +50,9 @@ export function StudentShell({ children }: StudentShellProps) {
   const userEmail = session?.user?.email || "student@selffits.com";
 
   return (
-    <div className="min-h-screen bg-[#0A0B0E] text-white flex flex-col md:flex-row">
-      {/* Desktop Sidebar Navigation */}
-      <aside className="hidden md:flex flex-col w-64 bg-[#14161D] border-r border-white/10 shrink-0 sticky top-0 h-screen z-40 overflow-y-auto">
+    <div className="min-h-screen bg-[#0A0B0E] text-white flex selection:bg-[#0080FF] selection:text-white">
+      {/* Desktop Sidebar Navigation (Fixed Full Viewport Height Architecture) */}
+      <aside className="hidden md:flex flex-col w-64 bg-[#14161D] border-r border-white/10 shrink-0 fixed inset-y-0 left-0 z-40 overflow-y-auto">
         {/* Brand Header */}
         <div className="p-5 border-b border-white/10 flex items-center justify-between shrink-0">
           <Link href="/dashboard" className="flex items-center group">
@@ -106,7 +106,7 @@ export function StudentShell({ children }: StudentShellProps) {
           })}
 
           {/* Unified Divider Line & Integrated Logout Button */}
-          <div className="pt-3 pb-1">
+          <div className="pt-3 pb-4">
             <div className="border-t border-white/10 mb-3" />
             <button
               onClick={handleLogout}
@@ -121,8 +121,8 @@ export function StudentShell({ children }: StudentShellProps) {
         </nav>
       </aside>
 
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-w-0">
+      {/* Main Content Area (Offset by md:pl-64 for fixed sidebar) */}
+      <div className="flex-1 md:pl-64 flex flex-col min-w-0 min-h-screen">
         {/* Top Navbar */}
         <header className="sticky top-0 z-30 bg-[#0A0B0E]/90 backdrop-blur-md border-b border-white/10 px-4 sm:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
