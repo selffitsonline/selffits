@@ -237,7 +237,7 @@ export function Header() {
                   className="px-5 py-2.5 rounded-xl text-sm font-extrabold uppercase tracking-wider text-white border border-white/20 hover:border-white/40 hover:bg-white/10 transition-all flex items-center gap-2 shrink-0 shadow-md"
                 >
                   <User className="w-4 h-4 text-[#0080FF]" />
-                  Student Login
+                  Login
                 </Link>
 
                 <Link
@@ -371,7 +371,7 @@ export function Header() {
                       className="w-full py-3.5 px-3 rounded-2xl text-center font-bold text-sm text-white bg-white/10 hover:bg-white/20 border border-white/15 transition-all flex items-center justify-center gap-2 shadow-lg active:scale-98"
                     >
                       <User className="w-4 h-4 text-[#38BDF8]" />
-                      Student Login
+                      Login
                     </Link>
 
                     <Link
