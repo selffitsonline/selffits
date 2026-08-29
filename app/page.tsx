@@ -28,40 +28,50 @@ import { ScrollProgressButton } from "@/components/public/scroll-progress-button
 
 import { getAdminBannerContentAction } from "@/actions/admin.actions";
 
-const HERO_IMAGES = [
-  "/images/hero1.jpg",
-  "/images/hero2.jpg",
+const DEFAULT_HERO_SLIDES = [
+  {
+    id: "slide_1",
+    badgeText: "ONLINE FITNESS & MARTIAL ARTS ACADEMY",
+    titleMain: "Train Anywhere.",
+    titleHighlight: "Transform Yourself!",
+    subtitle: "Join live, interactive Martial Arts Belts & Fitness Transformation classes from anywhere in the world. Real-time form correction, official belt certifications, and world-class instructors.",
+    primaryCtaText: "Join Academy Now",
+    primaryCtaLink: "/programs",
+    secondaryCtaText: "View Programs",
+    secondaryCtaLink: "/programs",
+    imageUrl: "/images/hero1.jpg",
+    isEnabled: true,
+  },
+  {
+    id: "slide_2",
+    badgeText: "LIVE VIRTUAL ZOOM CLASSES",
+    titleMain: "Master Belt Ranks.",
+    titleHighlight: "Earn Official Certification!",
+    subtitle: "Interactive training with 4th Dan Black Belt Instructors. Kids, Adults, and Ladies Only dedicated batches.",
+    primaryCtaText: "Explore Belt Programs",
+    primaryCtaLink: "/programs",
+    secondaryCtaText: "Meet Master Coaches",
+    secondaryCtaLink: "/coaches",
+    imageUrl: "/images/hero2.jpg",
+    isEnabled: true,
+  },
+  {
+    id: "slide_3",
+    badgeText: "FEMALE FITNESS & SELF DEFENSE",
+    titleMain: "Empower Your Spirit.",
+    titleHighlight: "Ladies Only Batches!",
+    subtitle: "Female-led high energy HIIT workouts, fat loss challenges, and real-world self-defense techniques.",
+    primaryCtaText: "Join Ladies Batch",
+    primaryCtaLink: "/programs#ladies",
+    secondaryCtaText: "Contact Support",
+    secondaryCtaLink: "/contact",
+    imageUrl: "/images/ladies_fitness.png",
+    isEnabled: true,
+  },
 ];
 
 export default function HomePage() {
-  const [heroSlides, setHeroSlides] = useState<any[]>([
-    {
-      id: "slide_1",
-      badgeText: "ONLINE FITNESS & MARTIAL ARTS ACADEMY",
-      titleMain: "Train Anywhere.",
-      titleHighlight: "Transform Yourself!",
-      subtitle: "Join live, interactive Martial Arts Belts & Fitness Transformation classes from anywhere in the world. Real-time form correction, official belt certifications, and world-class instructors.",
-      primaryCtaText: "Join Academy Now",
-      primaryCtaLink: "/programs",
-      secondaryCtaText: "View Programs",
-      secondaryCtaLink: "/programs",
-      imageUrl: "/images/hero1.jpg",
-      isEnabled: true,
-    },
-    {
-      id: "slide_2",
-      badgeText: "LIVE VIRTUAL ZOOM CLASSES",
-      titleMain: "Master Belt Ranks.",
-      titleHighlight: "Earn Official Certification!",
-      subtitle: "Interactive training with 4th Dan Black Belt Instructors. Kids, Adults, and Ladies Only dedicated batches.",
-      primaryCtaText: "Explore Belt Programs",
-      primaryCtaLink: "/programs",
-      secondaryCtaText: "Meet Master Coaches",
-      secondaryCtaLink: "/coaches",
-      imageUrl: "/images/hero2.jpg",
-      isEnabled: true,
-    },
-  ]);
+  const [heroSlides, setHeroSlides] = useState<any[]>(DEFAULT_HERO_SLIDES);
 
   const [currentSlide, setCurrentSlide] = useState(0);
 
@@ -92,8 +102,8 @@ export default function HomePage() {
 
   const activeSlide = activeSlides[currentSlide] || activeSlides[0] || heroSlides[0];
 
-  const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % HERO_IMAGES.length);
-  const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + HERO_IMAGES.length) % HERO_IMAGES.length);
+  const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % activeSlideCount);
+  const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + activeSlideCount) % activeSlideCount);
 
   const programs = [
     {
@@ -228,14 +238,14 @@ export default function HomePage() {
                 {activeSlide.badgeText}
               </div>
 
-              <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.05] font-[family-name:var(--font-outfit)] text-white">
+              <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.05] font-[family-name:var(--font-outfit)] text-white min-h-[96px] sm:min-h-[140px] flex flex-col justify-center">
                 <span className="block">{activeSlide.titleMain}</span>
                 <span className="text-[#E50914] block mt-1 sm:mt-2">
                   {activeSlide.titleHighlight}
                 </span>
               </h1>
 
-              <p className="text-gray-100 text-base sm:text-xl font-semibold max-w-3xl mx-auto leading-relaxed">
+              <p className="text-gray-100 text-base sm:text-xl font-semibold max-w-3xl mx-auto leading-relaxed min-h-[56px] sm:min-h-[60px] flex items-center justify-center">
                 {activeSlide.subtitle}
               </p>
 
@@ -255,21 +265,21 @@ export default function HomePage() {
                 </Link>
               </div>
 
-              {/* Carousel Slide Indicators */}
-              {activeSlides.length > 1 && (
-                <div className="flex items-center justify-center gap-2 pt-6">
-                  {activeSlides.map((_, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setCurrentSlide(idx)}
-                      className={`h-2 rounded-full transition-all duration-300 ${
-                        currentSlide === idx ? "w-8 bg-[#E50914]" : "w-2 bg-white/30 hover:bg-white/60"
-                      }`}
-                      aria-label={`Go to slide ${idx + 1}`}
-                    />
-                  ))}
-                </div>
-              )}
+              {/* Carousel Slide Indicators - Fixed 3 Dots Position */}
+              <div className="flex items-center justify-center gap-2.5 pt-6 pb-2 min-h-[44px] shrink-0 z-20">
+                {activeSlides.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentSlide(idx)}
+                    className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
+                      currentSlide === idx
+                        ? "w-8 bg-[#E50914] shadow-md shadow-[#E50914]/40"
+                        : "w-2.5 bg-white/40 hover:bg-white/70"
+                    }`}
+                    aria-label={`Go to slide ${idx + 1}`}
+                  />
+                ))}
+              </div>
             </div>
           </div>
         </section>
