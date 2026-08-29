@@ -83,10 +83,10 @@ export default function LoginPage() {
             />
           </Link>
           <h1 className="text-2xl font-bold font-[family-name:var(--font-outfit)] tracking-tight text-white mt-2">
-            Student Login
+            Login
           </h1>
           <p className="text-sm text-gray-400 mt-1 text-center">
-            Welcome back! Access your live classes & dashboard.
+            Welcome back! Please enter your credentials to log in.
           </p>
         </div>
 
@@ -151,7 +151,7 @@ export default function LoginPage() {
             disabled={isLoading}
             className="w-full h-12 rounded-lg bg-gradient-to-r from-[#E50914] to-[#FF1E27] text-white font-bold text-base hover:opacity-95 transition-opacity shadow-lg shadow-[#E50914]/20 cursor-pointer disabled:opacity-50 flex items-center justify-center"
           >
-            {isLoading ? "Signing in..." : "Login to Dashboard"}
+            {isLoading ? "Signing in..." : "Login"}
           </button>
         </form>
 
