@@ -50,11 +50,6 @@ enum PaymentStatus {
   REFUNDED
 }
 
-enum PlatformType {
-  GOOGLE_MEET
-  ZOOM
-}
-
 enum ContactStatus {
   NEW
   RESOLVED
@@ -68,6 +63,7 @@ model User {
   email         String          @unique
   passwordHash  String?
   role          Role            @default(STUDENT)
+  isBlocked     Boolean         @default(false)
   image         String?
   emailVerified DateTime?
   createdAt     DateTime        @default(now())
@@ -79,10 +75,11 @@ model User {
   certificates   Certificate[]  @relation("StudentCertificates")
   issuedCerts    Certificate[]  @relation("AdminIssuedCertificates")
   notifications  Notification[]
-  updatedLinks   LiveClassLink[]
+  batchStudents  BatchStudent[]
 
   @@index([email])
   @@index([role])
+  @@index([isBlocked])
 }
 
 model StudentProfile {
@@ -130,8 +127,8 @@ model Program {
   createdAt      DateTime        @default(now())
 
   membershipPlans MembershipPlan[]
-  liveClasses     LiveClass[]
   certificates    Certificate[]
+  batches         Batch[]
 }
 
 model MembershipPlan {
@@ -147,6 +144,7 @@ model MembershipPlan {
   isActive       Boolean        @default(true)
 
   enrollments Enrollment[]
+  batches     Batch[]
 }
 
 model Enrollment {
@@ -155,6 +153,7 @@ model Enrollment {
   user               User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   membershipPlanId   String
   membershipPlan     MembershipPlan   @relation(fields: [membershipPlanId], references: [id])
+  classTiming        String?          // e.g. "03:30 PM to 04:15 PM (GMT)"
   startDate          DateTime         @default(now())
   endDate            DateTime
   totalClassesGranted Int
@@ -165,34 +164,6 @@ model Enrollment {
   payments Payment[]
 
   @@index([userId, status])
-}
-
-model LiveClass {
-  id           String   @id @default(cuid())
-  programId    String
-  program      Program  @relation(fields: [programId], references: [id], onDelete: Cascade)
-  batchName    String
-  scheduleDays String
-  startTime    String
-  endTime      String
-
-  liveClassLinks LiveClassLink[]
-}
-
-model LiveClassLink {
-  id              String       @id @default(cuid())
-  liveClassId     String
-  liveClass       LiveClass    @relation(fields: [liveClassId], references: [id], onDelete: Cascade)
-  meetingUrl      String
-  platform        PlatformType @default(GOOGLE_MEET)
-  validForDate    DateTime     @db.Date
-  notes           String?
-  updatedByUserId String
-  updatedByUser   User         @relation(fields: [updatedByUserId], references: [id])
-  updatedAt       DateTime     @updatedAt
-
-  @@unique([liveClassId, validForDate])
-  @@index([validForDate])
 }
 
 model Payment {
@@ -261,6 +232,7 @@ enum CoachAppStatus {
   PENDING
   APPROVED
   REJECTED
+  SUSPENDED
 }
 
 model CoachApplication {
@@ -326,6 +298,54 @@ model CoachApplication {
   status                CoachAppStatus @default(PENDING)
   createdAt             DateTime       @default(now())
 
+  batches               Batch[]
+
   @@index([email])
   @@index([status])
+}
+
+enum BatchStatus {
+  ACTIVE
+  FULL
+  INACTIVE
+}
+
+model Batch {
+  id               String           @id @default(cuid())
+  batchId          String           @unique @default(cuid())
+  name             String
+  programId        String
+  program          Program          @relation(fields: [programId], references: [id], onDelete: Cascade)
+  membershipPlanId String?
+  membershipPlan   MembershipPlan?  @relation(fields: [membershipPlanId], references: [id])
+  coachId          String
+  coach            CoachApplication @relation(fields: [coachId], references: [id])
+
+  dayCombination   String           // "Sunday & Wednesday" | "Monday & Thursday" | "Saturday & Tuesday"
+  timeSlot         String           // "Morning" | "Evening" | "Night"
+  clockTiming      String           // e.g. "09:00 AM to 09:45 AM (GMT)"
+  meetingUrl       String?          // Google Meet / Zoom URL e.g. "https://meet.google.com/abc-defg-hij"
+
+  maxCapacity      Int              @default(8)
+  status           BatchStatus      @default(ACTIVE)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  students         BatchStudent[]
+
+  @@index([programId])
+  @@index([coachId])
+  @@index([status])
+}
+
+model BatchStudent {
+  id         String   @id @default(cuid())
+  batchId    String
+  batch      Batch    @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignedAt DateTime @default(now())
+
+  @@unique([batchId, userId])
+  @@index([userId])
 }

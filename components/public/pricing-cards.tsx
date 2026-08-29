@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Check, ShieldCheck, Zap } from "lucide-react";
+import { Check, ShieldCheck, Zap, Clock } from "lucide-react";
 
 export function PricingCards() {
   const [currency, setCurrency] = useState<"INR" | "USD">("INR");
@@ -18,6 +18,7 @@ export function PricingCards() {
       priceINR: "2,999",
       priceUSD: "39",
       popular: false,
+      availableTimings: ["03:30 PM to 04:15 PM (GMT)", "05:15 PM to 06:00 PM (GMT)"],
       features: [
         "8 Interactive Live Classes",
         "Zoom Classes Access",
@@ -35,6 +36,7 @@ export function PricingCards() {
       priceINR: "7,999",
       priceUSD: "99",
       popular: true, // RECOMMENDED
+      availableTimings: ["03:30 PM to 04:30 PM (GMT)", "07:00 PM to 08:00 PM (GMT)"],
       features: [
         "24 Interactive Live Classes",
         "Zoom Classes Access",
@@ -53,6 +55,7 @@ export function PricingCards() {
       priceINR: "13,999",
       priceUSD: "179",
       popular: false,
+      availableTimings: ["04:30 AM to 06:00 AM (GMT)", "07:00 PM to 08:30 PM (GMT)"],
       features: [
         "48 Interactive Live Classes",
         "Zoom Classes Access",
@@ -71,6 +74,7 @@ export function PricingCards() {
       priceINR: "24,999",
       priceUSD: "319",
       popular: false,
+      availableTimings: ["06:00 AM to 07:30 AM (GMT)", "08:30 PM to 10:00 PM (GMT)"],
       features: [
         "96 Interactive Live Classes",
         "Zoom Classes Access",
@@ -92,6 +96,7 @@ export function PricingCards() {
       priceINR: "1,499",
       priceUSD: "19",
       popular: false,
+      availableTimings: ["03:30 PM to 04:30 PM (GMT)", "06:00 PM to 07:00 PM (GMT)"],
       features: [
         "8 Daily Live Workout Sessions",
         "HIIT & Fat Burn Routines",
@@ -108,6 +113,7 @@ export function PricingCards() {
       priceINR: "3,999",
       priceUSD: "49",
       popular: true,
+      availableTimings: ["09:00 AM to 10:00 AM (GMT)", "07:00 PM to 08:00 PM (GMT)"],
       features: [
         "24 Daily Live Workout Sessions",
         "HIIT & Bodyweight Strength",
@@ -125,6 +131,7 @@ export function PricingCards() {
       priceINR: "13,999",
       priceUSD: "169",
       popular: false,
+      availableTimings: ["06:00 AM to 07:00 AM (GMT)", "08:30 PM to 09:30 PM (GMT)"],
       features: [
         "96 Daily Live Workout Sessions",
         "Extreme Shred & Core Mastery",
@@ -219,7 +226,7 @@ export function PricingCards() {
                 <p className="text-xs text-gray-400 mt-0.5">{plan.subtitle}</p>
               </div>
 
-              <div className="my-6 pb-6 border-b border-white/10">
+              <div className="my-4 pb-4 border-b border-white/10">
                 <div className="flex items-baseline gap-1">
                   <span className="text-3xl font-black text-white font-[family-name:var(--font-outfit)]">
                     {currency === "INR" ? `₹${plan.priceINR}` : `$${plan.priceUSD}`}
@@ -230,6 +237,22 @@ export function PricingCards() {
                   {plan.classes}
                 </span>
               </div>
+
+              {/* Available Class Timings */}
+              {plan.availableTimings && plan.availableTimings.length > 0 && (
+                <div className="mb-5 p-2.5 rounded-xl bg-[#0F1117] border border-white/5 space-y-1">
+                  <span className="text-[10px] font-extrabold uppercase text-gray-400 tracking-wider flex items-center gap-1">
+                    <Clock className="w-3 h-3 text-[#0080FF]" /> Available Timings:
+                  </span>
+                  <div className="flex flex-wrap gap-1">
+                    {plan.availableTimings.map((t, idx) => (
+                      <span key={idx} className="px-2 py-0.5 rounded-md bg-[#0080FF]/15 text-[#0080FF] border border-[#0080FF]/30 text-[10px] font-bold">
+                        {t}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <ul className="space-y-3 mb-8">
                 {plan.features.map((feat, idx) => (

@@ -1,7 +1,10 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { getAdminStudentsAction } from "@/actions/admin.actions";
+import { getAdminStudentsAction, getAdminStudentCategoriesAction } from "@/actions/admin.actions";
 import { AdminStudentsView } from "@/components/admin/admin-students-view";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function AdminStudentsPage() {
   const session = await auth();
@@ -9,8 +12,20 @@ export default async function AdminStudentsPage() {
     redirect("/admin/login?callbackUrl=/admin/students");
   }
 
-  const res = await getAdminStudentsAction();
-  const initialStudents = res?.students || [];
+  const [studentsRes, categoriesRes] = await Promise.all([
+    getAdminStudentsAction(),
+    getAdminStudentCategoriesAction(),
+  ]);
 
-  return <AdminStudentsView initialStudents={initialStudents} />;
+  const initialStudents = studentsRes?.students || [];
+  const initialCategories = categoriesRes?.categories || [];
+  const initialPrograms = categoriesRes?.programs || [];
+
+  return (
+    <AdminStudentsView
+      initialStudents={initialStudents}
+      initialCategories={initialCategories}
+      initialPrograms={initialPrograms}
+    />
+  );
 }

@@ -306,7 +306,6 @@ export async function getStudentEnrollmentAction() {
         expiryDate: formattedDate,
         nextClassTime: "Today at 7:00 PM IST",
         instructor: "Sensei Rahul Sharma",
-        liveClassLink: "https://meet.google.com/selffits-live-class",
       };
     });
 
@@ -327,7 +326,6 @@ export async function getStudentEnrollmentAction() {
       expiryDate: "Aug 1, 2026",
       nextClassTime: "Course Expired",
       instructor: "Sensei Rahul Sharma",
-      liveClassLink: "",
     };
 
     const finalEnrollments = [...formattedEnrollments, sampleExpiredCourse];

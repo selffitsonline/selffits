@@ -43,7 +43,6 @@ export function StudentDashboardView({
       expiryDate: "October 15, 2026",
       nextClassTime: "Today at 7:00 PM IST",
       instructor: "Sensei Rahul Sharma",
-      liveClassLink: "https://meet.google.com/selffits-live-class",
     }
   );
 
@@ -76,16 +75,14 @@ export function StudentDashboardView({
             </div>
 
             {isEnrolled ? (
-              <a
-                href={activeStudentData.liveClassLink}
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                href="/dashboard/live"
                 className="w-full lg:w-auto px-6 py-4 rounded-2xl bg-gradient-to-r from-[#10B981] to-[#059669] text-black font-black text-sm uppercase tracking-wider hover:opacity-95 transition-all shadow-xl shadow-[#10B981]/25 flex items-center justify-center gap-3 shrink-0 active:scale-95"
               >
                 <Video className="w-5 h-5 fill-current" />
                 JOIN LIVE CLASS NOW
                 <ArrowRight className="w-4 h-4" />
-              </a>
+              </Link>
             ) : (
               <Link
                 href="/programs"
@@ -192,14 +189,12 @@ export function StudentDashboardView({
                 </div>
               </div>
 
-              <a
-                href={activeStudentData.liveClassLink}
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                href="/dashboard/live"
                 className="w-full py-4 rounded-2xl bg-[#10B981] hover:bg-[#059669] text-black font-extrabold text-xs uppercase tracking-wider text-center block transition-all shadow-lg shadow-[#10B981]/20 flex items-center justify-center gap-2"
               >
                 <Video className="w-4 h-4 fill-current" /> Join Virtual Classroom Session
-              </a>
+              </Link>
             </div>
 
             {/* Side Card: Student Portal Quick Links */}

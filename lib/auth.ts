@@ -38,16 +38,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           console.warn("Database query offline/failed, executing fallback auth handler:", dbErr);
         }
 
-        if (user && user.passwordHash) {
-          const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
-          if (isPasswordValid) {
-            return {
-              id: user.id,
-              email: user.email,
-              name: user.name,
-              role: user.role,
-              image: user.image,
-            };
+        if (user) {
+          if (user.isBlocked) {
+            throw new Error("Your account has been blocked by an administrator. Please contact academy support.");
+          }
+
+          if (user.passwordHash) {
+            const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
+            if (isPasswordValid) {
+              return {
+                id: user.id,
+                email: user.email,
+                name: user.name,
+                role: user.role,
+                isBlocked: user.isBlocked,
+                image: user.image,
+              };
+            }
           }
         }
 
@@ -58,6 +65,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             email: email,
             name: "Demo Student",
             role: "STUDENT" as Role,
+            isBlocked: false,
             image: null,
           };
         }
@@ -72,6 +80,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             email: email,
             name: "System Admin",
             role: "SUPER_ADMIN" as Role,
+            isBlocked: false,
             image: null,
           };
         }
@@ -93,6 +102,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.id = user.id as string;
         token.role = user.role as Role;
+        token.isBlocked = (user as any).isBlocked || false;
       }
       return token;
     },
@@ -100,6 +110,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (token && session.user) {
         session.user.id = token.id;
         session.user.role = token.role;
+        (session.user as any).isBlocked = (token as any).isBlocked || false;
       }
       return session;
     },

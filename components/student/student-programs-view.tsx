@@ -178,15 +178,13 @@ export function StudentProgramsView({ initialCourses }: StudentProgramsViewProps
 
                   <div className="p-6 pt-0">
                     {!isExpired ? (
-                      <a
-                        href={course.liveClassLink || "https://meet.google.com/selffits-live-class"}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <Link
+                        href="/dashboard/live"
                         className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#10B981] to-[#059669] text-black font-extrabold text-xs text-center block hover:opacity-95 transition-all shadow-md shadow-[#10B981]/20 flex items-center justify-center gap-2"
                       >
                         <Video className="w-4 h-4 fill-current" />
                         JOIN LIVE CLASS NOW <ArrowRight className="w-4 h-4" />
-                      </a>
+                      </Link>
                     ) : (
                       <div className="flex items-center gap-3">
                         <span className="flex-grow py-3 rounded-xl bg-white/5 border border-white/10 text-gray-400 font-bold text-xs text-center block">

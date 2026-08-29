@@ -287,6 +287,7 @@ export async function uploadBannerImageAction(formData: FormData) {
 }
 
 // 4. COACH MANAGEMENT ACTIONS
+// 4. COACH MANAGEMENT ACTIONS
 export async function getAdminCoachesAction() {
   try {
     const session = await auth();
@@ -294,22 +295,35 @@ export async function getAdminCoachesAction() {
       return { success: false, error: "Unauthorized access." };
     }
 
-    const approvedCoaches = await db.coachApplication.findMany({
-      where: { status: "APPROVED" },
+    const coaches = await db.coachApplication.findMany({
+      where: {
+        status: { in: ["APPROVED", "SUSPENDED"] },
+      },
       orderBy: { createdAt: "desc" },
     });
 
-    const formatted = approvedCoaches.map((c) => ({
-      id: c.id,
-      fullName: c.fullName,
-      email: c.email,
-      phone: c.phone,
-      highestRank: c.highestRank || "Certified Instructor",
-      disciplines: Array.isArray(c.disciplines) ? c.disciplines.join(", ") : "Martial Arts & Fitness",
-      experience: c.totalExperience || "5+ Years",
-      status: "APPROVED",
-      createdAt: c.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-    }));
+    const formatted = coaches.map((c) => {
+      const disciplinesArray = Array.isArray(c.disciplines)
+        ? (c.disciplines as string[])
+        : typeof c.disciplines === "string"
+        ? [c.disciplines]
+        : [];
+
+      return {
+        id: c.id,
+        fullName: c.fullName,
+        email: c.email,
+        phone: c.phone,
+        highestRank: c.highestRank || "Certified Instructor",
+        rawDisciplines: disciplinesArray,
+        disciplines: disciplinesArray.length > 0 ? disciplinesArray.join(", ") : "Fitness / Functional Training",
+        experience: c.totalExperience || "5+ Years",
+        status: c.status,
+        isSuspended: c.status === "SUSPENDED",
+        resumeUrl: c.resumeUrl || c.qualificationCertsUrl || null,
+        createdAt: c.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+      };
+    });
 
     return { success: true, coaches: formatted };
   } catch (err: any) {
@@ -318,7 +332,80 @@ export async function getAdminCoachesAction() {
   }
 }
 
-// 5. COACH APPLICATIONS & RESUME DOWNLOADS
+export async function toggleSuspendCoachAction(coachId: string, suspend: boolean) {
+  try {
+    const session = await auth();
+    if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
+      return { success: false, error: "Unauthorized access." };
+    }
+
+    const newStatus = suspend ? "SUSPENDED" : "APPROVED";
+
+    await db.coachApplication.update({
+      where: { id: coachId },
+      data: { status: newStatus },
+    });
+
+    revalidatePath("/admin/coaches");
+    revalidatePath("/admin/dashboard");
+
+    return {
+      success: true,
+      message: suspend
+        ? "Coach account suspended successfully."
+        : "Coach account reactivated successfully.",
+    };
+  } catch (err: any) {
+    console.error("toggleSuspendCoachAction error:", err);
+    return { success: false, error: "Failed to update coach status." };
+  }
+}
+
+export async function deleteCoachAccountAction(coachId: string) {
+  try {
+    const session = await auth();
+    if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
+      return { success: false, error: "Unauthorized access." };
+    }
+
+    await db.coachApplication.delete({
+      where: { id: coachId },
+    });
+
+    revalidatePath("/admin/coaches");
+    revalidatePath("/admin/dashboard");
+
+    return { success: true, message: "Coach account permanently deleted." };
+  } catch (err: any) {
+    console.error("deleteCoachAccountAction error:", err);
+    return { success: false, error: "Failed to delete coach account." };
+  }
+}
+
+export async function updateCoachDisciplinesAction(coachId: string, disciplines: string[]) {
+  try {
+    const session = await auth();
+    if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
+      return { success: false, error: "Unauthorized access." };
+    }
+
+    const safeDisciplines = JSON.parse(JSON.stringify(disciplines));
+
+    await db.coachApplication.update({
+      where: { id: coachId },
+      data: { disciplines: safeDisciplines },
+    });
+
+    revalidatePath("/admin/coaches");
+
+    return { success: true, message: "Coach specializations updated successfully." };
+  } catch (err: any) {
+    console.error("updateCoachDisciplinesAction error:", err);
+    return { success: false, error: "Failed to update coach specializations." };
+  }
+}
+
+// 5. COACH APPLICATIONS & REGISTRATION LEADS
 export async function getAdminCoachApplicationsAction() {
   try {
     const session = await auth();
@@ -326,23 +413,38 @@ export async function getAdminCoachApplicationsAction() {
       return { success: false, error: "Unauthorized access." };
     }
 
+    // Exclude APPROVED applications from leads/applications list (they belong in Active Coaches)
     const applications = await db.coachApplication.findMany({
+      where: {
+        status: { not: "APPROVED" },
+      },
       orderBy: { createdAt: "desc" },
     });
 
-    const formatted = applications.map((app) => ({
-      id: app.id,
-      fullName: app.fullName,
-      email: app.email,
-      phone: app.phone,
-      whatsappNumber: app.phone,
-      resumeUrl: app.resumeUrl || app.qualificationCertsUrl || null,
-      highestRank: app.highestRank || "N/A",
-      totalExperience: app.totalExperience || "N/A",
-      status: app.status,
-      appliedDate: app.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-      disciplines: Array.isArray(app.disciplines) ? app.disciplines.join(", ") : "Martial Arts & Fitness",
-    }));
+    const formatted = applications.map((app) => {
+      const disciplinesArray = Array.isArray(app.disciplines)
+        ? (app.disciplines as string[])
+        : typeof app.disciplines === "string"
+        ? [app.disciplines]
+        : [];
+
+      return {
+        id: app.id,
+        fullName: app.fullName,
+        email: app.email,
+        phone: app.phone,
+        whatsappNumber: app.phone,
+        resumeUrl: app.resumeUrl || app.qualificationCertsUrl || null,
+        highestRank: app.highestRank || "N/A",
+        totalExperience: app.totalExperience || "N/A",
+        status: app.status,
+        appliedDate: app.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+        rawDisciplines: disciplinesArray,
+        disciplines: disciplinesArray.length > 0 ? disciplinesArray.join(", ") : "Martial Arts & Fitness",
+        coachingBio: app.coachingBio || null,
+        aboutSelf: app.aboutSelf || null,
+      };
+    });
 
     return { success: true, applications: formatted };
   } catch (err: any) {
@@ -442,7 +544,34 @@ export async function updateAdminProgramsCatalogAction(catalogData: any) {
   }
 }
 
-// 8. STUDENT REGISTRATIONS MANAGEMENT
+// Helper to get formatted program category display name
+function getProgramCategoryLabel(program?: { category?: string; targetAudience?: string; title?: string } | null) {
+  if (!program) return "General Program";
+  if (program.targetAudience === "KIDS") return "Kids Martial Arts";
+  if (program.targetAudience === "LADIES_ONLY") return "Ladies Only Programs";
+  if (program.category === "FITNESS_WEIGHT_LOSS" || program.category === "FITNESS_HIIT") return "Weight Loss & HIIT";
+  if (program.category === "MARTIAL_ARTS") return "Adults Martial Arts";
+  return program.title || "Martial Arts & Fitness";
+}
+
+// Helper to format belt level or tier name
+function getBeltLevelName(tierType?: string | null, planName?: string | null) {
+  if (planName && planName.trim()) return planName.trim();
+  if (!tierType) return "Standard Level";
+  switch (tierType) {
+    case "YELLOW_BELT": return "Yellow Belt";
+    case "BLUE_BELT": return "Blue Belt";
+    case "PURPLE_BELT": return "Purple Belt";
+    case "BROWN_BELT": return "Brown Belt";
+    case "CHALLENGE_8": return "Challenge 8";
+    case "CHALLENGE_24": return "Challenge 24";
+    case "CHALLENGE_48": return "Challenge 48";
+    case "TRANSFORMATION_96": return "Transformation 96";
+    default: return tierType.replace(/_/g, " ");
+  }
+}
+
+// 8. STUDENT REGISTRATIONS & MANAGEMENT SYSTEM
 export async function getAdminStudentsAction() {
   try {
     const session = await auth();
@@ -454,31 +583,151 @@ export async function getAdminStudentsAction() {
       where: { role: "STUDENT" },
       orderBy: { createdAt: "desc" },
       include: {
+        studentProfile: true,
         enrollments: {
-          include: { membershipPlan: true },
+          orderBy: { createdAt: "desc" },
+          include: {
+            membershipPlan: {
+              include: {
+                program: true,
+              },
+            },
+          },
         },
         payments: {
-          where: { status: "SUCCESS" },
-          select: { amount: true },
+          orderBy: { createdAt: "desc" },
         },
       },
     });
 
     const formattedStudents = students.map((std) => {
-      const activeEnrollment = std.enrollments.find((e) => e.status === "ACTIVE");
-      const totalSpent = std.payments.reduce((acc, p) => acc + Number(p.amount), 0);
+      const activeEnrollment = std.enrollments.find(
+        (e) => e.status === "ACTIVE" && new Date(e.endDate) >= new Date()
+      );
+
+      const hasExpiredEnrollments =
+        !activeEnrollment &&
+        std.enrollments.length > 0 &&
+        std.enrollments.some(
+          (e) => e.status === "EXPIRED" || new Date(e.endDate) < new Date() || e.remainingClasses <= 0
+        );
+
+      let enrollmentStatus: "ACTIVE" | "EXPIRED" | "UNENROLLED" = "UNENROLLED";
+      if (activeEnrollment) {
+        enrollmentStatus = "ACTIVE";
+      } else if (hasExpiredEnrollments) {
+        enrollmentStatus = "EXPIRED";
+      }
+
+      const totalSpentNum = std.payments
+        .filter((p) => p.status === "SUCCESS")
+        .reduce((acc, p) => acc + Number(p.amount), 0);
+
+      const formattedEnrollments = std.enrollments.map((e) => {
+        const prg = e.membershipPlan?.program;
+        const totalGranted = e.totalClassesGranted || 0;
+        const remaining = e.remainingClasses || 0;
+        const completed = Math.max(0, totalGranted - remaining);
+
+        const joinedDateFormatted = e.createdAt.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+        const joinedTimeFormatted = e.createdAt.toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+        });
+
+        return {
+          id: e.id,
+          programTitle: prg?.title || e.membershipPlan?.name || "Martial Arts Program",
+          programCategory: prg?.category || "MARTIAL_ARTS",
+          categoryLabel: getProgramCategoryLabel(prg),
+          membershipPlanName: e.membershipPlan?.name || getBeltLevelName(e.membershipPlan?.tierType),
+          courseLevel: getBeltLevelName(e.membershipPlan?.tierType, e.membershipPlan?.name),
+          startDate: e.startDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+          endDate: e.endDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+          rawEndDate: e.endDate.toISOString(),
+          joinedTimestamp: `Joined: ${joinedDateFormatted} • ${joinedTimeFormatted}`,
+          totalClassesGranted: totalGranted,
+          remainingClasses: remaining,
+          completedClasses: completed,
+          status: e.status,
+        };
+      });
+
+      const formattedPayments = std.payments.map((p) => ({
+        id: p.id,
+        razorpayOrderId: p.razorpayOrderId,
+        razorpayPaymentId: p.razorpayPaymentId || "Direct Auth",
+        amount: Number(p.amount),
+        currency: p.currency,
+        formattedAmount: `${p.currency === "USD" ? "$" : "₹"}${p.amount}`,
+        status: p.status,
+        date: p.createdAt.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      }));
+
+      const activePrg = activeEnrollment?.membershipPlan?.program;
+
+      const activeClassTiming = activeEnrollment
+        ? activeEnrollment.classTiming || "03:30 PM to 04:15 PM (GMT)"
+        : null;
+
+      const activeJoinedDate = activeEnrollment
+        ? activeEnrollment.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+        : null;
+      const activeJoinedTime = activeEnrollment
+        ? activeEnrollment.createdAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
+        : null;
+      const activeEnrollmentFullTimestamp = activeEnrollment
+        ? `Joined: ${activeJoinedDate} • ${activeJoinedTime}`
+        : null;
+
+      const activeCourseLevel = activeEnrollment
+        ? getBeltLevelName(activeEnrollment.membershipPlan?.tierType, activeEnrollment.membershipPlan?.name)
+        : null;
 
       return {
         id: std.id,
         name: std.name,
+        firstName: std.firstName || "",
+        lastName: std.lastName || "",
         email: std.email,
+        phone: std.studentProfile?.phone || "Not provided",
+        country: std.studentProfile?.country || "Not specified",
+        city: std.studentProfile?.city || "Not specified",
+        emergencyContact: std.studentProfile?.emergencyContact || "None",
+        isBlocked: std.isBlocked || false,
+        accountStatus: std.isBlocked ? "BLOCKED" : "ACTIVE",
         joinedDate: std.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-        activeProgram: activeEnrollment?.membershipPlan?.name || "Unenrolled",
+        enrollmentStatus,
+        activeProgram: activePrg?.title || activeEnrollment?.membershipPlan?.name || (hasExpiredEnrollments ? "Expired Membership" : "Unenrolled"),
+        activeCategory: activePrg?.category || null,
+        activeCategoryLabel: activeEnrollment ? getProgramCategoryLabel(activePrg) : "None",
+        activeCourseLevel: activeCourseLevel || "Standard Level",
+        activeClassTiming: activeClassTiming || "03:30 PM to 04:15 PM (GMT)",
+        activeEnrollmentFullTimestamp,
         totalEnrollments: std.enrollments.length,
         remainingClasses: activeEnrollment ? activeEnrollment.remainingClasses : 0,
         totalClasses: activeEnrollment ? activeEnrollment.totalClassesGranted : 0,
-        totalSpent: `₹${totalSpent}`,
-        status: activeEnrollment ? "ACTIVE" : "REGISTERED",
+        completedClasses: activeEnrollment
+          ? Math.max(0, activeEnrollment.totalClassesGranted - activeEnrollment.remainingClasses)
+          : 0,
+        expiryDate: activeEnrollment
+          ? activeEnrollment.endDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+          : null,
+        totalSpentNum,
+        totalSpent: `₹${totalSpentNum.toLocaleString("en-IN")}`,
+        enrollments: formattedEnrollments,
+        payments: formattedPayments,
       };
     });
 
@@ -488,6 +737,86 @@ export async function getAdminStudentsAction() {
     return { success: false, error: "Failed to fetch students list." };
   }
 }
+
+export async function getAdminStudentCategoriesAction() {
+  try {
+    const session = await auth();
+    if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
+      return { success: false, error: "Unauthorized access." };
+    }
+
+    const programs = await db.program.findMany({
+      select: {
+        id: true,
+        title: true,
+        category: true,
+        targetAudience: true,
+      },
+      orderBy: { title: "asc" },
+    });
+
+    const categorySet = new Set<string>();
+    categorySet.add("Kids Martial Arts");
+    categorySet.add("Adults Martial Arts");
+    categorySet.add("Ladies Only Programs");
+    categorySet.add("Weight Loss & HIIT");
+
+    programs.forEach((p) => {
+      const label = getProgramCategoryLabel(p);
+      if (label) categorySet.add(label);
+    });
+
+    return {
+      success: true,
+      categories: Array.from(categorySet),
+      programs: programs.map((p) => ({
+        id: p.id,
+        title: p.title,
+        categoryLabel: getProgramCategoryLabel(p),
+      })),
+    };
+  } catch (err: any) {
+    console.error("getAdminStudentCategoriesAction error:", err);
+    return { success: false, error: "Failed to fetch program categories." };
+  }
+}
+
+export async function toggleBlockStudentAction(userId: string, isBlocked: boolean) {
+  try {
+    const session = await auth();
+    if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
+      return { success: false, error: "Unauthorized access." };
+    }
+
+    const student = await db.user.findUnique({
+      where: { id: userId },
+      select: { role: true, email: true },
+    });
+
+    if (!student || student.role !== "STUDENT") {
+      return { success: false, error: "Target student account not found." };
+    }
+
+    await db.user.update({
+      where: { id: userId },
+      data: { isBlocked },
+    });
+
+    revalidatePath("/admin/students");
+    revalidatePath("/admin/dashboard");
+
+    return {
+      success: true,
+      message: isBlocked
+        ? `Student (${student.email}) has been blocked successfully.`
+        : `Student (${student.email}) has been unblocked successfully.`,
+    };
+  } catch (err: any) {
+    console.error("toggleBlockStudentAction error:", err);
+    return { success: false, error: "Failed to update student block status." };
+  }
+}
+
 
 // 9. PAYMENT MANAGEMENT ACTIONS
 export async function getAdminPaymentsAction() {

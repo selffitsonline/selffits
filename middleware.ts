@@ -67,6 +67,12 @@ export async function middleware(req: NextRequest) {
       loginUrl.searchParams.set("callbackUrl", pathname);
       return NextResponse.redirect(loginUrl);
     }
+
+    if (token.isBlocked) {
+      const loginUrl = new URL("/login", req.url);
+      loginUrl.searchParams.set("error", "BlockedAccount");
+      return NextResponse.redirect(loginUrl);
+    }
   }
 
   return NextResponse.next();

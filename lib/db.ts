@@ -7,7 +7,7 @@ const globalForPrisma = globalThis as unknown as {
 // Ensure fresh PrismaClient instance if models were dynamically added
 let client = globalForPrisma.prisma;
 
-if (!client || !("coachApplication" in client)) {
+if (!client || !("batch" in client)) {
   client = new PrismaClient({
     log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
   });

@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   Bell,
   Sparkles,
+  Layers,
 } from "lucide-react";
 
 interface AdminShellProps {
@@ -42,10 +43,10 @@ export function AdminShell({ children }: AdminShellProps) {
     { label: "Homepage Banner", href: "/admin/banner", icon: ImageIcon },
     { label: "Programs & Pricing", href: "/admin/programs", icon: BookOpen },
     { label: "Registered Students", href: "/admin/students", icon: Users },
+    { label: "Batch Management", href: "/admin/batches", icon: Layers },
     { label: "Payments & Revenue", href: "/admin/payments", icon: CreditCard },
     { label: "Active Coaches", href: "/admin/coaches", icon: UserCheck },
     { label: "Coach Leads & Resumes", href: "/admin/coach-applications", icon: FileText },
-    { label: "Live Class Links", href: "/admin/live-links", icon: Video },
     { label: "Website Settings", href: "/admin/settings", icon: Settings },
   ];
 
