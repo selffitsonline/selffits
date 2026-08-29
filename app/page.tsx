@@ -267,15 +267,15 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Carousel Slide Indicators - Absolute Fixed Bottom Position */}
-          <div className="absolute bottom-5 sm:bottom-7 left-1/2 -translate-x-1/2 z-30 flex items-center justify-center gap-2.5 px-4 py-1.5 rounded-full bg-[#0A0B0E]/70 backdrop-blur-md border border-white/10 shadow-xl">
+          {/* Carousel Slide Indicators - Clean Dots Positioned Higher Without Background Pill */}
+          <div className="absolute bottom-10 sm:bottom-14 left-1/2 -translate-x-1/2 z-30 flex items-center justify-center gap-2.5">
             {activeSlides.map((_, idx) => (
               <button
                 key={idx}
                 onClick={() => setCurrentSlide(idx)}
                 className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
                   currentSlide === idx
-                    ? "w-8 bg-[#E50914] shadow-md shadow-[#E50914]/40"
+                    ? "w-8 bg-[#E50914] shadow-md shadow-[#E50914]/50"
                     : "w-2.5 bg-white/40 hover:bg-white/70"
                 }`}
                 aria-label={`Go to slide ${idx + 1}`}
