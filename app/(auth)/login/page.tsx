@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { signIn } from "next-auth/react";
+import { signIn, getSession } from "next-auth/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { LoginSchema, LoginInput } from "@/types/validation.schemas";
@@ -12,7 +12,7 @@ import { LoginSchema, LoginInput } from "@/types/validation.schemas";
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+  const callbackUrl = searchParams.get("callbackUrl");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -38,7 +38,6 @@ export default function LoginPage() {
         email: data.email,
         password: data.password,
         redirect: false,
-        callbackUrl,
       });
 
       if (res?.error) {
@@ -51,16 +50,29 @@ export default function LoginPage() {
         return;
       }
 
-      // Force immediate full browser location replace to target dashboard/callbackUrl
-      window.location.replace(callbackUrl);
-    } catch (err: any) {
-      // In NextAuth v5, NEXT_REDIRECT exception is thrown on successful auth redirect
-      if (err?.message?.includes("NEXT_REDIRECT") || err?.digest?.includes("NEXT_REDIRECT")) {
+      // Check session role for automatic role-based redirect
+      const session = await getSession();
+      const role = session?.user?.role;
+
+      if (role === "ADMIN" || role === "SUPER_ADMIN") {
+        window.location.replace("/admin/dashboard");
+      } else if (callbackUrl && !callbackUrl.startsWith("/admin")) {
         window.location.replace(callbackUrl);
+      } else {
+        window.location.replace("/dashboard");
+      }
+    } catch (err: any) {
+      if (err?.message?.includes("NEXT_REDIRECT") || err?.digest?.includes("NEXT_REDIRECT")) {
+        const session = await getSession();
+        if (session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN") {
+          window.location.replace("/admin/dashboard");
+        } else {
+          window.location.replace("/dashboard");
+        }
         return;
       }
       console.error("Login onSubmit error:", err);
-      window.location.replace(callbackUrl);
+      window.location.replace("/dashboard");
     }
   };
 

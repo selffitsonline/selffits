@@ -73,6 +73,11 @@ export async function middleware(req: NextRequest) {
       loginUrl.searchParams.set("error", "BlockedAccount");
       return NextResponse.redirect(loginUrl);
     }
+
+    // Automatic Role Routing: Redirect Admin users from student dashboard to Admin Dashboard
+    if ((token.role === "ADMIN" || token.role === "SUPER_ADMIN") && pathname.startsWith("/dashboard")) {
+      return NextResponse.redirect(new URL("/admin/dashboard", req.url));
+    }
   }
 
   return NextResponse.next();
