@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { StudentShell } from "@/components/student/student-shell";
@@ -11,12 +11,14 @@ import {
   Clock,
   ArrowRight,
   ShieldCheck,
-  Lock,
   BookOpen,
   User,
   Sparkles,
-  HelpCircle,
+  ExternalLink,
+  Layers,
+  AlertCircle,
 } from "lucide-react";
+import { getStudentBatchInfoAction } from "@/actions/batch.actions";
 
 interface StudentDashboardViewProps {
   userName: string;
@@ -46,11 +48,33 @@ export function StudentDashboardView({
     }
   );
 
+  const [batchInfo, setBatchInfo] = useState<any | null>(null);
+  const [loadingBatch, setLoadingBatch] = useState<boolean>(true);
+
+  useEffect(() => {
+    async function loadBatchData() {
+      try {
+        const res = await getStudentBatchInfoAction();
+        if (res && res.success && res.hasBatch) {
+          setBatchInfo(res.batch);
+        }
+      } catch (err) {
+        console.error("Error loading student batch info:", err);
+      } finally {
+        setLoadingBatch(false);
+      }
+    }
+    loadBatchData();
+  }, []);
+
   const completedClasses = activeStudentData.totalClasses - activeStudentData.remainingClasses;
   const progressPercentage = Math.min(
     100,
     Math.round((completedClasses / (activeStudentData.totalClasses || 24)) * 100)
   );
+
+  // Check if batch is ready with an active admin-assigned meeting URL
+  const isMeetingActive = !!(batchInfo && batchInfo.meetingUrl && batchInfo.status !== "INACTIVE");
 
   return (
     <StudentShell>
@@ -93,7 +117,7 @@ export function StudentDashboardView({
                   Current Rank Tier
                 </span>
                 <span className="text-sm font-extrabold text-[#0080FF] flex items-center gap-1.5 mt-0.5">
-                  <Award className="w-4 h-4 text-[#0080FF]" /> {activeStudentData.beltLevel}
+                  <Award className="w-4 h-4 text-[#0080FF]" /> {batchInfo?.levelName || activeStudentData.beltLevel}
                 </span>
               </div>
 
@@ -136,7 +160,7 @@ export function StudentDashboardView({
                   Enrolled Active Program
                 </span>
                 <h2 className="text-xl sm:text-2xl font-extrabold text-white font-[family-name:var(--font-outfit)] mt-2">
-                  {activeStudentData.programName}
+                  {batchInfo?.programTitle || activeStudentData.programName}
                 </h2>
               </div>
 
@@ -166,24 +190,64 @@ export function StudentDashboardView({
               <div className="p-4 rounded-2xl bg-[#0F1117] border border-white/5 space-y-1">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Next Scheduled Class</span>
                 <p className="text-xs font-extrabold text-white flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-[#0080FF]" /> {activeStudentData.nextClassTime}
+                  <Clock className="w-4 h-4 text-[#0080FF]" />{" "}
+                  {batchInfo
+                    ? `${batchInfo.dayCombination} • ${batchInfo.clockTiming}`
+                    : activeStudentData.nextClassTime}
                 </p>
               </div>
 
               <div className="p-4 rounded-2xl bg-[#0F1117] border border-white/5 space-y-1">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Assigned Instructor</span>
                 <p className="text-xs font-extrabold text-white flex items-center gap-2">
-                  <User className="w-4 h-4 text-[#E50914]" /> {activeStudentData.instructor}
+                  <User className="w-4 h-4 text-[#E50914]" />{" "}
+                  {batchInfo?.coachName || activeStudentData.instructor}
                 </p>
               </div>
             </div>
 
-            <Link
-              href="/dashboard/live"
-              className="w-full py-4 rounded-2xl bg-[#10B981] hover:bg-[#059669] text-black font-extrabold text-xs sm:text-sm uppercase tracking-wider text-center block transition-all shadow-lg shadow-[#10B981]/20 flex items-center justify-center gap-2"
-            >
-              <Video className="w-4 h-4 fill-current" /> Join Virtual Classroom Session
-            </Link>
+            {/* Preparation Information Panel (Automatically Visible BEFORE Meeting Link is Active) */}
+            {!isMeetingActive && (
+              <div className="p-5 rounded-2xl bg-gradient-to-r from-[#1A1812] via-[#14161D] to-[#0F1117] border border-[#F59E0B]/30 space-y-2 shadow-lg animate-in fade-in duration-300">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-[#F59E0B]/20 border border-[#F59E0B]/40 text-[#F59E0B] flex items-center justify-center font-bold shrink-0">
+                    <Sparkles className="w-4 h-4 animate-pulse" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-extrabold text-white font-[family-name:var(--font-outfit)]">
+                      Your Class Is Being Prepared
+                    </h3>
+                    <span className="text-[10px] font-semibold text-[#F59E0B]">
+                      You&apos;ll be notified when your virtual classroom is ready to join.
+                    </span>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-300 leading-relaxed pt-1 pl-10">
+                  Our team is currently organizing your training session. We&apos;ll get back to you soon once your batch and live class are ready.
+                </p>
+              </div>
+            )}
+
+            {/* Meeting Button (Disabled when inactive, Active when ready) */}
+            {isMeetingActive ? (
+              <a
+                href={batchInfo.meetingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-4 rounded-2xl bg-gradient-to-r from-[#10B981] to-[#059669] text-black font-extrabold text-xs sm:text-sm uppercase tracking-wider text-center block transition-all shadow-lg shadow-[#10B981]/20 flex items-center justify-center gap-2 hover:opacity-95 cursor-pointer transform hover:scale-[1.01]"
+              >
+                <Video className="w-4 h-4 fill-current" /> Join Virtual Classroom Session
+                <ExternalLink className="w-4 h-4" />
+              </a>
+            ) : (
+              <button
+                disabled
+                type="button"
+                className="w-full py-4 rounded-2xl bg-white/10 border border-white/10 text-gray-400 font-extrabold text-xs sm:text-sm uppercase tracking-wider text-center flex items-center justify-center gap-2 opacity-60 cursor-not-allowed pointer-events-none"
+              >
+                <Video className="w-4 h-4" /> Join Virtual Classroom Session (Not Ready)
+              </button>
+            )}
           </div>
         ) : (
           /* Un-enrolled Student View */

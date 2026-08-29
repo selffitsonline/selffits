@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { StudentShell } from "@/components/student/student-shell";
-import { Video, Calendar, Clock, User, ExternalLink, Layers, AlertCircle } from "lucide-react";
+import { Video, Calendar, Clock, User, ExternalLink, Layers, Sparkles } from "lucide-react";
 import { getStudentBatchInfoAction } from "@/actions/batch.actions";
 
 export default function StudentLiveClassesPage() {
@@ -25,6 +25,8 @@ export default function StudentLiveClassesPage() {
     loadStudentBatch();
   }, []);
 
+  const isMeetingActive = !!(batchInfo && batchInfo.meetingUrl && batchInfo.status !== "INACTIVE");
+
   return (
     <StudentShell>
       <div className="space-y-6">
@@ -43,12 +45,12 @@ export default function StudentLiveClassesPage() {
           </div>
         ) : batchInfo ? (
           <div className="space-y-6">
-            {/* Main Batch Meeting Card */}
-            <div className="bg-gradient-to-r from-[#14161D] via-[#14161D] to-[#0F1815] border-2 border-[#10B981]/40 p-6 sm:p-8 rounded-2xl space-y-6 shadow-2xl shadow-[#10B981]/10">
+            {/* Main Batch Card */}
+            <div className="bg-gradient-to-r from-[#14161D] via-[#14161D] to-[#0F1815] border-2 border-white/10 p-6 sm:p-8 rounded-2xl space-y-6 shadow-2xl">
               <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className="px-3 py-1 rounded-full bg-[#10B981]/20 text-[#10B981] text-[10px] font-extrabold border border-[#10B981]/30 animate-pulse flex items-center gap-1.5">
+                    <span className="px-3 py-1 rounded-full bg-[#10B981]/20 text-[#10B981] text-[10px] font-extrabold border border-[#10B981]/30 flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-[#10B981] animate-ping" />
                       ASSIGNED BATCH
                     </span>
@@ -68,26 +70,52 @@ export default function StudentLiveClassesPage() {
                     Program: <span className="text-[#0080FF]">{batchInfo.programTitle}</span> ({batchInfo.programCategory})
                   </p>
                 </div>
+              </div>
 
-                {/* Meeting Link Action Button */}
-                <div className="w-full md:w-auto shrink-0">
-                  {batchInfo.meetingUrl ? (
-                    <a
-                      href={batchInfo.meetingUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="w-full md:w-auto px-8 py-4 rounded-2xl bg-gradient-to-r from-[#10B981] to-[#059669] text-black font-black text-base hover:opacity-95 transition-all shadow-xl shadow-[#10B981]/25 flex items-center justify-center gap-2.5 cursor-pointer transform hover:scale-[1.02]"
-                    >
-                      <Video className="w-5 h-5 fill-current" />
-                      Join Live Class
-                      <ExternalLink className="w-4 h-4" />
-                    </a>
-                  ) : (
-                    <div className="p-4 rounded-xl bg-[#0F1117] border border-white/10 text-xs text-gray-400 italic text-center">
-                      Live meeting link will be available before class starts.
+              {/* Preparation Information Panel (Visible ABOVE meeting button when link is not ready) */}
+              {!isMeetingActive && (
+                <div className="p-5 rounded-2xl bg-gradient-to-r from-[#1A1812] via-[#14161D] to-[#0F1117] border border-[#F59E0B]/30 space-y-2 shadow-lg animate-in fade-in duration-300">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-[#F59E0B]/20 border border-[#F59E0B]/40 text-[#F59E0B] flex items-center justify-center font-bold shrink-0">
+                      <Sparkles className="w-4 h-4 animate-pulse" />
                     </div>
-                  )}
+                    <div>
+                      <h3 className="text-sm font-extrabold text-white font-[family-name:var(--font-outfit)]">
+                        Your Class Is Being Prepared
+                      </h3>
+                      <span className="text-[10px] font-semibold text-[#F59E0B]">
+                        You&apos;ll be notified when your virtual classroom is ready to join.
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-300 leading-relaxed pt-1 pl-10">
+                    Our team is currently organizing your training session. We&apos;ll get back to you soon once your batch and live class are ready.
+                  </p>
                 </div>
+              )}
+
+              {/* Meeting Link Action Button */}
+              <div className="w-full">
+                {isMeetingActive ? (
+                  <a
+                    href={batchInfo.meetingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full px-8 py-4 rounded-2xl bg-gradient-to-r from-[#10B981] to-[#059669] text-black font-black text-base hover:opacity-95 transition-all shadow-xl shadow-[#10B981]/25 flex items-center justify-center gap-2.5 cursor-pointer transform hover:scale-[1.01]"
+                  >
+                    <Video className="w-5 h-5 fill-current" />
+                    Join Live Class
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                ) : (
+                  <button
+                    disabled
+                    type="button"
+                    className="w-full py-4 rounded-2xl bg-white/10 border border-white/10 text-gray-400 font-extrabold text-xs sm:text-sm uppercase tracking-wider text-center flex items-center justify-center gap-2 opacity-60 cursor-not-allowed pointer-events-none"
+                  >
+                    <Video className="w-4 h-4" /> Join Live Class (Not Ready)
+                  </button>
+                )}
               </div>
 
               {/* Schedule & Coach Details Bar */}
