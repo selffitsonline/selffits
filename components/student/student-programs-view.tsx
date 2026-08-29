@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { StudentShell } from "@/components/student/student-shell";
-import { Video, Calendar, User, ArrowRight, ShieldCheck, BookOpen, Trash2, AlertTriangle, X } from "lucide-react";
+import { Video, Calendar, User, ArrowRight, ShieldCheck, BookOpen, Trash2, AlertTriangle, X, Sparkles, ExternalLink } from "lucide-react";
 import { cancelStudentEnrollmentAction } from "@/actions/payments.actions";
 import { clearStudentEnrollmentCache } from "@/lib/enrollment-cache";
 
@@ -176,15 +176,49 @@ export function StudentProgramsView({ initialCourses }: StudentProgramsViewProps
                     </div>
                   </div>
 
-                  <div className="p-6 pt-0">
+                  <div className="p-6 pt-0 space-y-3">
                     {!isExpired ? (
-                      <Link
-                        href="/dashboard/live"
-                        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#10B981] to-[#059669] text-black font-extrabold text-xs text-center block hover:opacity-95 transition-all shadow-md shadow-[#10B981]/20 flex items-center justify-center gap-2"
-                      >
-                        <Video className="w-4 h-4 fill-current" />
-                        JOIN LIVE CLASS NOW <ArrowRight className="w-4 h-4" />
-                      </Link>
+                      <>
+                        {!course.isReady ? (
+                          <>
+                            {/* Preparation Information Panel */}
+                            <div className="p-4 rounded-xl bg-gradient-to-r from-[#1A1812] via-[#14161D] to-[#0F1117] border border-[#F59E0B]/30 space-y-1.5 shadow-md">
+                              <div className="flex items-center gap-2">
+                                <Sparkles className="w-3.5 h-3.5 text-[#F59E0B] animate-pulse shrink-0" />
+                                <h4 className="text-xs font-extrabold text-white font-[family-name:var(--font-outfit)]">
+                                  Your Class Is Being Prepared
+                                </h4>
+                              </div>
+                              <p className="text-[11px] text-gray-300 leading-relaxed">
+                                Our team is currently organizing your training session. We&apos;ll get back to you soon once your batch and live class are ready.
+                              </p>
+                              <span className="text-[10px] font-semibold text-[#F59E0B] block">
+                                You&apos;ll be notified when your virtual classroom is ready to join.
+                              </span>
+                            </div>
+
+                            {/* Disabled Meeting Button */}
+                            <button
+                              disabled
+                              type="button"
+                              className="w-full py-3.5 rounded-xl bg-white/10 border border-white/10 text-gray-400 font-extrabold text-xs text-center flex items-center justify-center gap-2 opacity-60 cursor-not-allowed pointer-events-none"
+                            >
+                              <Video className="w-4 h-4" /> JOIN LIVE CLASS NOW (Not Ready)
+                            </button>
+                          </>
+                        ) : (
+                          /* Active Meeting Button */
+                          <a
+                            href={course.meetingUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-full py-3.5 rounded-xl bg-gradient-to-r from-[#10B981] to-[#059669] text-black font-extrabold text-xs text-center block hover:opacity-95 transition-all shadow-md shadow-[#10B981]/20 flex items-center justify-center gap-2 cursor-pointer"
+                          >
+                            <Video className="w-4 h-4 fill-current" />
+                            JOIN LIVE CLASS NOW <ExternalLink className="w-4 h-4" />
+                          </a>
+                        )}
+                      </>
                     ) : (
                       <div className="flex items-center gap-3">
                         <span className="flex-grow py-3 rounded-xl bg-white/5 border border-white/10 text-gray-400 font-bold text-xs text-center block">

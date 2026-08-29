@@ -225,12 +225,16 @@ export async function verifyPaymentSignatureAction(payload: {
   }
 }
 
+import { getCentralClassReadinessForUser } from "@/actions/batch.actions";
+
 export async function getStudentEnrollmentAction() {
   try {
     const session = await auth();
     if (!session || !session.user) {
       return { success: false, isEnrolled: false, enrollments: [] };
     }
+
+    const readiness = await getCentralClassReadinessForUser(session.user.id);
 
     const rawEnrollments = await db.enrollment.findMany({
       where: {
@@ -296,7 +300,7 @@ export async function getStudentEnrollmentAction() {
         title: planName,
         category: category,
         image: image,
-        beltLevel: beltLevel,
+        beltLevel: readiness.levelName || beltLevel,
         remainingClasses: remainingClasses,
         totalClasses: totalClasses,
         duration: `${totalClasses} Classes`,
@@ -304,8 +308,15 @@ export async function getStudentEnrollmentAction() {
         membershipStatus: item.status,
         status: item.status,
         expiryDate: formattedDate,
-        nextClassTime: "Today at 7:00 PM IST",
-        instructor: "Sensei Rahul Sharma",
+        nextClassTime: readiness.hasBatch
+          ? `${readiness.dayCombination} • ${readiness.clockTiming}`
+          : "Today at 7:00 PM IST",
+        instructor: readiness.coachName || "Sensei Rahul Sharma",
+        hasBatch: readiness.hasBatch,
+        batchName: readiness.batchName,
+        meetingUrl: readiness.meetingUrl,
+        batchStatus: readiness.batchStatus,
+        isReady: readiness.isReady,
       };
     });
 

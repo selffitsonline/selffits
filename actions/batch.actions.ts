@@ -315,6 +315,8 @@ export async function createBatchAction(data: {
 
     revalidatePath("/admin/batches");
     revalidatePath("/admin/dashboard");
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/programs");
     revalidatePath("/dashboard/live");
 
     return { success: true, message: `Batch "${data.name}" created successfully with ID ${generatedBatchId}.` };
@@ -418,6 +420,8 @@ export async function updateBatchAction(
 
     revalidatePath("/admin/batches");
     revalidatePath("/admin/dashboard");
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/programs");
     revalidatePath("/dashboard/live");
 
     return { success: true, message: "Batch updated successfully." };
@@ -508,6 +512,9 @@ export async function assignStudentToBatchAction(batchId: string, userId: string
 
     revalidatePath("/admin/batches");
     revalidatePath("/admin/students");
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/programs");
+    revalidatePath("/dashboard/live");
 
     return { success: true, message: `Student ${student.name} assigned to batch "${batch.name}" successfully!` };
   } catch (err: any) {
@@ -546,6 +553,9 @@ export async function removeStudentFromBatchAction(batchId: string, userId: stri
 
     revalidatePath("/admin/batches");
     revalidatePath("/admin/students");
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/programs");
+    revalidatePath("/dashboard/live");
 
     return { success: true, message: "Student removed from batch." };
   } catch (err: any) {
@@ -573,6 +583,9 @@ export async function deactivateOrDeleteBatchAction(batchId: string, deletePerma
 
     revalidatePath("/admin/batches");
     revalidatePath("/admin/dashboard");
+    revalidatePath("/dashboard");
+    revalidatePath("/dashboard/programs");
+    revalidatePath("/dashboard/live");
 
     return {
       success: true,
@@ -583,6 +596,73 @@ export async function deactivateOrDeleteBatchAction(batchId: string, deletePerma
     return { success: false, error: "Failed to update batch." };
   }
 }
+// Centralized Server-Side Batch & Meeting Readiness Calculator
+export async function getCentralClassReadinessForUser(userId: string) {
+  const assignment = await db.batchStudent.findFirst({
+    where: { userId },
+    include: {
+      batch: {
+        include: {
+          program: true,
+          membershipPlan: true,
+          coach: true,
+          students: true,
+        },
+      },
+    },
+  });
+
+  if (!assignment || !assignment.batch) {
+    return {
+      hasBatch: false,
+      batchId: null,
+      batchCode: null,
+      batchName: null,
+      programTitle: null,
+      programCategory: null,
+      levelName: null,
+      coachName: null,
+      coachRank: null,
+      coachDisciplines: null,
+      dayCombination: null,
+      timeSlot: null,
+      clockTiming: null,
+      meetingUrl: null,
+      capacityLabel: null,
+      batchStatus: null,
+      isReady: false,
+    };
+  }
+
+  const b = assignment.batch;
+  const hasValidMeetingUrl = !!(b.meetingUrl && b.meetingUrl.trim() !== "");
+  const isBatchActive = b.status === "ACTIVE" || b.status === "FULL";
+  const isReady = hasValidMeetingUrl && isBatchActive;
+
+  const coachDisciplines = Array.isArray(b.coach.disciplines) ? (b.coach.disciplines as string[]) : [];
+
+  return {
+    hasBatch: true,
+    batchId: b.id,
+    batchCode: b.batchId,
+    batchName: b.name,
+    programTitle: b.program.title,
+    programCategory: b.program.category,
+    levelName: getBeltLevelName(b.membershipPlan?.tierType, b.membershipPlan?.name),
+    coachName: b.coach.fullName,
+    coachRank: b.coach.highestRank || "Certified Instructor",
+    coachDisciplines: coachDisciplines.length > 0 ? coachDisciplines.join(", ") : "Martial Arts & Fitness",
+    dayCombination: b.dayCombination,
+    timeSlot: b.timeSlot,
+    clockTiming: b.clockTiming,
+    meetingUrl: b.meetingUrl || null,
+    capacityLabel: `${b.students.length} / ${b.maxCapacity}`,
+    batchStatus: b.status,
+    isReady: isReady,
+    assignedAt: assignment.assignedAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+  };
+}
+
 export async function getStudentBatchInfoAction() {
   try {
     const session = await auth();
@@ -590,48 +670,17 @@ export async function getStudentBatchInfoAction() {
       return { success: false, error: "Unauthorized access." };
     }
 
-    const assignment = await db.batchStudent.findFirst({
-      where: { userId: session.user.id },
-      include: {
-        batch: {
-          include: {
-            program: true,
-            membershipPlan: true,
-            coach: true,
-            students: true,
-          },
-        },
-      },
-    });
+    const readiness = await getCentralClassReadinessForUser(session.user.id);
 
-    if (!assignment) {
-      return { success: true, hasBatch: false, batch: null };
+    if (!readiness.hasBatch) {
+      return { success: true, hasBatch: false, batch: null, isReady: false };
     }
-
-    const b = assignment.batch;
-    const coachDisciplines = Array.isArray(b.coach.disciplines) ? (b.coach.disciplines as string[]) : [];
 
     return {
       success: true,
       hasBatch: true,
-      batch: {
-        id: b.id,
-        batchId: b.batchId,
-        name: b.name,
-        programTitle: b.program.title,
-        programCategory: b.program.category,
-        levelName: getBeltLevelName(b.membershipPlan?.tierType, b.membershipPlan?.name),
-        coachName: b.coach.fullName,
-        coachRank: b.coach.highestRank || "Certified Instructor",
-        coachDisciplines: coachDisciplines.length > 0 ? coachDisciplines.join(", ") : "Martial Arts & Fitness",
-        dayCombination: b.dayCombination,
-        timeSlot: b.timeSlot,
-        clockTiming: b.clockTiming,
-        meetingUrl: b.meetingUrl || null,
-        capacityLabel: `${b.students.length} / ${b.maxCapacity}`,
-        status: b.status,
-        assignedAt: assignment.assignedAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-      },
+      isReady: readiness.isReady,
+      batch: readiness,
     };
   } catch (err: any) {
     console.error("getStudentBatchInfoAction error:", err);
