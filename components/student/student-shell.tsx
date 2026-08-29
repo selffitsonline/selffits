@@ -52,72 +52,73 @@ export function StudentShell({ children }: StudentShellProps) {
   return (
     <div className="min-h-screen bg-[#0A0B0E] text-white flex flex-col md:flex-row">
       {/* Desktop Sidebar Navigation */}
-      <aside className="hidden md:flex flex-col w-64 bg-[#14161D] border-r border-white/10 shrink-0 sticky top-0 h-screen z-40 justify-between">
-        <div className="flex flex-col min-h-0 overflow-y-auto">
-          {/* Brand Header */}
-          <div className="p-5 border-b border-white/10 flex items-center justify-between shrink-0">
-            <Link href="/dashboard" className="flex items-center group">
-              <Image
-                src="/logo-updated.jpg"
-                alt="SELFFITS Logo"
-                width={200}
-                height={70}
-                priority
-                className="h-12 w-auto object-contain rounded-xl group-hover:scale-105 transition-transform"
-              />
-            </Link>
-          </div>
-
-          {/* Student Profile Quick Card */}
-          <div className="p-4 m-4 rounded-xl bg-[#0F1117] border border-white/10 flex items-center gap-3 shrink-0">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#E50914] to-[#0080FF] flex items-center justify-center font-bold text-white text-sm shrink-0">
-              {userDisplayName.charAt(0).toUpperCase()}
-            </div>
-            <div className="overflow-hidden">
-              <h4 className="text-xs font-bold text-white truncate">{userDisplayName}</h4>
-              <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#0080FF]">
-                <ShieldCheck className="w-3 h-3 text-[#0080FF]" />
-                Student Account
-              </span>
-            </div>
-          </div>
-
-          {/* Nav Links */}
-          <nav className="flex-1 px-4 py-2 space-y-1">
-            {navigationItems.map((item) => {
-              const isActive = pathname === item.href;
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center justify-between px-4 py-3 rounded-xl text-xs font-semibold transition-all ${
-                    isActive
-                      ? "bg-[#E50914] text-white shadow-lg shadow-[#E50914]/20 font-bold"
-                      : "text-gray-400 hover:text-white hover:bg-white/5"
-                  }`}
-                >
-                  <div className="flex items-center gap-3">
-                    <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-gray-400"}`} />
-                    <span>{item.name}</span>
-                  </div>
-                  {isActive && <ChevronRight className="w-3.5 h-3.5 opacity-80" />}
-                </Link>
-              );
-            })}
-          </nav>
+      <aside className="hidden md:flex flex-col w-64 bg-[#14161D] border-r border-white/10 shrink-0 sticky top-0 h-screen z-40 overflow-y-auto">
+        {/* Brand Header */}
+        <div className="p-5 border-b border-white/10 flex items-center justify-between shrink-0">
+          <Link href="/dashboard" className="flex items-center group">
+            <Image
+              src="/logo-updated.jpg"
+              alt="SELFFITS Logo"
+              width={200}
+              height={70}
+              priority
+              className="h-12 w-auto object-contain rounded-xl group-hover:scale-105 transition-transform"
+            />
+          </Link>
         </div>
 
-        {/* Sidebar Footer / Logout */}
-        <div className="p-4 border-t border-white/10 shrink-0 bg-[#14161D]">
-          <button
-            onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-gray-300 hover:text-[#EF4444] bg-[#0F1117] hover:bg-[#E50914]/15 border border-white/10 hover:border-[#E50914]/30 transition-all cursor-pointer active:scale-95 shadow-md"
-          >
-            <LogOut className="w-4 h-4 text-[#E50914]" />
-            <span>Logout Account</span>
-          </button>
+        {/* Student Profile Quick Card */}
+        <div className="p-4 m-4 rounded-xl bg-[#0F1117] border border-white/10 flex items-center gap-3 shrink-0">
+          <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-[#E50914] to-[#0080FF] flex items-center justify-center font-bold text-white text-sm shrink-0">
+            {userDisplayName.charAt(0).toUpperCase()}
+          </div>
+          <div className="overflow-hidden">
+            <h4 className="text-xs font-bold text-white truncate">{userDisplayName}</h4>
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#0080FF]">
+              <ShieldCheck className="w-3 h-3 text-[#0080FF]" />
+              Student Account
+            </span>
+          </div>
         </div>
+
+        {/* Nav Links + Integrated Logout Button */}
+        <nav className="px-4 py-2 space-y-1 flex-1">
+          {navigationItems.map((item) => {
+            const isActive = pathname === item.href;
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center justify-between px-4 py-3 rounded-xl text-xs font-semibold transition-all ${
+                  isActive
+                    ? "bg-[#E50914] text-white shadow-lg shadow-[#E50914]/20 font-bold"
+                    : "text-gray-400 hover:text-white hover:bg-white/5"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-gray-400"}`} />
+                  <span>{item.name}</span>
+                </div>
+                {isActive && <ChevronRight className="w-3.5 h-3.5 opacity-80" />}
+              </Link>
+            );
+          })}
+
+          {/* Unified Divider Line & Integrated Logout Button */}
+          <div className="pt-3 pb-1">
+            <div className="border-t border-white/10 mb-3" />
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-semibold text-gray-300 hover:text-[#EF4444] bg-[#0F1117] hover:bg-[#E50914]/15 border border-white/10 hover:border-[#E50914]/30 transition-all cursor-pointer active:scale-95 shadow-md"
+            >
+              <div className="flex items-center gap-3">
+                <LogOut className="w-4 h-4 text-[#E50914]" />
+                <span>Logout Account</span>
+              </div>
+            </button>
+          </div>
+        </nav>
       </aside>
 
       {/* Main Content Area */}
