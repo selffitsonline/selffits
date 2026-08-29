@@ -35,7 +35,7 @@ export function AdminShell({ children }: AdminShellProps) {
 
   const adminName = session?.user?.name || "Administrator";
   const adminEmail = session?.user?.email || "admin@selffits.com";
-  const roleBadge = session?.user?.role || "ADMIN";
+  const roleBadge = "ADMIN";
 
   const navigationItems = [
     { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
