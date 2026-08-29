@@ -74,16 +74,7 @@ export function StudentDashboardView({
               </p>
             </div>
 
-            {isEnrolled ? (
-              <Link
-                href="/dashboard/live"
-                className="w-full lg:w-auto px-6 py-4 rounded-2xl bg-gradient-to-r from-[#10B981] to-[#059669] text-black font-black text-sm uppercase tracking-wider hover:opacity-95 transition-all shadow-xl shadow-[#10B981]/25 flex items-center justify-center gap-3 shrink-0 active:scale-95"
-              >
-                <Video className="w-5 h-5 fill-current" />
-                JOIN LIVE CLASS NOW
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            ) : (
+            {!isEnrolled && (
               <Link
                 href="/programs"
                 className="w-full lg:w-auto px-6 py-4 rounded-2xl bg-gradient-to-r from-[#0080FF] to-[#2563EB] text-white font-black text-sm uppercase tracking-wider hover:opacity-95 transition-all shadow-xl shadow-[#0080FF]/25 flex items-center justify-center gap-3 shrink-0 active:scale-95"
@@ -138,107 +129,61 @@ export function StudentDashboardView({
 
         {/* 2. ACTIVE ENROLLMENT / PROGRAM DETAIL CARD */}
         {isEnrolled ? (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Active Class Card */}
-            <div className="lg:col-span-2 bg-[#14161D] border border-white/10 rounded-3xl p-6 space-y-6 shadow-xl relative overflow-hidden">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-5 border-b border-white/10">
-                <div>
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-[#0080FF] px-2.5 py-1 rounded-full bg-[#0080FF]/15 border border-[#0080FF]/30">
-                    Enrolled Active Program
-                  </span>
-                  <h2 className="text-xl font-extrabold text-white font-[family-name:var(--font-outfit)] mt-2">
-                    {activeStudentData.programName}
-                  </h2>
-                </div>
-
-                <Link
-                  href="/dashboard/programs"
-                  className="text-xs text-[#0080FF] hover:underline font-bold flex items-center gap-1"
-                >
-                  Manage All Programs <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
-              </div>
-
-              {/* Progress Bar */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-gray-400 font-medium">Training Class Attendance Progress</span>
-                  <span className="font-extrabold text-white">{progressPercentage}% Completed</span>
-                </div>
-                <div className="w-full h-3 rounded-full bg-[#0F1117] overflow-hidden p-0.5 border border-white/10">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-[#0080FF] to-[#10B981] transition-all duration-500"
-                    style={{ width: `${progressPercentage}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                <div className="p-4 rounded-2xl bg-[#0F1117] border border-white/5 space-y-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Next Scheduled Class</span>
-                  <p className="text-xs font-extrabold text-white flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-[#0080FF]" /> {activeStudentData.nextClassTime}
-                  </p>
-                </div>
-
-                <div className="p-4 rounded-2xl bg-[#0F1117] border border-white/5 space-y-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Assigned Instructor</span>
-                  <p className="text-xs font-extrabold text-white flex items-center gap-2">
-                    <User className="w-4 h-4 text-[#E50914]" /> {activeStudentData.instructor}
-                  </p>
-                </div>
+          <div className="w-full bg-[#14161D] border border-white/10 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl relative overflow-hidden">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-5 border-b border-white/10">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#0080FF] px-2.5 py-1 rounded-full bg-[#0080FF]/15 border border-[#0080FF]/30">
+                  Enrolled Active Program
+                </span>
+                <h2 className="text-xl sm:text-2xl font-extrabold text-white font-[family-name:var(--font-outfit)] mt-2">
+                  {activeStudentData.programName}
+                </h2>
               </div>
 
               <Link
-                href="/dashboard/live"
-                className="w-full py-4 rounded-2xl bg-[#10B981] hover:bg-[#059669] text-black font-extrabold text-xs uppercase tracking-wider text-center block transition-all shadow-lg shadow-[#10B981]/20 flex items-center justify-center gap-2"
+                href="/dashboard/programs"
+                className="text-xs text-[#0080FF] hover:underline font-bold flex items-center gap-1"
               >
-                <Video className="w-4 h-4 fill-current" /> Join Virtual Classroom Session
+                Manage All Programs <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
 
-            {/* Side Card: Student Portal Quick Links */}
-            <div className="space-y-6">
-              <div className="bg-[#14161D] border border-white/10 rounded-3xl p-6 space-y-4 shadow-xl">
-                <h3 className="text-sm font-extrabold text-white uppercase tracking-wider flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-[#0080FF]" /> Academy Student Services
-                </h3>
-
-                <div className="space-y-2 text-xs">
-                  <Link
-                    href="/dashboard/programs"
-                    className="flex items-center justify-between p-3 rounded-xl bg-[#0F1117] border border-white/5 hover:border-[#0080FF]/40 text-gray-300 hover:text-white transition-all font-semibold"
-                  >
-                    <span>My Enrolled Programs</span>
-                    <ArrowRight className="w-3.5 h-3.5 text-[#0080FF]" />
-                  </Link>
-
-                  <Link
-                    href="/dashboard/certificates"
-                    className="flex items-center justify-between p-3 rounded-xl bg-[#0F1117] border border-white/5 hover:border-[#0080FF]/40 text-gray-300 hover:text-white transition-all font-semibold"
-                  >
-                    <span>Belt Exam Certificates</span>
-                    <ArrowRight className="w-3.5 h-3.5 text-[#0080FF]" />
-                  </Link>
-
-                  <Link
-                    href="/dashboard/recordings"
-                    className="flex items-center justify-between p-3 rounded-xl bg-[#0F1117] border border-white/5 hover:border-[#0080FF]/40 text-gray-300 hover:text-white transition-all font-semibold"
-                  >
-                    <span>Class Video Recordings</span>
-                    <ArrowRight className="w-3.5 h-3.5 text-[#0080FF]" />
-                  </Link>
-
-                  <Link
-                    href="/dashboard/profile"
-                    className="flex items-center justify-between p-3 rounded-xl bg-[#0F1117] border border-white/5 hover:border-[#0080FF]/40 text-gray-300 hover:text-white transition-all font-semibold"
-                  >
-                    <span>Account Profile Settings</span>
-                    <ArrowRight className="w-3.5 h-3.5 text-[#0080FF]" />
-                  </Link>
-                </div>
+            {/* Progress Bar */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-gray-400 font-medium">Training Class Attendance Progress</span>
+                <span className="font-extrabold text-white">{progressPercentage}% Completed</span>
+              </div>
+              <div className="w-full h-3 rounded-full bg-[#0F1117] overflow-hidden p-0.5 border border-white/10">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-[#0080FF] to-[#10B981] transition-all duration-500"
+                  style={{ width: `${progressPercentage}%` }}
+                />
               </div>
             </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <div className="p-4 rounded-2xl bg-[#0F1117] border border-white/5 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Next Scheduled Class</span>
+                <p className="text-xs font-extrabold text-white flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-[#0080FF]" /> {activeStudentData.nextClassTime}
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-[#0F1117] border border-white/5 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Assigned Instructor</span>
+                <p className="text-xs font-extrabold text-white flex items-center gap-2">
+                  <User className="w-4 h-4 text-[#E50914]" /> {activeStudentData.instructor}
+                </p>
+              </div>
+            </div>
+
+            <Link
+              href="/dashboard/live"
+              className="w-full py-4 rounded-2xl bg-[#10B981] hover:bg-[#059669] text-black font-extrabold text-xs sm:text-sm uppercase tracking-wider text-center block transition-all shadow-lg shadow-[#10B981]/20 flex items-center justify-center gap-2"
+            >
+              <Video className="w-4 h-4 fill-current" /> Join Virtual Classroom Session
+            </Link>
           </div>
         ) : (
           /* Un-enrolled Student View */
