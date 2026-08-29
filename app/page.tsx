@@ -201,7 +201,7 @@ export default function HomePage() {
 
       <main className="flex-grow pt-14 sm:pt-16">
         {/* 1. HERO SECTION WITH FULL-SCREEN 2-IMAGE CAROUSEL */}
-        <section className="relative w-full min-h-[calc(100vh-64px)] flex items-center justify-center overflow-hidden py-6 sm:py-10 px-4 sm:px-6 lg:px-8">
+        <section className="relative w-full min-h-[calc(100vh-64px)] flex items-center justify-center overflow-hidden py-8 sm:py-12 pb-20 sm:pb-24 px-4 sm:px-6 lg:px-8">
           {/* Full-Screen Edge-to-Edge Multi-Slide Background Carousel */}
           <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
             {activeSlides.map((s, idx) => (
@@ -238,14 +238,14 @@ export default function HomePage() {
                 {activeSlide.badgeText}
               </div>
 
-              <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.05] font-[family-name:var(--font-outfit)] text-white min-h-[96px] sm:min-h-[140px] flex flex-col justify-center">
+              <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.05] font-[family-name:var(--font-outfit)] text-white">
                 <span className="block">{activeSlide.titleMain}</span>
                 <span className="text-[#E50914] block mt-1 sm:mt-2">
                   {activeSlide.titleHighlight}
                 </span>
               </h1>
 
-              <p className="text-gray-100 text-base sm:text-xl font-semibold max-w-3xl mx-auto leading-relaxed min-h-[56px] sm:min-h-[60px] flex items-center justify-center">
+              <p className="text-gray-100 text-base sm:text-xl font-semibold max-w-3xl mx-auto leading-relaxed">
                 {activeSlide.subtitle}
               </p>
 
@@ -264,23 +264,23 @@ export default function HomePage() {
                   {activeSlide.secondaryCtaText}
                 </Link>
               </div>
-
-              {/* Carousel Slide Indicators - Fixed 3 Dots Position */}
-              <div className="flex items-center justify-center gap-2.5 pt-6 pb-2 min-h-[44px] shrink-0 z-20">
-                {activeSlides.map((_, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => setCurrentSlide(idx)}
-                    className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
-                      currentSlide === idx
-                        ? "w-8 bg-[#E50914] shadow-md shadow-[#E50914]/40"
-                        : "w-2.5 bg-white/40 hover:bg-white/70"
-                    }`}
-                    aria-label={`Go to slide ${idx + 1}`}
-                  />
-                ))}
-              </div>
             </div>
+          </div>
+
+          {/* Carousel Slide Indicators - Absolute Fixed Bottom Position */}
+          <div className="absolute bottom-5 sm:bottom-7 left-1/2 -translate-x-1/2 z-30 flex items-center justify-center gap-2.5 px-4 py-1.5 rounded-full bg-[#0A0B0E]/70 backdrop-blur-md border border-white/10 shadow-xl">
+            {activeSlides.map((_, idx) => (
+              <button
+                key={idx}
+                onClick={() => setCurrentSlide(idx)}
+                className={`h-2.5 rounded-full transition-all duration-300 cursor-pointer ${
+                  currentSlide === idx
+                    ? "w-8 bg-[#E50914] shadow-md shadow-[#E50914]/40"
+                    : "w-2.5 bg-white/40 hover:bg-white/70"
+                }`}
+                aria-label={`Go to slide ${idx + 1}`}
+              />
+            ))}
           </div>
         </section>
 
