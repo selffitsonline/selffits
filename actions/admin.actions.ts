@@ -76,7 +76,7 @@ export async function getAdminDashboardStatsAction() {
       id: e.id,
       userName: e.user.name,
       userEmail: e.user.email,
-      planName: e.membershipPlan?.name || "Belt Tier",
+      planName: e.membershipPlan?.name || "Membership Plan",
       status: e.status,
       classes: `${e.remainingClasses} / ${e.totalClassesGranted}`,
       startDate: e.startDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
@@ -189,7 +189,7 @@ export async function getAdminBannerContentAction() {
         badgeText: "ONLINE FITNESS & MARTIAL ARTS ACADEMY",
         titleMain: "Train Anywhere.",
         titleHighlight: "Transform Yourself!",
-        subtitle: "Join live, interactive Martial Arts Belts & Fitness Transformation classes from anywhere in the world. Real-time form correction, official belt certifications, and world-class instructors.",
+        subtitle: "Join live, interactive Martial Arts & Fitness Transformation classes from anywhere in the world. Real-time form correction, official certifications, and world-class instructors.",
         primaryCtaText: "Join Academy Now",
         primaryCtaLink: "/programs",
         secondaryCtaText: "View Programs",
@@ -200,10 +200,10 @@ export async function getAdminBannerContentAction() {
       {
         id: "slide_2",
         badgeText: "LIVE VIRTUAL ZOOM CLASSES",
-        titleMain: "Master Belt Ranks.",
+        titleMain: "Master Martial Arts & Fitness.",
         titleHighlight: "Earn Official Certification!",
-        subtitle: "Interactive training with 4th Dan Black Belt Instructors. Kids, Adults, and Ladies Only dedicated batches.",
-        primaryCtaText: "Explore Belt Programs",
+        subtitle: "Interactive training with expert instructors. Kids, Adults, and Ladies Only dedicated batches.",
+        primaryCtaText: "Explore Programs",
         primaryCtaLink: "/programs",
         secondaryCtaText: "Meet Master Coaches",
         secondaryCtaLink: "/coaches",
@@ -505,6 +505,57 @@ export async function getAdminProgramsAction() {
   }
 }
 
+function isLegacyCourseItem(c: any) {
+  if (!c || typeof c !== "object") return true;
+  const title = (c.title || "").toLowerCase();
+  const badge = (c.badge || c.daysBadge || c.belt || "").toLowerCase();
+  return (
+    title.includes("belt") ||
+    title.includes("challenge") ||
+    title.includes("1 month course") ||
+    title.includes("3 months course") ||
+    title.includes("6 month course") ||
+    title.includes("12 months course") ||
+    badge.includes("belt") ||
+    badge.includes("challenge")
+  );
+}
+
+function sanitizeCatalogData(cat: any) {
+  if (!cat || typeof cat !== "object") return null;
+  const cleaned: any = {};
+
+  if (cat.mmaData) {
+    cleaned.mmaData = {};
+    for (const key of ["kids", "adults", "ladies"]) {
+      if (cat.mmaData[key]) {
+        cleaned.mmaData[key] = {
+          ...cat.mmaData[key],
+          courses: (cat.mmaData[key].courses || []).filter((c: any) => !isLegacyCourseItem(c)),
+        };
+      }
+    }
+  }
+
+  if (cat.hiitData) {
+    if (Array.isArray(cat.hiitData)) {
+      cleaned.hiitData = cat.hiitData.filter((c: any) => !isLegacyCourseItem(c));
+    } else if (typeof cat.hiitData === "object") {
+      cleaned.hiitData = {};
+      for (const key of ["kids", "adults", "ladies"]) {
+        if (cat.hiitData[key]) {
+          cleaned.hiitData[key] = {
+            ...cat.hiitData[key],
+            courses: (cat.hiitData[key].courses || []).filter((c: any) => !isLegacyCourseItem(c)),
+          };
+        }
+      }
+    }
+  }
+
+  return cleaned;
+}
+
 export async function getAdminProgramsCatalogAction() {
   try {
     const setting = await db.websiteSettings.findUnique({
@@ -512,7 +563,8 @@ export async function getAdminProgramsCatalogAction() {
     });
 
     if (setting && setting.value) {
-      return { success: true, catalog: setting.value };
+      const sanitized = sanitizeCatalogData(setting.value);
+      return { success: true, catalog: sanitized };
     }
 
     return { success: true, catalog: null };
@@ -549,24 +601,24 @@ function getProgramCategoryLabel(program?: { category?: string; targetAudience?:
   if (!program) return "General Program";
   if (program.targetAudience === "KIDS") return "Kids Martial Arts";
   if (program.targetAudience === "LADIES_ONLY") return "Ladies Only Programs";
-  if (program.category === "FITNESS_WEIGHT_LOSS" || program.category === "FITNESS_HIIT") return "Weight Loss & HIIT";
+  if (program.category === "FITNESS_WEIGHT_LOSS" || program.category === "FITNESS_HIIT") return "Fitness & Weight Management";
   if (program.category === "MARTIAL_ARTS") return "Adults Martial Arts";
   return program.title || "Martial Arts & Fitness";
 }
 
-// Helper to format belt level or tier name
-function getBeltLevelName(tierType?: string | null, planName?: string | null) {
-  if (planName && planName.trim()) return planName.trim();
-  if (!tierType) return "Standard Level";
+// Helper to format program level or tier name
+function getProgramLevelName(tierType?: string | null, planName?: string | null) {
+  if (planName && planName.trim() && !planName.toLowerCase().includes("belt") && !planName.toLowerCase().includes("challenge")) return planName.trim();
+  if (!tierType) return "Standard Plan";
   switch (tierType) {
-    case "YELLOW_BELT": return "Yellow Belt";
-    case "BLUE_BELT": return "Blue Belt";
-    case "PURPLE_BELT": return "Purple Belt";
-    case "BROWN_BELT": return "Brown Belt";
-    case "CHALLENGE_8": return "Challenge 8";
-    case "CHALLENGE_24": return "Challenge 24";
-    case "CHALLENGE_48": return "Challenge 48";
-    case "TRANSFORMATION_96": return "Transformation 96";
+    case "YELLOW_BELT": return "1 Day / Week";
+    case "BLUE_BELT": return "3 Days / Week";
+    case "PURPLE_BELT": return "4 Days / Week";
+    case "BROWN_BELT": return "5 Days / Week";
+    case "CHALLENGE_8": return "1 Day / Week";
+    case "CHALLENGE_24": return "3 Days / Week";
+    case "CHALLENGE_48": return "4 Days / Week";
+    case "TRANSFORMATION_96": return "5 Days / Week";
     default: return tierType.replace(/_/g, " ");
   }
 }
@@ -645,8 +697,8 @@ export async function getAdminStudentsAction() {
           programTitle: prg?.title || e.membershipPlan?.name || "Martial Arts Program",
           programCategory: prg?.category || "MARTIAL_ARTS",
           categoryLabel: getProgramCategoryLabel(prg),
-          membershipPlanName: e.membershipPlan?.name || getBeltLevelName(e.membershipPlan?.tierType),
-          courseLevel: getBeltLevelName(e.membershipPlan?.tierType, e.membershipPlan?.name),
+          membershipPlanName: e.membershipPlan?.name || getProgramLevelName(e.membershipPlan?.tierType),
+          courseLevel: getProgramLevelName(e.membershipPlan?.tierType, e.membershipPlan?.name),
           startDate: e.startDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
           endDate: e.endDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
           rawEndDate: e.endDate.toISOString(),
@@ -692,44 +744,53 @@ export async function getAdminStudentsAction() {
         : null;
 
       const activeCourseLevel = activeEnrollment
-        ? getBeltLevelName(activeEnrollment.membershipPlan?.tierType, activeEnrollment.membershipPlan?.name)
+        ? getProgramLevelName(activeEnrollment.membershipPlan?.tierType, activeEnrollment.membershipPlan?.name)
         : null;
 
-      return {
-        id: std.id,
-        name: std.name,
-        firstName: std.firstName || "",
-        lastName: std.lastName || "",
-        email: std.email,
-        phone: std.studentProfile?.phone || "Not provided",
-        country: std.studentProfile?.country || "Not specified",
-        city: std.studentProfile?.city || "Not specified",
-        emergencyContact: std.studentProfile?.emergencyContact || "None",
-        isBlocked: std.isBlocked || false,
-        accountStatus: std.isBlocked ? "BLOCKED" : "ACTIVE",
-        joinedDate: std.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-        enrollmentStatus,
-        activeProgram: activePrg?.title || activeEnrollment?.membershipPlan?.name || (hasExpiredEnrollments ? "Expired Membership" : "Unenrolled"),
-        activeCategory: activePrg?.category || null,
-        activeCategoryLabel: activeEnrollment ? getProgramCategoryLabel(activePrg) : "None",
-        activeCourseLevel: activeCourseLevel || "Standard Level",
-        activeClassTiming: activeClassTiming || "03:30 PM to 04:15 PM (GMT)",
-        activeEnrollmentFullTimestamp,
-        totalEnrollments: std.enrollments.length,
-        remainingClasses: activeEnrollment ? activeEnrollment.remainingClasses : 0,
-        totalClasses: activeEnrollment ? activeEnrollment.totalClassesGranted : 0,
-        completedClasses: activeEnrollment
-          ? Math.max(0, activeEnrollment.totalClassesGranted - activeEnrollment.remainingClasses)
-          : 0,
-        expiryDate: activeEnrollment
-          ? activeEnrollment.endDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-          : null,
-        totalSpentNum,
-        totalSpent: `₹${totalSpentNum.toLocaleString("en-IN")}`,
-        enrollments: formattedEnrollments,
-        payments: formattedPayments,
-      };
-    });
+        const activeSelectedDays = activeEnrollment && Array.isArray(activeEnrollment.selectedDays)
+          ? (activeEnrollment.selectedDays as string[])
+          : ["Sunday", "Wednesday", "Saturday"];
+
+        return {
+          id: std.id,
+          name: std.name,
+          firstName: std.firstName || "",
+          lastName: std.lastName || "",
+          email: std.email,
+          phone: std.studentProfile?.phone || "Not provided",
+          country: std.studentProfile?.country || "Not specified",
+          city: std.studentProfile?.city || "Not specified",
+          emergencyContact: std.studentProfile?.emergencyContact || "None",
+          isBlocked: std.isBlocked || false,
+          accountStatus: std.isBlocked ? "BLOCKED" : "ACTIVE",
+          joinedDate: std.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+          enrollmentStatus,
+          activeProgram: activePrg?.title || activeEnrollment?.membershipPlan?.name || (hasExpiredEnrollments ? "Expired Membership" : "Unenrolled"),
+          activeCategory: activePrg?.category || null,
+          activeCategoryLabel: activeEnrollment ? getProgramCategoryLabel(activePrg) : "None",
+          activeCourseLevel: activeCourseLevel || "Standard Level",
+          activeClassTiming: activeClassTiming || "03:30 PM to 04:15 PM (GMT)",
+          activeDaysPerWeek: activeEnrollment?.daysPerWeek || 3,
+          activeSelectedDays: activeSelectedDays,
+          activeSelectedBatch: activeEnrollment?.selectedBatch || activeClassTiming || "2nd Batch — 02:30 PM to 03:30 PM (GMT)",
+          activeMonthlyPrice: activeEnrollment?.monthlyPrice ? Number(activeEnrollment.monthlyPrice) : null,
+          activeTimezone: activeEnrollment?.timezone || "GMT (UTC+0)",
+          activeEnrollmentFullTimestamp,
+          totalEnrollments: std.enrollments.length,
+          remainingClasses: activeEnrollment ? activeEnrollment.remainingClasses : 0,
+          totalClasses: activeEnrollment ? activeEnrollment.totalClassesGranted : 0,
+          completedClasses: activeEnrollment
+            ? Math.max(0, activeEnrollment.totalClassesGranted - activeEnrollment.remainingClasses)
+            : 0,
+          expiryDate: activeEnrollment
+            ? activeEnrollment.endDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+            : null,
+          totalSpentNum,
+          totalSpent: `₹${totalSpentNum.toLocaleString("en-IN")}`,
+          enrollments: formattedEnrollments,
+          payments: formattedPayments,
+        };
+      });
 
     return { success: true, students: formattedStudents };
   } catch (err: any) {
@@ -759,7 +820,7 @@ export async function getAdminStudentCategoriesAction() {
     categorySet.add("Kids Martial Arts");
     categorySet.add("Adults Martial Arts");
     categorySet.add("Ladies Only Programs");
-    categorySet.add("Weight Loss & HIIT");
+    categorySet.add("Fitness & Weight Management");
 
     programs.forEach((p) => {
       const label = getProgramCategoryLabel(p);

@@ -27,9 +27,9 @@ const defaultFaqs: FAQItem[] = [
       "We maintain separate dedicated batches tailored to different age groups and needs: Kids Martial Arts (Ages 8-20), Adults Martial Arts (21+), and Ladies Only Programs.",
   },
   {
-    question: "How are Belt Certifications issued?",
+    question: "How are Program Completion Certificates issued?",
     answer:
-      "Upon completing your required class count and passing your live virtual belt evaluation with Sensei, official Belt Certificates are uploaded directly to your Student Dashboard for high-resolution download.",
+      "Upon completing your required class count and passing your live virtual skills evaluation with Sensei, official Program Completion Certificates are uploaded directly to your Student Dashboard for high-resolution download.",
   },
   {
     question: "What payment methods do you support?",

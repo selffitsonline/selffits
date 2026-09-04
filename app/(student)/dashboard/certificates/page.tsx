@@ -7,13 +7,13 @@ import { Award, Download, Calendar, ShieldCheck, CheckCircle2 } from "lucide-rea
 export default function StudentCertificatesPage() {
   const certificates = [
     {
-      id: "cert-yellow-belt",
-      name: "Yellow Belt Certification",
+      id: "cert-martial-arts",
+      name: "Martial Arts Graduation Certificate",
       program: "Kids & Adults Martial Arts",
       issuedDate: "June 28, 2026",
-      certificateNumber: "SELFFITS-YB-2026-0482",
+      certificateNumber: "SELFFITS-MA-2026-0482",
       status: "VERIFIED",
-      fileUrl: "/api/certificates/download/cert-yellow-belt",
+      fileUrl: "/api/certificates/download/cert-martial-arts",
     },
   ];
 
@@ -25,7 +25,7 @@ export default function StudentCertificatesPage() {
             My Certificates
           </h1>
           <p className="text-xs text-gray-400 mt-1">
-            View and download your official SELFFITS belt graduation and challenge completion certificates.
+            View and download your official SELFFITS program graduation and course completion certificates.
           </p>
         </div>
 

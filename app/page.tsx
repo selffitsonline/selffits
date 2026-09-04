@@ -18,10 +18,11 @@ import {
   Sparkles,
   Calendar,
   Tag,
+  Clock,
+  CheckCircle2,
 } from "lucide-react";
 import { Header } from "@/components/public/header";
 import { Footer } from "@/components/public/footer";
-import { PricingCards } from "@/components/public/pricing-cards";
 import { FAQAccordion } from "@/components/public/faq-accordion";
 import { CoachesCarousel } from "@/components/public/coaches-carousel";
 import { ScrollProgressButton } from "@/components/public/scroll-progress-button";
@@ -96,7 +97,7 @@ export default function HomePage() {
     if (activeSlideCount <= 1) return;
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % activeSlideCount);
-    }, 5000);
+    }, 6000);
     return () => clearInterval(timer);
   }, [activeSlideCount]);
 
@@ -112,43 +113,47 @@ export default function HomePage() {
       category: "MARTIAL ARTS",
       image: "/images/kids_martial_arts.png",
       description: "Build confidence, discipline, focus, and physical coordination in a safe online virtual class environment.",
-      classes: "8 - 96 Live Classes",
-      duration: "1 - 12 Months",
-      priceStartsINR: "2,999",
-      priceStartsUSD: "39",
+      classes: "4 - 20 Live Classes",
+      duration: "1 - 5 Days / Wk",
+      priceStartsINR: "1,999",
+      priceStartsUSD: "25",
+      href: "/programs?cat=mma&audience=kids",
     },
     {
       id: "adults",
       title: "Adults Martial Arts (21+)",
       category: "MARTIAL ARTS",
       image: "/images/adults_martial_arts.png",
-      description: "Master real striking, self defense techniques, belt rank mastery, and high energy martial fitness.",
-      classes: "8 - 96 Live Classes",
-      duration: "1 - 12 Months",
-      priceStartsINR: "2,999",
-      priceStartsUSD: "39",
+      description: "Master striking techniques, self defense maneuvers, physical conditioning, and martial arts syllabus mastery.",
+      classes: "4 - 20 Live Classes",
+      duration: "1 - 5 Days / Wk",
+      priceStartsINR: "1,999",
+      priceStartsUSD: "25",
+      href: "/programs?cat=mma&audience=adults",
     },
     {
       id: "ladies",
       title: "Ladies Only Programs",
       category: "LADIES SPECIAL",
       image: "/images/ladies_fitness.png",
-      description: "Empowering female-only live sessions focusing on self-defense, weight management, and toning.",
-      classes: "8 - 48 Live Classes",
-      duration: "1 - 6 Months",
-      priceStartsINR: "2,999",
-      priceStartsUSD: "39",
+      description: "Empowering female-only live sessions focusing on self-defense, weight management, toning, and personal safety.",
+      classes: "4 - 20 Live Classes",
+      duration: "1 - 5 Days / Wk",
+      priceStartsINR: "1,999",
+      priceStartsUSD: "25",
+      href: "/programs?cat=mma&audience=ladies",
     },
     {
       id: "weight-loss",
-      title: "Weight Loss & HIIT",
-      category: "FITNESS CHALLENGE",
+      title: "Fitness & Weight Management",
+      category: "FITNESS & WEIGHT",
       image: "/images/weight_loss_hiit.png",
       description: "High-intensity calorie-burning workouts designed for fat loss, stamina, and lean muscle building.",
-      classes: "8 - 96 Live Sessions",
-      duration: "8 - 96 Days",
-      priceStartsINR: "1,499",
-      priceStartsUSD: "19",
+      classes: "4 - 20 Live Sessions",
+      duration: "1 - 5 Days / Wk",
+      priceStartsINR: "1,999",
+      priceStartsUSD: "25",
+      href: "/programs?cat=hiit&audience=adults",
     },
   ];
 
@@ -173,25 +178,25 @@ export default function HomePage() {
 
   const testimonials = [
     {
-      quote: "SELFFITS changed my 12-year-old son's routine completely. He passed his Blue Belt evaluation right from our living room!",
+      quote: "SELFFITS changed my 12-year-old son's routine completely. He passed his curriculum evaluation right from our living room!",
       name: "Priya Nair",
       role: "Parent of Kid Student",
       stars: 5,
-      achievement: "Blue Belt Earned",
+      achievement: "Level 3 Mastery Earned",
     },
     {
-      quote: "The 24 Day Weight Loss Challenge helped me lose 6 kg while boosting my energy levels. The live trainers correct form in real time!",
+      quote: "The 5 Days / Week Weight Loss program helped me lose 6 kg while boosting my energy levels. The live trainers correct form in real time!",
       name: "David Miller",
       role: "Adult Student (USA)",
       stars: 5,
-      achievement: "24-Day Transformation",
+      achievement: "5-Day Transformation",
     },
     {
       quote: "The Ladies Only batch is super comfortable and high energy. I feel so much stronger and confident in self-defense.",
       name: "Ananya Roy",
       role: "Ladies Batch Student",
       stars: 5,
-      achievement: "Purple Belt Student",
+      achievement: "Advanced Scholar",
     },
   ];
 
@@ -199,9 +204,9 @@ export default function HomePage() {
     <div className="min-h-screen bg-[#0A0B0E] text-white flex flex-col selection:bg-[#E50914] selection:text-white">
       <Header />
 
-      <main className="flex-grow pt-14 sm:pt-16">
+      <main className="flex-grow pt-16 sm:pt-20">
         {/* 1. HERO SECTION WITH FULL-SCREEN 2-IMAGE CAROUSEL */}
-        <section className="relative w-full min-h-[calc(100vh-64px)] flex items-center justify-center overflow-hidden py-8 sm:py-12 pb-20 sm:pb-24 px-4 sm:px-6 lg:px-8">
+        <section className="relative w-full min-h-[calc(100vh-68px)] flex items-center justify-center overflow-hidden py-8 sm:py-12 pb-20 sm:pb-24 px-4 sm:px-6 lg:px-8">
           {/* Full-Screen Edge-to-Edge Multi-Slide Background Carousel */}
           <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
             {activeSlides.map((s, idx) => (
@@ -232,39 +237,48 @@ export default function HomePage() {
 
           {/* Overlaid Hero Content Container - Single Line Hero Title Width */}
           <div className="max-w-7xl mx-auto relative z-10 w-full px-4 sm:px-6 text-center">
-            <div className="max-w-6xl mx-auto space-y-3.5 sm:space-y-4 flex flex-col items-center">
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#0A0B0E]/80 border border-[#E50914]/60 text-[#E50914] text-xs sm:text-sm font-bold uppercase tracking-wider backdrop-blur-md shadow-lg">
-                <span className="w-2 h-2 rounded-full bg-[#10B981] animate-ping" />
-                {activeSlide.badgeText}
-              </div>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeSlide.id || currentSlide}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1.0] }}
+                className="max-w-6xl mx-auto space-y-3.5 sm:space-y-4 flex flex-col items-center"
+              >
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#0A0B0E]/80 border border-[#E50914]/60 text-[#E50914] text-xs sm:text-sm font-bold uppercase tracking-wider backdrop-blur-md shadow-lg">
+                  <span className="w-2 h-2 rounded-full bg-[#10B981] animate-ping" />
+                  {activeSlide.badgeText}
+                </div>
 
-              <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.05] font-[family-name:var(--font-outfit)] text-white">
-                <span className="block">{activeSlide.titleMain}</span>
-                <span className="text-[#E50914] block mt-1 sm:mt-2">
-                  {activeSlide.titleHighlight}
-                </span>
-              </h1>
+                <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.05] font-[family-name:var(--font-outfit)] text-white">
+                  <span className="block">{activeSlide.titleMain}</span>
+                  <span className="text-[#E50914] block mt-1 sm:mt-2">
+                    {activeSlide.titleHighlight}
+                  </span>
+                </h1>
 
-              <p className="text-gray-100 text-base sm:text-xl font-semibold max-w-3xl mx-auto leading-relaxed">
-                {activeSlide.subtitle}
-              </p>
+                <p className="text-gray-100 text-base sm:text-xl font-semibold max-w-3xl mx-auto leading-relaxed">
+                  {activeSlide.subtitle}
+                </p>
 
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4 w-full max-w-2xl mx-auto">
-                <Link
-                  href={activeSlide.primaryCtaLink || "/programs"}
-                  className="px-8 py-4 sm:px-10 sm:py-4.5 rounded-2xl bg-gradient-to-r from-[#E50914] to-[#FF1E27] text-white font-extrabold text-base sm:text-lg hover:opacity-95 transition-all shadow-2xl shadow-[#E50914]/50 hover:translate-y-[-2px] flex items-center justify-center gap-2.5 text-center whitespace-nowrap shrink-0 tracking-wide w-full sm:w-auto"
-                >
-                  {activeSlide.primaryCtaText}
-                  <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" />
-                </Link>
-                <Link
-                  href={activeSlide.secondaryCtaLink || "/programs"}
-                  className="px-8 py-4 sm:px-10 sm:py-4.5 rounded-2xl bg-[#0A0B0E]/85 backdrop-blur-md border border-white/35 text-white font-bold text-base sm:text-lg hover:bg-white/20 transition-all text-center whitespace-nowrap shrink-0 tracking-wide w-full sm:w-auto shadow-xl"
-                >
-                  {activeSlide.secondaryCtaText}
-                </Link>
-              </div>
-            </div>
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4 w-full max-w-2xl mx-auto">
+                  <Link
+                    href={activeSlide.primaryCtaLink || "/programs"}
+                    className="px-8 py-4 sm:px-10 sm:py-4.5 rounded-2xl bg-gradient-to-r from-[#E50914] to-[#FF1E27] text-white font-extrabold text-base sm:text-lg hover:opacity-95 transition-all shadow-2xl shadow-[#E50914]/50 hover:translate-y-[-2px] flex items-center justify-center gap-2.5 text-center whitespace-nowrap shrink-0 tracking-wide w-full sm:w-auto"
+                  >
+                    {activeSlide.primaryCtaText}
+                    <ArrowRight className="w-5 h-5 sm:w-6 sm:h-6 shrink-0" />
+                  </Link>
+                  <Link
+                    href={activeSlide.secondaryCtaLink || "/programs"}
+                    className="px-8 py-4 sm:px-10 sm:py-4.5 rounded-2xl bg-[#0A0B0E]/85 backdrop-blur-md border border-white/35 text-white font-bold text-base sm:text-lg hover:bg-white/20 transition-all text-center whitespace-nowrap shrink-0 tracking-wide w-full sm:w-auto shadow-xl"
+                  >
+                    {activeSlide.secondaryCtaText}
+                  </Link>
+                </div>
+              </motion.div>
+            </AnimatePresence>
           </div>
 
           {/* Carousel Slide Indicators - Clean Dots Positioned Higher Without Background Pill */}
@@ -424,7 +438,7 @@ export default function HomePage() {
               Explore Our Programs
             </h2>
             <p className="text-gray-400 text-sm">
-              Tailored martial arts belt progressions and fitness transformation challenges.
+              Structured live virtual training paths with customizable weekly schedule frequencies from 1 to 5 Days / Week.
             </p>
           </div>
 
@@ -487,7 +501,7 @@ export default function HomePage() {
 
                 <div className="p-5 pt-0">
                   <Link
-                    href={`/programs#${prog.id}`}
+                    href={prog.href}
                     className="w-full py-3 rounded-xl bg-gradient-to-r from-[#E50914] to-[#FF1E27] text-white text-xs sm:text-sm font-extrabold text-center block transition-all shadow-md shadow-[#E50914]/20 hover:opacity-95 flex items-center justify-center gap-2"
                   >
                     View Program Details <ArrowRight className="w-4 h-4" />
@@ -553,47 +567,162 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* 6. HOW IT WORKS (3 Simple Steps) */}
+        {/* 6. HOW IT WORKS (6 Comprehensive Steps + Belt Roadmap + Example) */}
         <section className="py-16 sm:py-24 bg-[#0E1015] border-y-[0.5px] border-white/10 px-4">
-          <div className="max-w-7xl mx-auto">
-            <div className="text-center max-w-2xl mx-auto mb-12 sm:mb-16 space-y-3">
-              <span className="text-xs font-bold uppercase tracking-widest text-[#0080FF]">
-                3 Simple Steps
+          <div className="max-w-7xl mx-auto space-y-12">
+            <div className="text-center max-w-3xl mx-auto space-y-3">
+              <span className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-[#0080FF]/15 border border-[#0080FF]/30 text-xs font-extrabold uppercase tracking-widest text-[#0080FF]">
+                <Sparkles className="w-3.5 h-3.5" />
+                Structured Academy Pathway
               </span>
-              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold font-[family-name:var(--font-outfit)]">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black font-[family-name:var(--font-outfit)] tracking-tight text-white">
                 How SELFFITS Works
               </h2>
+              <p className="text-gray-300 text-sm sm:text-base max-w-xl mx-auto font-medium">
+                Simple 6-step roadmap from selecting your weekly schedule to belt progression examinations.
+              </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
-              <div className="bg-[#14161D] border border-white/10 p-6 sm:p-8 rounded-2xl relative">
-                <span className="text-4xl sm:text-5xl font-black text-[#E50914]/20 absolute top-4 right-6 font-[family-name:var(--font-outfit)]">
-                  01
-                </span>
-                <h3 className="text-base sm:text-lg font-bold text-white mb-2">Select Your Program</h3>
-                <p className="text-xs text-gray-400 leading-relaxed">
-                  Choose your belt tier (Yellow to Brown) or fitness challenge (8 to 96 Days) and complete enrollment.
-                </p>
+            {/* 6 Step Cards Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Step 1 */}
+              <div className="bg-[#14161D] border border-white/15 p-6 sm:p-7 rounded-2xl relative flex flex-col justify-between space-y-4 hover:border-[#E50914]/50 transition-all group shadow-xl">
+                <div className="flex items-center justify-between">
+                  <div className="w-12 h-12 rounded-xl bg-[#E50914]/15 border border-[#E50914]/30 flex items-center justify-center text-[#E50914]">
+                    <Calendar className="w-6 h-6" />
+                  </div>
+                  <span className="text-4xl font-black text-[#E50914]/25 font-[family-name:var(--font-outfit)]">
+                    01
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-lg font-bold text-white font-[family-name:var(--font-outfit)] flex items-center gap-2">
+                    1. Choose your Plan
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-300 leading-relaxed font-medium">
+                    Select your preferred training frequency — <span className="text-white font-bold">1, 2, 3, 4, or 5 days</span> per week.
+                  </p>
+                </div>
               </div>
 
-              <div className="bg-[#14161D] border border-white/10 p-6 sm:p-8 rounded-2xl relative">
-                <span className="text-4xl sm:text-5xl font-black text-[#0080FF]/20 absolute top-4 right-6 font-[family-name:var(--font-outfit)]">
-                  02
-                </span>
-                <h3 className="text-base sm:text-lg font-bold text-white mb-2">Join Live Classes</h3>
-                <p className="text-xs text-gray-400 leading-relaxed">
-                  Log into your student dashboard, view today&apos;s active Zoom Classes link, and train with live feedback.
-                </p>
+              {/* Step 2 */}
+              <div className="bg-[#14161D] border border-white/15 p-6 sm:p-7 rounded-2xl relative flex flex-col justify-between space-y-4 hover:border-[#0080FF]/50 transition-all group shadow-xl">
+                <div className="flex items-center justify-between">
+                  <div className="w-12 h-12 rounded-xl bg-[#0080FF]/15 border border-[#0080FF]/30 flex items-center justify-center text-[#0080FF]">
+                    <Clock className="w-6 h-6" />
+                  </div>
+                  <span className="text-4xl font-black text-[#0080FF]/25 font-[family-name:var(--font-outfit)]">
+                    02
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-lg font-bold text-white font-[family-name:var(--font-outfit)] flex items-center gap-2">
+                    2. Choose your Training Days
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-300 leading-relaxed font-medium">
+                    Choose the specific days that work best for your personal schedule.
+                  </p>
+                </div>
               </div>
 
-              <div className="bg-[#14161D] border border-white/10 p-6 sm:p-8 rounded-2xl relative">
-                <span className="text-4xl sm:text-5xl font-black text-[#10B981]/20 absolute top-4 right-6 font-[family-name:var(--font-outfit)]">
-                  03
-                </span>
-                <h3 className="text-base sm:text-lg font-bold text-white mb-2">Get Certified</h3>
-                <p className="text-xs text-gray-400 leading-relaxed">
-                  Pass your virtual belt evaluation and download your official completion certificate directly.
-                </p>
+              {/* Step 3 */}
+              <div className="bg-[#14161D] border border-white/15 p-6 sm:p-7 rounded-2xl relative flex flex-col justify-between space-y-4 hover:border-[#10B981]/50 transition-all group shadow-xl">
+                <div className="flex items-center justify-between">
+                  <div className="w-12 h-12 rounded-xl bg-[#10B981]/15 border border-[#10B981]/30 flex items-center justify-center text-[#10B981]">
+                    <Users className="w-6 h-6" />
+                  </div>
+                  <span className="text-4xl font-black text-[#10B981]/25 font-[family-name:var(--font-outfit)]">
+                    03
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-lg font-bold text-white font-[family-name:var(--font-outfit)] flex items-center gap-2">
+                    3. Choose your Preferred Batch
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-300 leading-relaxed font-medium">
+                    Select your preferred one-hour live class batch timing.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 4 */}
+              <div className="bg-[#14161D] border border-white/15 p-6 sm:p-7 rounded-2xl relative flex flex-col justify-between space-y-4 hover:border-[#F59E0B]/50 transition-all group shadow-xl">
+                <div className="flex items-center justify-between">
+                  <div className="w-12 h-12 rounded-xl bg-[#F59E0B]/15 border border-[#F59E0B]/30 flex items-center justify-center text-[#F59E0B]">
+                    <Video className="w-6 h-6" />
+                  </div>
+                  <span className="text-4xl font-black text-[#F59E0B]/25 font-[family-name:var(--font-outfit)]">
+                    04
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-lg font-bold text-white font-[family-name:var(--font-outfit)] flex items-center gap-2">
+                    4. Train Live with Coach
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-300 leading-relaxed font-medium">
+                    Attend your live online martial arts training through <span className="text-white font-bold">Google Meet</span> with real-time instructor feedback.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 5 */}
+              <div className="bg-[#14161D] border border-white/15 p-6 sm:p-7 rounded-2xl relative flex flex-col justify-between space-y-4 hover:border-[#EC4899]/50 transition-all group shadow-xl">
+                <div className="flex items-center justify-between">
+                  <div className="w-12 h-12 rounded-xl bg-[#EC4899]/15 border border-[#EC4899]/30 flex items-center justify-center text-[#EC4899]">
+                    <CheckCircle2 className="w-6 h-6" />
+                  </div>
+                  <span className="text-4xl font-black text-[#EC4899]/25 font-[family-name:var(--font-outfit)]">
+                    05
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-lg font-bold text-white font-[family-name:var(--font-outfit)] flex items-center gap-2">
+                    5. Complete 25 Classes → Attend Grading
+                  </h3>
+                  <p className="text-xs sm:text-sm text-gray-300 leading-relaxed font-medium">
+                    After completing every <span className="text-[#EC4899] font-bold">25 classes</span>, you become eligible to attend your official grading examination.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 6 */}
+              <div className="bg-[#14161D] border border-white/15 p-6 sm:p-7 rounded-2xl relative flex flex-col justify-between space-y-4 hover:border-[#8B5CF6]/50 transition-all group shadow-xl md:col-span-2 lg:col-span-1">
+                <div className="flex items-center justify-between">
+                  <div className="w-12 h-12 rounded-xl bg-[#8B5CF6]/15 border border-[#8B5CF6]/30 flex items-center justify-center text-[#8B5CF6]">
+                    <Award className="w-6 h-6" />
+                  </div>
+                  <span className="text-4xl font-black text-[#8B5CF6]/25 font-[family-name:var(--font-outfit)]">
+                    06
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  <h3 className="text-lg font-bold text-white font-[family-name:var(--font-outfit)] flex items-center gap-2">
+                    6. Progress Through the Belt Levels 🥋
+                  </h3>
+                  <p className="text-xs text-gray-300 leading-relaxed font-medium">
+                    With each successful grading, your belt level progresses:
+                  </p>
+                  
+                  {/* Visual Belt Hierarchy Pills */}
+                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <span className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-white text-black shadow-sm">White</span>
+                    <span className="text-gray-400 text-xs">→</span>
+                    <span className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-yellow-400 text-black shadow-sm">Yellow</span>
+                    <span className="text-gray-400 text-xs">→</span>
+                    <span className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-emerald-500 text-white shadow-sm">Green</span>
+                    <span className="text-gray-400 text-xs">→</span>
+                    <span className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-blue-600 text-white shadow-sm">Blue</span>
+                    <span className="text-gray-400 text-xs">→</span>
+                    <span className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-amber-800 text-white shadow-sm">Brown</span>
+                    <span className="text-gray-400 text-xs">→</span>
+                    <span className="px-2.5 py-1 rounded-lg text-[11px] font-black bg-stone-900 text-white border border-white/30 shadow-sm">Black</span>
+                  </div>
+
+                  <p className="text-[11px] font-bold text-[#F59E0B] flex items-center gap-1 pt-1">
+                    <Star className="w-3.5 h-3.5 fill-[#F59E0B] text-[#F59E0B] shrink-0" />
+                    Every 25 completed classes = Eligibility for next grading level
+                  </p>
+                </div>
               </div>
             </div>
           </div>

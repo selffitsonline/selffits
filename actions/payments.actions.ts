@@ -14,16 +14,15 @@ export type PaymentPlanDetail = {
   totalClasses: number;
   priceINR: number;
   priceUSD: number;
+  tierType?: string;
 };
 
 const PLAN_MAP: Record<string, PaymentPlanDetail> = {
-  "yellow-belt": { id: "yellow-belt", name: "Yellow Belt Tier", durationMonths: 1, totalClasses: 8, priceINR: 2999, priceUSD: 39 },
-  "blue-belt": { id: "blue-belt", name: "Blue Belt Tier", durationMonths: 3, totalClasses: 24, priceINR: 7999, priceUSD: 99 },
-  "purple-belt": { id: "purple-belt", name: "Purple Belt Tier", durationMonths: 6, totalClasses: 48, priceINR: 13999, priceUSD: 179 },
-  "brown-belt": { id: "brown-belt", name: "Brown Belt Tier", durationMonths: 12, totalClasses: 96, priceINR: 24999, priceUSD: 319 },
-  "challenge-8": { id: "challenge-8", name: "8 Day Challenge", durationMonths: 1, totalClasses: 8, priceINR: 1499, priceUSD: 19 },
-  "challenge-24": { id: "challenge-24", name: "24 Day Challenge", durationMonths: 1, totalClasses: 24, priceINR: 3999, priceUSD: 49 },
-  "transformation-96": { id: "transformation-96", name: "96 Day Transformation", durationMonths: 3, totalClasses: 96, priceINR: 13999, priceUSD: 169 },
+  "plan-1-day": { id: "plan-1-day", name: "1 Day / Week Membership Plan", durationMonths: 1, totalClasses: 4, priceINR: 1999, priceUSD: 25 },
+  "plan-2-day": { id: "plan-2-day", name: "2 Days / Week Membership Plan", durationMonths: 1, totalClasses: 8, priceINR: 3199, priceUSD: 40 },
+  "plan-3-day": { id: "plan-3-day", name: "3 Days / Week Membership Plan", durationMonths: 1, totalClasses: 12, priceINR: 4399, priceUSD: 55 },
+  "plan-4-day": { id: "plan-4-day", name: "4 Days / Week Membership Plan", durationMonths: 1, totalClasses: 16, priceINR: 5599, priceUSD: 70 },
+  "plan-5-day": { id: "plan-5-day", name: "5 Days / Week Membership Plan", durationMonths: 1, totalClasses: 20, priceINR: 6799, priceUSD: 85 },
 };
 
 async function getOrCreateMembershipPlan(plan: PaymentPlanDetail) {
@@ -48,25 +47,11 @@ async function getOrCreateMembershipPlan(plan: PaymentPlanDetail) {
   });
 
   if (!membershipPlan) {
-    const tierType = plan.id.includes("yellow")
-      ? "YELLOW_BELT"
-      : plan.id.includes("purple")
-      ? "PURPLE_BELT"
-      : plan.id.includes("brown")
-      ? "BROWN_BELT"
-      : plan.id.includes("challenge-8")
-      ? "CHALLENGE_8"
-      : plan.id.includes("challenge-24")
-      ? "CHALLENGE_24"
-      : plan.id.includes("transformation-96")
-      ? "TRANSFORMATION_96"
-      : "BLUE_BELT";
-
     membershipPlan = await db.membershipPlan.create({
       data: {
         programId: program.id,
         name: plan.name,
-        tierType: tierType as any,
+        tierType: (plan.tierType || "BLUE_BELT") as any,
         durationMonths: plan.durationMonths,
         totalClasses: plan.totalClasses,
         priceINR: plan.priceINR,
@@ -88,7 +73,7 @@ export async function createRazorpayOrderAction(
       return { success: false, error: "Please log in to complete your enrollment purchase." };
     }
 
-    const plan = PLAN_MAP[planId] || PLAN_MAP["blue-belt"];
+    const plan = PLAN_MAP[planId] || PLAN_MAP["plan-3-day"];
     const basePrice = currency === "INR" ? plan.priceINR : plan.priceUSD;
     const amountInSubunits = Math.round(basePrice * 100);
 
@@ -138,6 +123,11 @@ export async function verifyPaymentSignatureAction(payload: {
   razorpayPaymentId: string;
   razorpaySignature: string;
   planId: string;
+  daysPerWeek?: number;
+  selectedDays?: string[];
+  selectedBatch?: string;
+  monthlyPrice?: number;
+  timezone?: string;
 }) {
   try {
     const session = await auth();
@@ -145,7 +135,17 @@ export async function verifyPaymentSignatureAction(payload: {
       return { success: false, error: "Unauthorized session." };
     }
 
-    const { razorpayOrderId, razorpayPaymentId, razorpaySignature, planId } = payload;
+    const {
+      razorpayOrderId,
+      razorpayPaymentId,
+      razorpaySignature,
+      planId,
+      daysPerWeek,
+      selectedDays,
+      selectedBatch,
+      monthlyPrice,
+      timezone,
+    } = payload;
     const secret = process.env.RAZORPAY_KEY_SECRET || "secret_placeholder";
 
     const generatedSignature = crypto
@@ -157,12 +157,13 @@ export async function verifyPaymentSignatureAction(payload: {
       return { success: false, error: "Invalid Razorpay payment signature." };
     }
 
-    const plan = PLAN_MAP[planId] || PLAN_MAP["blue-belt"];
+    const plan = PLAN_MAP[planId] || PLAN_MAP["plan-3-day"];
     const startDate = new Date();
     const endDate = new Date();
     endDate.setMonth(endDate.getMonth() + plan.durationMonths);
 
     const membershipPlan = await getOrCreateMembershipPlan(plan);
+    const classTimingLabel = selectedBatch ? selectedBatch : "02:30 PM to 03:30 PM (GMT)";
 
     // Execute atomic enrollment and payment update
     const result = await db.$transaction(async (tx) => {
@@ -170,6 +171,12 @@ export async function verifyPaymentSignatureAction(payload: {
         data: {
           userId: session.user.id,
           membershipPlanId: membershipPlan.id,
+          classTiming: classTimingLabel,
+          daysPerWeek: daysPerWeek || (selectedDays ? selectedDays.length : 3),
+          selectedDays: selectedDays || ["Sunday", "Wednesday", "Saturday"],
+          selectedBatch: selectedBatch || "2nd Batch — 02:30 PM to 03:30 PM (GMT)",
+          monthlyPrice: monthlyPrice || plan.priceUSD,
+          timezone: timezone || "GMT (UTC+0)",
           startDate,
           endDate,
           totalClassesGranted: plan.totalClasses,
@@ -289,10 +296,12 @@ export async function getStudentEnrollmentAction() {
         ? "/images/kids_martial_arts.png"
         : "/images/adults_martial_arts.png";
 
-      const category = isChallenge ? "FITNESS CHALLENGE" : "MARTIAL ARTS";
-      const beltLevel = item.membershipPlan?.tierType
-        ? item.membershipPlan.tierType.replace("_", " ")
-        : planName;
+      const category = isChallenge ? "FITNESS & WEIGHT MANAGEMENT" : "MARTIAL ARTS";
+      const planLevel = item.daysPerWeek ? `${item.daysPerWeek} Days / Week` : (readiness.levelName || planName);
+
+      const selectedDaysList = Array.isArray(item.selectedDays)
+        ? (item.selectedDays as string[])
+        : ["Sunday", "Wednesday", "Saturday"];
 
       return {
         id: item.id,
@@ -300,7 +309,7 @@ export async function getStudentEnrollmentAction() {
         title: planName,
         category: category,
         image: image,
-        beltLevel: readiness.levelName || beltLevel,
+        beltLevel: planLevel,
         remainingClasses: remainingClasses,
         totalClasses: totalClasses,
         duration: `${totalClasses} Classes`,
@@ -308,9 +317,14 @@ export async function getStudentEnrollmentAction() {
         membershipStatus: item.status,
         status: item.status,
         expiryDate: formattedDate,
+        daysPerWeek: item.daysPerWeek || selectedDaysList.length || 3,
+        selectedDays: selectedDaysList,
+        selectedBatch: item.selectedBatch || item.classTiming || "2nd Batch — 02:30 PM to 03:30 PM (GMT)",
+        monthlyPrice: item.monthlyPrice ? Number(item.monthlyPrice) : null,
+        timezone: item.timezone || "GMT (UTC+0)",
         nextClassTime: readiness.hasBatch
           ? `${readiness.dayCombination} • ${readiness.clockTiming}`
-          : "Today at 7:00 PM IST",
+          : `${selectedDaysList.join(", ")} • ${item.selectedBatch || "02:30 PM to 03:30 PM (GMT)"}`,
         instructor: readiness.coachName || "Sensei Rahul Sharma",
         hasBatch: readiness.hasBatch,
         batchName: readiness.batchName,
@@ -327,7 +341,7 @@ export async function getStudentEnrollmentAction() {
       title: "Sample Expired Martial Arts Course (Demo)",
       category: "MARTIAL ARTS",
       image: "/images/adults_martial_arts.png",
-      beltLevel: "Yellow Belt",
+      beltLevel: "1 Day / Week",
       remainingClasses: 0,
       totalClasses: 8,
       duration: "8 Classes (Completed)",
@@ -356,7 +370,14 @@ export async function getStudentEnrollmentAction() {
 
 export async function createDirectCardEnrollmentAction(
   planId: string,
-  currency: "INR" | "USD" = "INR"
+  currency: "INR" | "USD" = "INR",
+  scheduleData?: {
+    daysPerWeek?: number;
+    selectedDays?: string[];
+    selectedBatch?: string;
+    monthlyPrice?: number;
+    timezone?: string;
+  }
 ) {
   try {
     const session = await auth();
@@ -364,13 +385,14 @@ export async function createDirectCardEnrollmentAction(
       return { success: false, error: "Please log in to complete your enrollment purchase." };
     }
 
-    const plan = PLAN_MAP[planId] || PLAN_MAP["blue-belt"];
-    const basePrice = currency === "INR" ? plan.priceINR : plan.priceUSD;
+    const plan = PLAN_MAP[planId] || PLAN_MAP["plan-3-day"];
+    const basePrice = scheduleData?.monthlyPrice || (currency === "INR" ? plan.priceINR : plan.priceUSD);
     const startDate = new Date();
     const endDate = new Date();
     endDate.setMonth(endDate.getMonth() + plan.durationMonths);
 
     const membershipPlan = await getOrCreateMembershipPlan(plan);
+    const classTimingLabel = scheduleData?.selectedBatch ? scheduleData.selectedBatch : "02:30 PM to 03:30 PM (GMT)";
 
     // Execute atomic enrollment and payment creation in PostgreSQL
     const result = await db.$transaction(async (tx) => {
@@ -378,6 +400,12 @@ export async function createDirectCardEnrollmentAction(
         data: {
           userId: session.user.id,
           membershipPlanId: membershipPlan.id,
+          classTiming: classTimingLabel,
+          daysPerWeek: scheduleData?.daysPerWeek || (scheduleData?.selectedDays ? scheduleData.selectedDays.length : 3),
+          selectedDays: scheduleData?.selectedDays || ["Sunday", "Wednesday", "Saturday"],
+          selectedBatch: scheduleData?.selectedBatch || "2nd Batch — 02:30 PM to 03:30 PM (GMT)",
+          monthlyPrice: basePrice,
+          timezone: scheduleData?.timezone || "GMT (UTC+0)",
           startDate,
           endDate,
           totalClassesGranted: plan.totalClasses,

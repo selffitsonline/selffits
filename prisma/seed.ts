@@ -6,6 +6,11 @@ const prisma = new PrismaClient();
 async function main() {
   console.log("Seeding database with programs, plans, active student enrollments, and payments...");
 
+  // Wipe obsolete saved catalog settings so outdated belt/challenge cards are cleared
+  await prisma.websiteSettings.deleteMany({
+    where: { key: "programs_catalog" },
+  });
+
   const superAdminPassword = await bcrypt.hash("SuperAdmin@123", 10);
   const adminPassword = await bcrypt.hash("Admin@123", 10);
   const studentPassword = await bcrypt.hash("Student@123", 10);
@@ -61,7 +66,7 @@ async function main() {
       slug: "karate-kids",
       category: ProgramCategory.MARTIAL_ARTS,
       targetAudience: AgeGroup.KIDS,
-      description: "Shotokan Karate belt certification program for kids and teenagers.",
+      description: "Shotokan Karate skills program for kids and teenagers.",
     },
   });
 
@@ -73,7 +78,7 @@ async function main() {
       slug: "taekwondo-adults",
       category: ProgramCategory.MARTIAL_ARTS,
       targetAudience: AgeGroup.ADULTS,
-      description: "Dynamic kicks, sparring, and official WTF belt certifications.",
+      description: "Dynamic kicks, sparring, and official skills certifications.",
     },
   });
 
@@ -81,7 +86,7 @@ async function main() {
     where: { slug: "ladies-fitness-hiit" },
     update: {},
     create: {
-      title: "Weight Loss & HIIT",
+      title: "Fitness & Weight Management",
       slug: "ladies-fitness-hiit",
       category: ProgramCategory.FITNESS_HIIT,
       targetAudience: AgeGroup.LADIES_ONLY,
@@ -89,64 +94,64 @@ async function main() {
     },
   });
 
-  // 4. Membership Plans (Belt Levels)
+  // 4. Membership Plans (1-5 Days / Week)
   const kungFuBlueBelt = await prisma.membershipPlan.upsert({
     where: { id: "plan-kungfu-blue" },
-    update: {},
+    update: { name: "3 Days / Week" },
     create: {
       id: "plan-kungfu-blue",
       programId: kungFuPrg.id,
-      name: "Blue Belt",
+      name: "3 Days / Week",
       tierType: MembershipTier.BLUE_BELT,
-      durationMonths: 6,
-      totalClasses: 48,
-      priceINR: 14999,
-      priceUSD: 199,
+      durationMonths: 1,
+      totalClasses: 12,
+      priceINR: 4399,
+      priceUSD: 55,
     },
   });
 
   const karateYellowBelt = await prisma.membershipPlan.upsert({
     where: { id: "plan-karate-yellow" },
-    update: {},
+    update: { name: "1 Day / Week" },
     create: {
       id: "plan-karate-yellow",
       programId: karatePrg.id,
-      name: "Yellow Belt",
+      name: "1 Day / Week",
       tierType: MembershipTier.YELLOW_BELT,
-      durationMonths: 3,
-      totalClasses: 24,
-      priceINR: 7999,
-      priceUSD: 99,
+      durationMonths: 1,
+      totalClasses: 4,
+      priceINR: 1999,
+      priceUSD: 25,
     },
   });
 
   const taekwondoBrownBelt = await prisma.membershipPlan.upsert({
     where: { id: "plan-tkd-brown" },
-    update: {},
+    update: { name: "5 Days / Week" },
     create: {
       id: "plan-tkd-brown",
       programId: taekwondoPrg.id,
-      name: "Brown Belt",
+      name: "5 Days / Week",
       tierType: MembershipTier.BROWN_BELT,
-      durationMonths: 12,
-      totalClasses: 96,
-      priceINR: 24999,
-      priceUSD: 349,
+      durationMonths: 1,
+      totalClasses: 20,
+      priceINR: 6799,
+      priceUSD: 85,
     },
   });
 
   const ladiesChallenge8 = await prisma.membershipPlan.upsert({
     where: { id: "plan-ladies-c8" },
-    update: {},
+    update: { name: "2 Days / Week" },
     create: {
       id: "plan-ladies-c8",
       programId: ladiesFitnessPrg.id,
-      name: "Challenge 8",
+      name: "2 Days / Week",
       tierType: MembershipTier.CHALLENGE_8,
-      durationMonths: 2,
-      totalClasses: 16,
-      priceINR: 5999,
-      priceUSD: 79,
+      durationMonths: 1,
+      totalClasses: 8,
+      priceINR: 3199,
+      priceUSD: 40,
     },
   });
 

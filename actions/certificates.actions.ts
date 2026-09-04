@@ -46,7 +46,7 @@ export async function issueCertificateAction(payload: {
             slug: "martial-arts-academy",
             category: "MARTIAL_ARTS",
             targetAudience: "ADULTS",
-            description: "General Belt Program",
+            description: "General Training Program",
           },
         });
       }

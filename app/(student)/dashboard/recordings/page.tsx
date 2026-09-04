@@ -9,7 +9,7 @@ export default function StudentRecordingsPage() {
   const recordings = [
     {
       id: "rec-1",
-      title: "Blue Belt Kicking Combos & Spinning Back Kick",
+      title: "Advanced Kicking Combos & Spinning Back Kick",
       date: "Aug 5, 2026",
       duration: "55 Mins",
       instructor: "Sensei Rahul Sharma",

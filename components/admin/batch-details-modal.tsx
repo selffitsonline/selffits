@@ -438,7 +438,7 @@ export function BatchDetailsModal({
                     <thead className="bg-[#0A0C10] text-gray-400 font-extrabold uppercase border-b border-white/10">
                       <tr>
                         <th className="p-3">Student Profile</th>
-                        <th className="p-3">Level / Belt</th>
+                        <th className="p-3">Plan Level</th>
                         <th className="p-3">Joined Date & Time</th>
                         <th className="p-3">Assigned Date</th>
                         <th className="p-3 text-right">Actions</th>

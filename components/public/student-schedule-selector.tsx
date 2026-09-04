@@ -1,0 +1,469 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import {
+  CentralScheduleConfig,
+  DEFAULT_CENTRAL_SCHEDULE_CONFIG,
+  DEFAULT_MEMBERSHIP_PLANS,
+  calculateMonthlyPrice,
+} from "@/lib/schedule-config";
+import { getScheduleConfigAction } from "@/actions/schedule-config.actions";
+import { Calendar, Clock, Check, Zap, AlertCircle, ShieldCheck, Sparkles, Lock, BookOpen } from "lucide-react";
+
+export interface StudentScheduleSelectionState {
+  daysPerWeek: number;
+  selectedDays: string[];
+  selectedBatch: string;
+  monthlyPriceUSD: number;
+  monthlyPriceINR: number;
+  currency: "INR" | "USD";
+}
+
+export interface StudentScheduleSelectorProps {
+  title?: string;
+  initialDaysPerWeek?: number;
+  initialSelectedDays?: string[];
+  initialSelectedBatch?: string;
+  currency?: "INR" | "USD";
+  onCurrencyChange?: (c: "INR" | "USD") => void;
+  onSelectionChange?: (state: StudentScheduleSelectionState) => void;
+  showCheckoutCta?: boolean;
+  onCheckoutSubmit?: (state: StudentScheduleSelectionState) => void;
+}
+
+export function StudentScheduleSelector({
+  title = "Mixed Martial Arts",
+  initialDaysPerWeek = 1,
+  initialSelectedDays = ["Sunday"],
+  initialSelectedBatch = "2nd Batch — 02:30 PM to 03:30 PM (GMT)",
+  currency = "USD",
+  onCurrencyChange,
+  onSelectionChange,
+  showCheckoutCta = false,
+  onCheckoutSubmit,
+}: StudentScheduleSelectorProps) {
+  const [config, setConfig] = useState<CentralScheduleConfig>(DEFAULT_CENTRAL_SCHEDULE_CONFIG);
+  const [daysPerWeek, setDaysPerWeek] = useState<number>(initialDaysPerWeek);
+  const [selectedDays, setSelectedDays] = useState<string[]>(initialSelectedDays);
+  const [selectedBatch, setSelectedBatch] = useState<string>(initialSelectedBatch);
+  const [curr, setCurr] = useState<"INR" | "USD">(currency);
+
+  useEffect(() => {
+    async function loadConfig() {
+      try {
+        const res = await getScheduleConfigAction();
+        if (res.success && res.config) {
+          setConfig(res.config);
+        }
+      } catch (err) {
+        console.error("Failed to load central schedule config:", err);
+      }
+    }
+    loadConfig();
+  }, []);
+
+  useEffect(() => {
+    setCurr(currency);
+  }, [currency]);
+
+  // Available days vs Rest Days
+  const availableTrainingDays = (config.trainingDays || DEFAULT_CENTRAL_SCHEDULE_CONFIG.trainingDays).filter(
+    (d) => d.activeStatus !== false
+  );
+
+  const availableBatchTimings = (config.batchTimings || DEFAULT_CENTRAL_SCHEDULE_CONFIG.batchTimings).filter(
+    (b) => b.activeStatus !== false
+  );
+
+  const membershipPlans = (config.membershipPlans || DEFAULT_CENTRAL_SCHEDULE_CONFIG.membershipPlans).filter(
+    (p) => p.activeStatus !== false
+  );
+
+  // Active Plan Curriculum Topics
+  const activePlanObj = membershipPlans.find((p) => p.daysPerWeek === daysPerWeek);
+  const activeCurriculum =
+    activePlanObj?.curriculum ||
+    DEFAULT_MEMBERSHIP_PLANS.find((p) => p.daysPerWeek === daysPerWeek)?.curriculum || [
+      "Breathing & meditation exercises",
+      "Warm-up & full joint flexibility routines",
+      "Martial arts fundamental stances & kicks",
+      "Core strength conditioning & self-defense techniques",
+    ];
+
+  // When frequency changes to 5, auto-select all 5 available training days
+  const handleFrequencyChange = (freq: number) => {
+    setDaysPerWeek(freq);
+
+    const selectableDaysList = availableTrainingDays
+      .filter((d) => !d.restDay && d.selectable)
+      .map((d) => d.dayName);
+
+    if (freq === 5) {
+      setSelectedDays(selectableDaysList);
+    } else {
+      // Keep existing selected days if valid, otherwise adjust to match target frequency
+      const currentValid = selectedDays.filter((d) => selectableDaysList.includes(d));
+      if (currentValid.length > freq) {
+        setSelectedDays(currentValid.slice(0, freq));
+      } else if (currentValid.length < freq) {
+        const needed = freq - currentValid.length;
+        const availableToPick = selectableDaysList.filter((d) => !currentValid.includes(d));
+        setSelectedDays([...currentValid, ...availableToPick.slice(0, needed)]);
+      } else {
+        setSelectedDays(currentValid);
+      }
+    }
+  };
+
+  const handleDayToggle = (dayName: string, isRestDay: boolean) => {
+    if (isRestDay) return; // Rest days cannot be selected
+
+    if (daysPerWeek === 5) {
+      // For 5 days, all available days are required
+      return;
+    }
+
+    if (selectedDays.includes(dayName)) {
+      if (selectedDays.length > 1) {
+        setSelectedDays(selectedDays.filter((d) => d !== dayName));
+      }
+    } else {
+      if (selectedDays.length < daysPerWeek) {
+        setSelectedDays([...selectedDays, dayName]);
+      } else {
+        // Replace oldest or replace last if max count reached
+        const newSelection = [...selectedDays.slice(1), dayName];
+        setSelectedDays(newSelection);
+      }
+    }
+  };
+
+  const currentPricing = calculateMonthlyPrice(daysPerWeek, membershipPlans);
+
+  // Emit selection state changes
+  useEffect(() => {
+    if (onSelectionChange) {
+      onSelectionChange({
+        daysPerWeek,
+        selectedDays,
+        selectedBatch,
+        monthlyPriceUSD: currentPricing.priceUSD,
+        monthlyPriceINR: currentPricing.priceINR,
+        currency: curr,
+      });
+    }
+  }, [daysPerWeek, selectedDays, selectedBatch, curr, currentPricing.priceUSD, currentPricing.priceINR]);
+
+  const handleCurrencySwitch = (newCurr: "INR" | "USD") => {
+    setCurr(newCurr);
+    if (onCurrencyChange) onCurrencyChange(newCurr);
+  };
+
+  const isSelectionValid = selectedDays.length === daysPerWeek && !!selectedBatch;
+
+  return (
+    <div className="space-y-8 bg-[#14161D] border border-white/10 p-6 sm:p-8 rounded-3xl shadow-2xl">
+      {/* Header & Currency Toggle */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-white/10">
+        <div>
+          <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#E50914] px-2.5 py-1 rounded-full bg-[#E50914]/15 border border-[#E50914]/30">
+            Interactive Schedule Builder
+          </span>
+          <h3 className="text-xl sm:text-2xl font-extrabold text-white font-[family-name:var(--font-outfit)] mt-2">
+            {title}
+          </h3>
+        </div>
+
+        {/* Currency Switcher */}
+        <div className="flex items-center gap-2 text-xs font-semibold text-gray-300">
+          <span>Billing Currency:</span>
+          <div className="flex items-center bg-[#0F1117] p-1 rounded-xl border border-white/10">
+            <button
+              type="button"
+              onClick={() => handleCurrencySwitch("INR")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                curr === "INR" ? "bg-[#0080FF] text-white shadow-md" : "text-gray-400 hover:text-white"
+              }`}
+            >
+              🇮🇳 INR (₹)
+            </button>
+            <button
+              type="button"
+              onClick={() => handleCurrencySwitch("USD")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                curr === "USD" ? "bg-[#0080FF] text-white shadow-md" : "text-gray-400 hover:text-white"
+              }`}
+            >
+              🌐 USD ($)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* STEP 1: SELECT MEMBERSHIP FREQUENCY */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-extrabold uppercase tracking-wider text-gray-300 flex items-center gap-2">
+            <span className="w-5 h-5 rounded-full bg-[#E50914] text-white text-[11px] font-extrabold flex items-center justify-center">
+              1
+            </span>
+            Select Weekly Training Frequency
+          </label>
+          <span className="text-xs font-bold text-[#0080FF]">
+            Selected: {daysPerWeek} {daysPerWeek === 1 ? "Day" : "Days"} / Week
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          {membershipPlans.map((plan) => {
+            const isSelected = daysPerWeek === plan.daysPerWeek;
+            const priceLabel = curr === "INR" ? `₹${plan.monthlyPriceINR}` : `$${plan.monthlyPriceUSD}`;
+
+            return (
+              <button
+                key={plan.daysPerWeek}
+                type="button"
+                onClick={() => handleFrequencyChange(plan.daysPerWeek)}
+                className={`relative p-3.5 rounded-2xl border transition-all text-center flex flex-col justify-between cursor-pointer ${
+                  isSelected
+                    ? "bg-[#1E2330] border-[#E50914] text-white shadow-lg shadow-[#E50914]/20 ring-1 ring-[#E50914]"
+                    : "bg-[#0F1117] border-white/10 text-gray-300 hover:border-white/20 hover:text-white"
+                }`}
+              >
+                {plan.badge && (
+                  <span
+                    className={`absolute -top-2.5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider whitespace-nowrap shadow-md ${
+                      plan.badge === "MOST POPULAR"
+                        ? "bg-gradient-to-r from-[#E50914] to-[#FF1E27] text-white"
+                        : "bg-gradient-to-r from-[#0080FF] to-[#2563EB] text-white"
+                    }`}
+                  >
+                    {plan.badge}
+                  </span>
+                )}
+
+                <div className="mt-1">
+                  <span className="block text-xs font-extrabold">{plan.label}</span>
+                </div>
+
+                <div className="mt-2 pt-2 border-t border-white/10">
+                  <span className="text-base font-black text-white font-[family-name:var(--font-outfit)]">
+                    {priceLabel}
+                  </span>
+                  <span className="block text-[10px] text-gray-400">/ month</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* STEP 2: SELECT REQUIRED WEEKLY TRAINING DAYS */}
+      <div className="space-y-3 pt-2">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-extrabold uppercase tracking-wider text-gray-300 flex items-center gap-2">
+            <span className="w-5 h-5 rounded-full bg-[#E50914] text-white text-[11px] font-extrabold flex items-center justify-center">
+              2
+            </span>
+            Select {daysPerWeek} Training {daysPerWeek === 1 ? "Day" : "Days"}
+          </label>
+          <span className="text-xs font-semibold text-gray-400">
+            Selected <span className="text-white font-bold">{selectedDays.length}</span> of{" "}
+            <span className="text-white font-bold">{daysPerWeek}</span> required
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-7 gap-2.5">
+          {availableTrainingDays.map((day) => {
+            const isSelected = selectedDays.includes(day.dayName);
+            const isRest = day.restDay || !day.selectable;
+
+            return (
+              <button
+                key={day.dayName}
+                type="button"
+                disabled={isRest}
+                onClick={() => handleDayToggle(day.dayName, isRest)}
+                className={`h-20 p-3 rounded-2xl border text-center transition-all flex flex-col items-center justify-center gap-1.5 ${
+                  isRest
+                    ? "bg-red-500/10 border-red-500/25 text-red-300 cursor-not-allowed"
+                    : isSelected
+                    ? "bg-[#0080FF] border-[#0080FF] text-white font-extrabold shadow-lg shadow-[#0080FF]/25 cursor-pointer ring-1 ring-[#0080FF]"
+                    : "bg-[#0F1117] border-white/10 text-gray-300 hover:border-white/25 hover:text-white cursor-pointer"
+                }`}
+              >
+                <span className="text-xs sm:text-sm font-extrabold">{day.dayName}</span>
+                {isRest ? (
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-red-500/20 text-red-400 border border-red-500/30 whitespace-nowrap">
+                    REST DAY
+                  </span>
+                ) : (
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider whitespace-nowrap flex items-center gap-1 ${
+                      isSelected
+                        ? "bg-white/20 text-white"
+                        : "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                    }`}
+                  >
+                    {isSelected ? <Check className="w-3 h-3 stroke-[3]" /> : null}
+                    {isSelected ? "Selected" : "Available"}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {selectedDays.length < daysPerWeek && (
+          <p className="text-xs text-amber-400 font-semibold flex items-center gap-1 mt-1">
+            <AlertCircle className="w-3.5 h-3.5" /> Please select {daysPerWeek - selectedDays.length} more training day(s).
+          </p>
+        )}
+      </div>
+
+      {/* STEP 3: SELECT PREFERRED BATCH TIMING */}
+      <div className="space-y-3 pt-2">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-extrabold uppercase tracking-wider text-gray-300 flex items-center gap-2">
+            <span className="w-5 h-5 rounded-full bg-[#E50914] text-white text-[11px] font-extrabold flex items-center justify-center">
+              3
+            </span>
+            Select Preferred Class Batch Timing (GMT UTC+0)
+          </label>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {availableBatchTimings.map((batch) => {
+            const fullBatchLabel = `${batch.batchName} — ${batch.displayLabel} (${batch.timezone})`;
+            const isSelected = selectedBatch.includes(batch.batchName) || selectedBatch === fullBatchLabel;
+
+            return (
+              <button
+                key={batch.id}
+                type="button"
+                onClick={() => setSelectedBatch(fullBatchLabel)}
+                className={`p-4 rounded-2xl border transition-all text-left flex flex-col justify-between cursor-pointer ${
+                  isSelected
+                    ? "bg-[#1E2330] border-[#0080FF] text-white shadow-md shadow-[#0080FF]/20 ring-1 ring-[#0080FF]"
+                    : "bg-[#0F1117] border-white/10 text-gray-300 hover:border-white/20 hover:text-white"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-extrabold text-[#0080FF]">{batch.batchName}</span>
+                  {isSelected && <Check className="w-4 h-4 text-[#0080FF]" />}
+                </div>
+
+                <div className="mt-2 space-y-0.5">
+                  <span className="text-sm font-extrabold text-white font-[family-name:var(--font-outfit)] block">
+                    {batch.displayLabel}
+                  </span>
+                  <span className="text-[10px] font-semibold text-gray-400 block">{batch.timezone}</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* STEP 4: CURRICULUM & LEARNING SYLLABUS BREAKDOWN */}
+      <div className="space-y-3 pt-2">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-extrabold uppercase tracking-wider text-gray-300 flex items-center gap-2">
+            <span className="w-5 h-5 rounded-full bg-[#E50914] text-white text-[11px] font-extrabold flex items-center justify-center">
+              4
+            </span>
+            Curriculum & Learning Syllabus ({daysPerWeek} {daysPerWeek === 1 ? "Day" : "Days"} / Wk Plan)
+          </label>
+          <span className="text-xs font-bold text-[#0080FF] flex items-center gap-1">
+            <BookOpen className="w-3.5 h-3.5" /> Verified Academy Curriculum
+          </span>
+        </div>
+
+        <div className="p-4 sm:p-5 rounded-2xl bg-[#0F1117] border border-white/10 space-y-3">
+          <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
+            <span className="text-xs font-extrabold text-white uppercase tracking-wider">
+              Included Topics in {daysPerWeek} {daysPerWeek === 1 ? "Day" : "Days"} / Week Tier:
+            </span>
+            <span className="text-[10px] font-bold text-gray-400">Zoom Live Online Classes</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+            {activeCurriculum.map((topic, tIdx) => (
+              <div key={tIdx} className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[#14161D] border border-white/5 text-xs text-gray-200 font-medium">
+                <span className="w-5 h-5 rounded-full bg-[#E50914]/20 border border-[#E50914]/40 text-[#E50914] text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">
+                  {tIdx + 1}
+                </span>
+                <span>{topic}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* STEP 5: SELECTION SUMMARY PREVIEW */}
+      <div className="p-5 rounded-2xl bg-[#0F1117] border border-white/15 space-y-4">
+        <div className="flex items-center justify-between border-b border-white/10 pb-3">
+          <span className="text-xs font-extrabold uppercase tracking-wider text-white flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-[#0080FF]" /> Enrollment Schedule Summary
+          </span>
+          <span className="px-2.5 py-1 rounded-full bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30 text-[10px] font-extrabold uppercase tracking-wider">
+            Auto-Calculated
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+          <div className="space-y-1">
+            <span className="text-gray-400 font-semibold block">Selected Membership Plan:</span>
+            <span className="font-extrabold text-white text-sm block">
+              {daysPerWeek} {daysPerWeek === 1 ? "Day" : "Days"} / Week
+            </span>
+          </div>
+
+          <div className="space-y-1">
+            <span className="text-gray-400 font-semibold block">Selected Training Days:</span>
+            <span className="font-extrabold text-[#0080FF] text-sm block">
+              {selectedDays.length > 0 ? selectedDays.join(", ") : "None Selected"}
+            </span>
+          </div>
+
+          <div className="space-y-1">
+            <span className="text-gray-400 font-semibold block">Selected Batch Timing:</span>
+            <span className="font-extrabold text-white text-sm block">
+              {selectedBatch || "Not Selected"}
+            </span>
+          </div>
+
+          <div className="space-y-1">
+            <span className="text-gray-400 font-semibold block">Monthly Price:</span>
+            <span className="font-black text-2xl text-white font-[family-name:var(--font-outfit)] block">
+              {curr === "INR" ? `₹${currentPricing.priceINR}` : `$${currentPricing.priceUSD}`}
+              <span className="text-xs text-gray-400 font-normal"> / month</span>
+            </span>
+          </div>
+        </div>
+
+        {showCheckoutCta && onCheckoutSubmit && (
+          <div className="pt-2">
+            <button
+              type="button"
+              disabled={!isSelectionValid}
+              onClick={() =>
+                onCheckoutSubmit({
+                  daysPerWeek,
+                  selectedDays,
+                  selectedBatch,
+                  monthlyPriceUSD: currentPricing.priceUSD,
+                  monthlyPriceINR: currentPricing.priceINR,
+                  currency: curr,
+                })
+              }
+              className="w-full py-4 rounded-xl bg-gradient-to-r from-[#E50914] to-[#FF1E27] text-white font-extrabold text-sm uppercase tracking-wider hover:opacity-95 transition-all shadow-xl shadow-[#E50914]/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Lock className="w-4 h-4" /> Proceed to Enrollment ({curr === "INR" ? `₹${currentPricing.priceINR}` : `$${currentPricing.priceUSD}`})
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

@@ -36,8 +36,8 @@ export function StudentDashboardView({
   const [isEnrolled, setIsEnrolled] = useState<boolean>(initialIsEnrolled);
   const [activeStudentData, setActiveStudentData] = useState(
     initialEnrollment || {
-      programName: "Adults Martial Arts - Blue Belt Tier",
-      beltLevel: "Blue Belt",
+      programName: "Adults Martial Arts - 3 Days / Week",
+      beltLevel: "3 Days / Week",
       remainingClasses: 18,
       totalClasses: 24,
       daysRemaining: 42,
@@ -93,7 +93,7 @@ export function StudentDashboardView({
               </h1>
               <p className="text-xs sm:text-sm text-gray-300 max-w-xl">
                 {isEnrolled
-                  ? `Your live virtual training membership is active. You have ${activeStudentData.remainingClasses} classes remaining in your ${activeStudentData.beltLevel} tier.`
+                  ? `Your live virtual training membership is active. You have ${activeStudentData.remainingClasses} classes remaining in your ${activeStudentData.beltLevel} plan.`
                   : "Explore certified live martial arts & virtual fitness programs. Enroll today to start your journey."}
               </p>
             </div>
@@ -114,7 +114,7 @@ export function StudentDashboardView({
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-6 mt-6 border-t border-white/10 relative z-10">
               <div className="bg-[#0F1117]/80 backdrop-blur-md p-3.5 rounded-2xl border border-white/10">
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
-                  Current Rank Tier
+                  Membership Level
                 </span>
                 <span className="text-sm font-extrabold text-[#0080FF] flex items-center gap-1.5 mt-0.5">
                   <Award className="w-4 h-4 text-[#0080FF]" /> {batchInfo?.levelName || activeStudentData.beltLevel}
@@ -186,14 +186,25 @@ export function StudentDashboardView({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
               <div className="p-4 rounded-2xl bg-[#0F1117] border border-white/5 space-y-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Next Scheduled Class</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Weekly Training Schedule</span>
+                <p className="text-xs font-extrabold text-[#0080FF] flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-[#0080FF]" />{" "}
+                  {activeStudentData.selectedDays && Array.isArray(activeStudentData.selectedDays)
+                    ? activeStudentData.selectedDays.join(", ")
+                    : "Sun, Wed, Sat"}{" "}
+                  ({activeStudentData.daysPerWeek || 3} Days/Wk)
+                </p>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-[#0F1117] border border-white/5 space-y-1">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Selected Batch Timing (GMT)</span>
                 <p className="text-xs font-extrabold text-white flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-[#0080FF]" />{" "}
+                  <Clock className="w-4 h-4 text-[#10B981]" />{" "}
                   {batchInfo
                     ? `${batchInfo.dayCombination} • ${batchInfo.clockTiming}`
-                    : activeStudentData.nextClassTime}
+                    : activeStudentData.selectedBatch || activeStudentData.nextClassTime}
                 </p>
               </div>
 
@@ -260,7 +271,7 @@ export function StudentDashboardView({
                 No Active Program Enrollment Found
               </h2>
               <p className="text-xs sm:text-sm text-gray-400 max-w-lg mx-auto">
-                You are registered as a student on SELFFITS. Choose a belt tier or fitness challenge program to unlock live interactive classes and instructor access.
+                You are registered as a student on SELFFITS. Choose a program membership plan to unlock live interactive classes and instructor access.
               </p>
             </div>
             <Link

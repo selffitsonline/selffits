@@ -42,7 +42,7 @@ export function StudentProgramsView({ initialCourses }: StudentProgramsViewProps
               Virtual Academy Dashboard
             </span>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white font-[family-name:var(--font-outfit)] mt-2">
-              My Enrolled Programs & Belt Tiers
+              My Enrolled Programs & Memberships
             </h1>
             <p className="text-xs text-gray-400 mt-1">
               Track live class progress, instructor assignments, and active program validity.
@@ -110,7 +110,7 @@ export function StudentProgramsView({ initialCourses }: StudentProgramsViewProps
             <BookOpen className="w-10 h-10 text-gray-500 mx-auto" />
             <h3 className="text-base font-bold text-white">No Enrolled Programs Yet</h3>
             <p className="text-xs text-gray-400">
-              When you enroll in a martial arts belt tier or fitness challenge, your active course will appear here.
+              When you enroll in a program or membership plan, your active course will appear here.
             </p>
             <Link
               href="/programs"

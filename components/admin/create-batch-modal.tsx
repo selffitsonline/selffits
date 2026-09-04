@@ -181,10 +181,10 @@ export function CreateBatchModal({
               </select>
             </div>
 
-            {/* Level / Belt Select */}
+            {/* Level / Plan Select */}
             <div className="space-y-1">
               <label className="block font-bold text-gray-300 uppercase tracking-wider text-[10px]">
-                Level / Belt (Optional)
+                Membership Plan Level (Optional)
               </label>
               <select
                 value={membershipPlanId}
@@ -192,7 +192,7 @@ export function CreateBatchModal({
                 className="w-full h-10 px-3 rounded-xl bg-[#0F1117] border border-white/10 text-white text-xs font-semibold focus:outline-none focus:border-[#0080FF] cursor-pointer"
               >
                 <option value="" className="bg-[#14161D]">
-                  All Belt Levels
+                  All Plan Levels
                 </option>
                 {availablePlans.map((plan) => (
                   <option key={plan.id} value={plan.id} className="bg-[#14161D]">

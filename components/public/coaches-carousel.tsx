@@ -26,7 +26,7 @@ export function CoachesCarousel() {
       rank: "4th Dan Black Belt",
       image: "/images/adults_martial_arts.png",
       bio: "Former national champion specializing in Taekwondo, Karate, and real-time stance evaluation.",
-      specialty: "Martial Arts & Belt Progression",
+      specialty: "Martial Arts & Skills Progression",
     },
     {
       id: "sarah",
@@ -36,7 +36,7 @@ export function CoachesCarousel() {
       rank: "Certified Master Trainer",
       image: "/images/ladies_fitness.png",
       bio: "Transformation specialist focusing on female fitness, fat loss challenges, and conditioning.",
-      specialty: "HIIT & Weight Loss",
+      specialty: "Fitness & Weight Management",
     },
     {
       id: "kenji",
@@ -65,8 +65,8 @@ export function CoachesCarousel() {
       experience: "10+ Years Experience",
       rank: "2nd Dan Black Belt",
       image: "/images/kids_martial_arts.png",
-      bio: "Specialist in youth discipline, agility building, and virtual belt examination preparation.",
-      specialty: "Youth Belt Academy",
+      bio: "Specialist in youth discipline, agility building, and virtual skills examination preparation.",
+      specialty: "Youth Martial Arts Academy",
     },
     {
       id: "elena",

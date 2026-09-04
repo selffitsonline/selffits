@@ -2,7 +2,7 @@
 
 import React from "react";
 import { StudentShell } from "@/components/student/student-shell";
-import { BarChart3, ShieldCheck, Award, CheckCircle, Flame, Star, Zap } from "lucide-react";
+import { BarChart3, ShieldCheck, Award, CheckCircle, Flame, Zap } from "lucide-react";
 
 export default function StudentProgressPage() {
   const stats = {
@@ -10,16 +10,16 @@ export default function StudentProgressPage() {
     remainingClasses: 18,
     totalClasses: 24,
     attendanceRate: 100,
-    currentBelt: "Blue Belt",
-    nextBelt: "Purple Belt",
+    activePlan: "3 Days / Week",
+    nextGoal: "5 Days / Week Master",
     streakDays: 4,
   };
 
   const badges = [
-    { name: "Yellow Belt Master", desc: "Graduated 1st Belt Rank", icon: Award, earned: true },
+    { name: "Foundation Master", desc: "Completed 1st Level Syllabus", icon: Award, earned: true },
     { name: "100% Attendance", desc: "Never missed a live class", icon: CheckCircle, earned: true },
     { name: "High Kicker", desc: "Completed 5 Kicking Drills", icon: Flame, earned: true },
-    { name: "Purple Belt Candidate", desc: "Complete 24 Classes", icon: ShieldCheck, earned: false },
+    { name: "Master Syllabus Candidate", desc: "Complete 24 Classes", icon: ShieldCheck, earned: false },
   ];
 
   return (
@@ -30,7 +30,7 @@ export default function StudentProgressPage() {
             My Training Progress & Stats
           </h1>
           <p className="text-xs text-gray-400 mt-1">
-            Track your class attendance, streak, belt milestones, and earned achievement badges.
+            Track your class attendance, streak, learning milestones, and earned achievement badges.
           </p>
         </div>
 
@@ -48,14 +48,14 @@ export default function StudentProgressPage() {
           </div>
 
           <div className="bg-[#14161D] border border-white/10 p-6 rounded-2xl space-y-2">
-            <span className="text-xs text-gray-400">Current Belt Level</span>
+            <span className="text-xs text-gray-400">Active Membership</span>
             <div className="flex items-baseline justify-between">
               <h3 className="text-3xl font-black text-[#0080FF] font-[family-name:var(--font-outfit)]">
-                {stats.currentBelt}
+                {stats.activePlan}
               </h3>
               <ShieldCheck className="w-5 h-5 text-[#0080FF]" />
             </div>
-            <p className="text-[11px] text-gray-400">Next Rank: {stats.nextBelt}</p>
+            <p className="text-[11px] text-gray-400">Next Goal: {stats.nextGoal}</p>
           </div>
 
           <div className="bg-[#14161D] border border-white/10 p-6 rounded-2xl space-y-2">
@@ -81,27 +81,27 @@ export default function StudentProgressPage() {
           </div>
         </div>
 
-        {/* Belt Progression Bar */}
+        {/* Syllabus Roadmap */}
         <div className="bg-[#14161D] border border-white/10 p-8 rounded-3xl space-y-6">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-bold text-white font-[family-name:var(--font-outfit)]">
-              Martial Arts Belt Roadmap
+              Curriculum & Skills Roadmap
             </h3>
-            <span className="text-xs text-[#0080FF] font-semibold">Rank 2 of 4</span>
+            <span className="text-xs text-[#0080FF] font-semibold">Level 2 of 4</span>
           </div>
 
-          <div className="grid grid-cols-4 gap-2 text-center text-xs">
-            <div className="p-3 rounded-xl bg-[#10B981]/15 border border-[#10B981]/30 text-[#10B981] font-bold">
-              ✓ Yellow Belt (Completed)
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-center text-xs">
+            <div className="p-3.5 rounded-xl bg-[#10B981]/15 border border-[#10B981]/30 text-[#10B981] font-bold">
+              ✓ Fundamental Stances (Completed)
             </div>
-            <div className="p-3 rounded-xl bg-[#0080FF]/20 border border-[#0080FF] text-[#0080FF] font-bold">
-              ⚡ Blue Belt (Active)
+            <div className="p-3.5 rounded-xl bg-[#0080FF]/20 border border-[#0080FF] text-[#0080FF] font-bold">
+              ⚡ Defensive Combinations (Active)
             </div>
-            <div className="p-3 rounded-xl bg-[#0F1117] border border-white/10 text-gray-500 font-semibold">
-              🔒 Purple Belt
+            <div className="p-3.5 rounded-xl bg-[#0F1117] border border-white/10 text-gray-500 font-semibold">
+              🔒 Advanced Strikes & Sparring
             </div>
-            <div className="p-3 rounded-xl bg-[#0F1117] border border-white/10 text-gray-500 font-semibold">
-              🔒 Brown Belt
+            <div className="p-3.5 rounded-xl bg-[#0F1117] border border-white/10 text-gray-500 font-semibold">
+              🔒 Master Skills & Weapon Forms
             </div>
           </div>
         </div>

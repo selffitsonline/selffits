@@ -233,10 +233,16 @@ export function StudentDetailsModal({
                       </span>
                     </div>
                     {student.activeClassTiming && (
-                      <p className="text-gray-300 text-xs mt-1.5 flex items-center gap-1.5 font-semibold">
-                        <Clock className="w-3.5 h-3.5 text-[#0080FF]" />
-                        Session Batch Timing: {student.activeClassTiming}
-                      </p>
+                      <div className="mt-2 space-y-1">
+                        <p className="text-gray-300 text-xs flex items-center gap-1.5 font-semibold">
+                          <Calendar className="w-3.5 h-3.5 text-[#0080FF]" />
+                          Selected Schedule: {(student as any).activeSelectedDays?.join(", ") || "Sunday, Wednesday, Saturday"} ({(student as any).activeDaysPerWeek || 3} Days/Wk)
+                        </p>
+                        <p className="text-gray-300 text-xs flex items-center gap-1.5 font-semibold">
+                          <Clock className="w-3.5 h-3.5 text-[#10B981]" />
+                          Session Batch Timing: {(student as any).activeSelectedBatch || student.activeClassTiming}
+                        </p>
+                      </div>
                     )}
                   </div>
 

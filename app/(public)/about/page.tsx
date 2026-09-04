@@ -46,7 +46,7 @@ export default function AboutPage() {
               </div>
               <div className="flex items-center gap-3 text-sm font-semibold text-white">
                 <CheckCircle2 className="w-5 h-5 text-[#0080FF]" />
-                <span>Dedicated belt evaluation system & official downloadable certificates.</span>
+                <span>Dedicated skills evaluation system & official downloadable certificates.</span>
               </div>
               <div className="flex items-center gap-3 text-sm font-semibold text-white">
                 <CheckCircle2 className="w-5 h-5 text-[#10B981]" />
@@ -89,7 +89,7 @@ export default function AboutPage() {
               <div className="bg-[#14161D] border border-white/10 p-6 rounded-2xl space-y-3">
                 <Award className="w-8 h-8 text-[#10B981]" />
                 <h3 className="text-lg font-bold text-white">Recognized Progression</h3>
-                <p className="text-xs text-gray-400">Clear belt progression from Yellow Belt to Brown Belt with verifiable certificates.</p>
+                <p className="text-xs text-gray-400">Clear curriculum progression with verifiable program completion certificates.</p>
               </div>
               <div className="bg-[#14161D] border border-white/10 p-6 rounded-2xl space-y-3">
                 <Heart className="w-8 h-8 text-[#F59E0B]" />

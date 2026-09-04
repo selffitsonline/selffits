@@ -174,7 +174,7 @@ export function StudentShell({ children }: StudentShellProps) {
                     </div>
                     <div className="p-2.5 rounded-lg bg-[#0F1117] text-xs space-y-1">
                       <p className="font-semibold text-white">New Certificate Issued</p>
-                      <p className="text-[11px] text-gray-400">Your Yellow Belt Certificate is ready to download.</p>
+                      <p className="text-[11px] text-gray-400">Your Program Graduation Certificate is ready to download.</p>
                     </div>
                   </div>
                   <Link

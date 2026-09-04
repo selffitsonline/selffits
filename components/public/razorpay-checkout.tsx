@@ -21,12 +21,19 @@ interface RazorpayCheckoutProps {
   planName: string;
   priceINR: number;
   priceUSD: number;
+  scheduleData?: {
+    daysPerWeek?: number;
+    selectedDays?: string[];
+    selectedBatch?: string;
+    monthlyPrice?: number;
+    timezone?: string;
+  };
 }
 
-export function RazorpayCheckout({ planId, planName, priceINR, priceUSD }: RazorpayCheckoutProps) {
+export function RazorpayCheckout({ planId, planName, priceINR, priceUSD, scheduleData }: RazorpayCheckoutProps) {
   const router = useRouter();
   const { data: session } = useSession();
-  const [currency, setCurrency] = useState<"INR" | "USD">("INR");
+  const [currency, setCurrency] = useState<"INR" | "USD">("USD");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -89,7 +96,7 @@ export function RazorpayCheckout({ planId, planName, priceINR, priceUSD }: Razor
     setIsLoading(true);
     setErrorMsg(null);
 
-    const res = await createDirectCardEnrollmentAction(planId, currency);
+    const res = await createDirectCardEnrollmentAction(planId, currency, scheduleData);
     if (!res.success) {
       setErrorMsg(res.error || "Payment authorization failed.");
       setIsLoading(false);
@@ -159,6 +166,7 @@ export function RazorpayCheckout({ planId, planName, priceINR, priceUSD }: Razor
           razorpayPaymentId: response.razorpay_payment_id,
           razorpaySignature: response.razorpay_signature,
           planId: planId,
+          ...scheduleData,
         });
 
         if (verifyRes.success) {
@@ -217,7 +225,7 @@ export function RazorpayCheckout({ planId, planName, priceINR, priceUSD }: Razor
           </span>
         </div>
         <p className="text-xs text-gray-400">
-          Includes live Google Meet & Zoom class access, form evaluation, and belt certificate.
+          Includes live Google Meet & Zoom class access, form evaluation, and program completion certificate.
         </p>
       </div>
 

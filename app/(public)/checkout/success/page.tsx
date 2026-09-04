@@ -10,20 +10,18 @@ import { CheckCircle2, ArrowRight, Sparkles, ShieldCheck, Video, Award } from "l
 export default function CheckoutSuccessPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const planId = searchParams.get("plan") || "blue-belt";
+  const planId = searchParams.get("plan") || "plan-3-day";
   const [countdown, setCountdown] = useState(10);
 
   const plansData: Record<string, any> = {
-    "yellow-belt": { name: "Yellow Belt Tier", duration: "1 Month (8 Live Classes)" },
-    "blue-belt": { name: "Blue Belt Tier", duration: "3 Months (24 Live Classes)" },
-    "purple-belt": { name: "Purple Belt Tier", duration: "6 Months (48 Live Classes)" },
-    "brown-belt": { name: "Brown Belt Tier", duration: "12 Months (96 Live Classes)" },
-    "challenge-8": { name: "8 Day Challenge", duration: "8 Days (8 Live Workouts)" },
-    "challenge-24": { name: "24 Day Challenge", duration: "24 Days (24 Live Workouts)" },
-    "transformation-96": { name: "96 Day Transformation", duration: "96 Days (96 Live Workouts)" },
+    "plan-1-day": { name: "1 Day / Week Membership", duration: "1 Month Access (4 Live Classes / Month)" },
+    "plan-2-day": { name: "2 Days / Week Membership", duration: "1 Month Access (8 Live Classes / Month)" },
+    "plan-3-day": { name: "3 Days / Week Membership", duration: "1 Month Access (12 Live Classes / Month)" },
+    "plan-4-day": { name: "4 Days / Week Membership", duration: "1 Month Access (16 Live Classes / Month)" },
+    "plan-5-day": { name: "5 Days / Week Membership", duration: "1 Month Access (20 Live Classes / Month)" },
   };
 
-  const selectedPlan = plansData[planId] || plansData["blue-belt"];
+  const selectedPlan = plansData[planId] || plansData["plan-3-day"];
 
   // 10-Second Auto-Redirect Countdown to Student Dashboard
   useEffect(() => {

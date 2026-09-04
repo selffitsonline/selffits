@@ -16,19 +16,19 @@ const DAY_COMBINATIONS = [
   "Saturday & Tuesday",
 ];
 
-// Helper to format belt level or tier name
-function getBeltLevelName(tierType?: string | null, planName?: string | null) {
-  if (planName && planName.trim()) return planName.trim();
-  if (!tierType) return "Standard Level";
+// Helper to format program level or tier name
+function getProgramLevelName(tierType?: string | null, planName?: string | null) {
+  if (planName && planName.trim() && !planName.toLowerCase().includes("belt") && !planName.toLowerCase().includes("challenge")) return planName.trim();
+  if (!tierType) return "Standard Plan";
   switch (tierType) {
-    case "YELLOW_BELT": return "Yellow Belt";
-    case "BLUE_BELT": return "Blue Belt";
-    case "PURPLE_BELT": return "Purple Belt";
-    case "BROWN_BELT": return "Brown Belt";
-    case "CHALLENGE_8": return "Challenge 8";
-    case "CHALLENGE_24": return "Challenge 24";
-    case "CHALLENGE_48": return "Challenge 48";
-    case "TRANSFORMATION_96": return "Transformation 96";
+    case "YELLOW_BELT": return "1 Day / Week";
+    case "BLUE_BELT": return "3 Days / Week";
+    case "PURPLE_BELT": return "4 Days / Week";
+    case "BROWN_BELT": return "5 Days / Week";
+    case "CHALLENGE_8": return "1 Day / Week";
+    case "CHALLENGE_24": return "3 Days / Week";
+    case "CHALLENGE_48": return "4 Days / Week";
+    case "TRANSFORMATION_96": return "5 Days / Week";
     default: return tierType.replace(/_/g, " ");
   }
 }
@@ -98,7 +98,7 @@ export async function getAdminBatchesAction() {
           email: bs.user.email,
           phone: bs.user.studentProfile?.phone || "Not provided",
           programTitle: b.program.title,
-          levelName: getBeltLevelName(b.membershipPlan?.tierType, b.membershipPlan?.name),
+          levelName: getProgramLevelName(b.membershipPlan?.tierType, b.membershipPlan?.name),
           enrollmentStatus: activeEnr ? "ACTIVE" : "UNENROLLED",
           joinedTimestamp: `Joined: ${enrDate} • ${enrTime}`,
           assignedAt: bs.assignedAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
@@ -114,7 +114,7 @@ export async function getAdminBatchesAction() {
         programCategory: b.program.category,
         targetAudience: b.program.targetAudience,
         membershipPlanId: b.membershipPlanId || null,
-        levelName: getBeltLevelName(b.membershipPlan?.tierType, b.membershipPlan?.name),
+        levelName: getProgramLevelName(b.membershipPlan?.tierType, b.membershipPlan?.name),
         coachId: b.coachId,
         coachName: b.coach.fullName,
         coachEmail: b.coach.email,
@@ -204,7 +204,7 @@ export async function getBatchFormDataAction() {
       id: mp.id,
       programId: mp.programId,
       name: mp.name,
-      levelName: getBeltLevelName(mp.tierType, mp.name),
+      levelName: getProgramLevelName(mp.tierType, mp.name),
       tierType: mp.tierType,
     }));
 
@@ -221,7 +221,7 @@ export async function getBatchFormDataAction() {
         activeProgramId: prg?.id || null,
         activeProgramTitle: prg?.title || "Unenrolled",
         activePlanId: mp?.id || null,
-        activeLevelName: getBeltLevelName(mp?.tierType, mp?.name),
+        activeLevelName: getProgramLevelName(mp?.tierType, mp?.name),
         isEnrolled: !!activeEnr,
       };
     });
@@ -648,7 +648,7 @@ export async function getCentralClassReadinessForUser(userId: string) {
     batchName: b.name,
     programTitle: b.program.title,
     programCategory: b.program.category,
-    levelName: getBeltLevelName(b.membershipPlan?.tierType, b.membershipPlan?.name),
+    levelName: getProgramLevelName(b.membershipPlan?.tierType, b.membershipPlan?.name),
     coachName: b.coach.fullName,
     coachRank: b.coach.highestRank || "Certified Instructor",
     coachDisciplines: coachDisciplines.length > 0 ? coachDisciplines.join(", ") : "Martial Arts & Fitness",

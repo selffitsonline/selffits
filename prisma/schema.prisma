@@ -154,6 +154,11 @@ model Enrollment {
   membershipPlanId   String
   membershipPlan     MembershipPlan   @relation(fields: [membershipPlanId], references: [id])
   classTiming        String?          // e.g. "03:30 PM to 04:15 PM (GMT)"
+  daysPerWeek        Int?
+  selectedDays       Json?
+  selectedBatch      String?
+  monthlyPrice       Decimal?         @db.Decimal(10, 2)
+  timezone           String?          @default("GMT (UTC+0)")
   startDate          DateTime         @default(now())
   endDate            DateTime
   totalClassesGranted Int

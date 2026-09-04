@@ -175,10 +175,10 @@ export function Footer() {
                 <Link href="/programs/ladies-fitness" className="hover:text-white transition-colors">Ladies Only Fitness</Link>
               </li>
               <li>
-                <Link href="/programs/weight-loss" className="hover:text-white transition-colors">Weight Loss & HIIT</Link>
+                <Link href="/programs/weight-loss" className="hover:text-white transition-colors">Fitness & Weight Management</Link>
               </li>
               <li>
-                <Link href="/programs/belt-certifications" className="hover:text-white transition-colors">Belt Certifications</Link>
+                <Link href="/programs" className="hover:text-white transition-colors">Program Completion Certifications</Link>
               </li>
             </ul>
           </div>
