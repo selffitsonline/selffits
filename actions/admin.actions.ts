@@ -760,6 +760,8 @@ export async function getAdminStudentsAction() {
           phone: std.studentProfile?.phone || "Not provided",
           country: std.studentProfile?.country || "Not specified",
           city: std.studentProfile?.city || "Not specified",
+          age: std.studentProfile?.age ? `${std.studentProfile.age} Yrs` : "Not specified",
+          gender: std.studentProfile?.gender || "Not specified",
           emergencyContact: std.studentProfile?.emergencyContact || "None",
           isBlocked: std.isBlocked || false,
           accountStatus: std.isBlocked ? "BLOCKED" : "ACTIVE",

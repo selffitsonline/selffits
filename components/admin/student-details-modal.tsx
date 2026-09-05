@@ -56,6 +56,8 @@ interface StudentDetailsModalProps {
     phone: string;
     country: string;
     city: string;
+    age?: string;
+    gender?: string;
     emergencyContact: string;
     isBlocked: boolean;
     accountStatus: string;
@@ -295,7 +297,13 @@ export function StudentDetailsModal({
                 <div className="p-4 rounded-xl bg-[#0F1117] border border-white/5 space-y-1">
                   <p className="text-gray-400 text-[11px]">Location</p>
                   <p className="text-white font-bold">
-                    {student.city}, {student.country}
+                    {student.country}
+                  </p>
+                </div>
+                <div className="p-4 rounded-xl bg-[#0F1117] border border-white/5 space-y-1">
+                  <p className="text-gray-400 text-[11px]">Age & Gender</p>
+                  <p className="text-white font-bold">
+                    {student.age || "N/A"} • {student.gender || "N/A"}
                   </p>
                 </div>
                 <div className="p-4 rounded-xl bg-[#0F1117] border border-white/5 space-y-1">

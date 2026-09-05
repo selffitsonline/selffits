@@ -12,6 +12,7 @@ import {
   ForgotPasswordInput,
   ResetPasswordInput,
 } from "@/types/validation.schemas";
+import { validatePhoneNumberForCountry } from "@/lib/countries";
 import { WelcomeVerificationEmail } from "@/emails/welcome-verification.email";
 import { ResetPasswordEmail } from "@/emails/reset-password.email";
 
@@ -30,13 +31,24 @@ export async function registerStudentAction(
     if (!validated.success) {
       return {
         success: false,
-        error: "Validation failed",
+        error: "Validation failed. Please check the form errors.",
         fieldErrors: validated.error.flatten().fieldErrors,
       };
     }
 
     const { firstName, lastName, email, phone, age, gender, country, password } = validated.data;
     const normalizedEmail = email.toLowerCase().trim();
+
+    const phoneValidation = validatePhoneNumberForCountry(phone, country);
+    if (!phoneValidation.isValid) {
+      return {
+        success: false,
+        error: phoneValidation.message || "Invalid phone number for the selected country.",
+        fieldErrors: { phone: [phoneValidation.message || "Invalid phone number"] },
+      };
+    }
+
+    const formattedPhone = phoneValidation.formatted || phone.trim();
 
     const existingUser = await db.user.findUnique({
       where: { email: normalizedEmail },
@@ -53,7 +65,7 @@ export async function registerStudentAction(
     const passwordHash = await bcrypt.hash(password, 10);
     const fullName = `${firstName.trim()} ${lastName.trim()}`;
 
-    // Create user and profile in a transaction
+    // Create user and student profile in a transaction
     const newUser = await db.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
@@ -70,7 +82,7 @@ export async function registerStudentAction(
       await tx.studentProfile.create({
         data: {
           userId: user.id,
-          phone: phone.trim(),
+          phone: formattedPhone,
           age,
           gender,
           country: country.trim(),
@@ -181,7 +193,6 @@ export async function forgotPasswordAction(
     });
 
     if (user) {
-      // Delete any existing reset token for this email
       await db.passwordResetToken.deleteMany({
         where: { email: normalizedEmail },
       });
@@ -215,7 +226,6 @@ export async function forgotPasswordAction(
       }
     }
 
-    // Always return a positive message to prevent email enumeration attacks
     return {
       success: true,
       message: "If an account exists with that email, a password reset link has been sent.",

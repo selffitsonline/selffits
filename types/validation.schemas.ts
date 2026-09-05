@@ -1,20 +1,42 @@
 import { z } from "zod";
+import { validatePhoneNumberForCountry } from "@/lib/countries";
 
 export const RegisterSchema = z
   .object({
     firstName: z.string().min(2, "First name must be at least 2 characters"),
     lastName: z.string().min(2, "Last name must be at least 2 characters"),
     email: z.string().email("Invalid email address"),
-    phone: z.string().min(6, "Phone number must be at least 6 characters"),
-    age: z.number({ message: "Please enter your age" }).min(4, "Age must be at least 4").max(100, "Please enter a valid age"),
-    gender: z.enum(["Male", "Female", "Other"]),
-    country: z.string().min(2, "Please select or enter your country"),
+    country: z.string().min(1, "Please select your country"),
+    phone: z.string().min(1, "Phone number is required"),
+    age: z
+      .number({ message: "Please select your age" })
+      .min(4, "Age must be at least 4")
+      .max(100, "Age must be at most 100"),
+    gender: z.enum(["Male", "Female", "Other", "Prefer not to say"], {
+      message: "Please select a valid gender option",
+    }),
     password: z.string().min(8, "Password must be at least 8 characters"),
     confirmPassword: z.string().min(8, "Confirm password is required"),
   })
-  .refine((data) => data.password === data.password, {
-    message: "Passwords do not match",
-    path: ["confirmPassword"],
+  .superRefine((data, ctx) => {
+    if (data.password !== data.confirmPassword) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Passwords do not match",
+        path: ["confirmPassword"],
+      });
+    }
+
+    if (data.country && data.phone) {
+      const phoneCheck = validatePhoneNumberForCountry(data.phone, data.country);
+      if (!phoneCheck.isValid) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: phoneCheck.message || "Invalid phone number for selected country",
+          path: ["phone"],
+        });
+      }
+    }
   });
 
 export const LoginSchema = z.object({
