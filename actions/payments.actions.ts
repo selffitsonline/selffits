@@ -23,7 +23,59 @@ const PLAN_MAP: Record<string, PaymentPlanDetail> = {
   "plan-3-day": { id: "plan-3-day", name: "3 Days / Week Membership Plan", durationMonths: 1, totalClasses: 12, priceINR: 4399, priceUSD: 55 },
   "plan-4-day": { id: "plan-4-day", name: "4 Days / Week Membership Plan", durationMonths: 1, totalClasses: 16, priceINR: 5599, priceUSD: 70 },
   "plan-5-day": { id: "plan-5-day", name: "5 Days / Week Membership Plan", durationMonths: 1, totalClasses: 20, priceINR: 6799, priceUSD: 85 },
+
+  // Shortcuts & Slugs
+  "1-day": { id: "plan-1-day", name: "1 Day / Week Membership Plan", durationMonths: 1, totalClasses: 4, priceINR: 1999, priceUSD: 25 },
+  "2-day": { id: "plan-2-day", name: "2 Days / Week Membership Plan", durationMonths: 1, totalClasses: 8, priceINR: 3199, priceUSD: 40 },
+  "3-day": { id: "plan-3-day", name: "3 Days / Week Membership Plan", durationMonths: 1, totalClasses: 12, priceINR: 4399, priceUSD: 55 },
+  "4-day": { id: "plan-4-day", name: "4 Days / Week Membership Plan", durationMonths: 1, totalClasses: 16, priceINR: 5599, priceUSD: 70 },
+  "5-day": { id: "plan-5-day", name: "5 Days / Week Membership Plan", durationMonths: 1, totalClasses: 20, priceINR: 6799, priceUSD: 85 },
+
+  "yellow-belt": { id: "plan-1-day", name: "1 Day / Week Membership Plan", durationMonths: 1, totalClasses: 4, priceINR: 1999, priceUSD: 25 },
+  "blue-belt": { id: "plan-3-day", name: "3 Days / Week Membership Plan", durationMonths: 1, totalClasses: 12, priceINR: 4399, priceUSD: 55 },
+  "purple-belt": { id: "plan-4-day", name: "4 Days / Week Membership Plan", durationMonths: 1, totalClasses: 16, priceINR: 5599, priceUSD: 70 },
+  "brown-belt": { id: "plan-5-day", name: "5 Days / Week Membership Plan", durationMonths: 1, totalClasses: 20, priceINR: 6799, priceUSD: 85 },
+
+  "challenge-8": { id: "plan-2-day", name: "2 Days / Week Membership Plan", durationMonths: 1, totalClasses: 8, priceINR: 3199, priceUSD: 40 },
+  "challenge-24": { id: "plan-3-day", name: "3 Days / Week Membership Plan", durationMonths: 1, totalClasses: 12, priceINR: 4399, priceUSD: 55 },
+  "challenge-48": { id: "plan-4-day", name: "4 Days / Week Membership Plan", durationMonths: 1, totalClasses: 16, priceINR: 5599, priceUSD: 70 },
+  "transformation-96": { id: "plan-5-day", name: "5 Days / Week Membership Plan", durationMonths: 1, totalClasses: 20, priceINR: 6799, priceUSD: 85 },
 };
+
+async function ensureUserExists(sessionUser: { id: string; email?: string | null; name?: string | null }) {
+  if (!sessionUser || !sessionUser.id) return null;
+
+  let user = await db.user.findUnique({
+    where: { id: sessionUser.id },
+  });
+
+  if (!user && sessionUser.email) {
+    user = await db.user.findUnique({
+      where: { email: sessionUser.email.toLowerCase().trim() },
+    });
+  }
+
+  if (!user) {
+    const email = (sessionUser.email || `user_${Date.now()}@selffits.com`).toLowerCase().trim();
+    const name = sessionUser.name || "Student User";
+    user = await db.user.create({
+      data: {
+        id: sessionUser.id,
+        name: name,
+        email: email,
+        role: "STUDENT",
+      },
+    });
+
+    await db.studentProfile.create({
+      data: {
+        userId: user.id,
+      },
+    });
+  }
+
+  return user;
+}
 
 async function getOrCreateMembershipPlan(plan: PaymentPlanDetail) {
   let program = await db.program.findFirst();
@@ -73,18 +125,23 @@ export async function createRazorpayOrderAction(
       return { success: false, error: "Please log in to complete your enrollment purchase." };
     }
 
+    const user = await ensureUserExists(session.user);
+    if (!user) {
+      return { success: false, error: "User account not found. Please log in again." };
+    }
+
     const plan = PLAN_MAP[planId] || PLAN_MAP["plan-3-day"];
     const basePrice = currency === "INR" ? plan.priceINR : plan.priceUSD;
     const amountInSubunits = Math.round(basePrice * 100);
 
-    const receipt = `rcpt_${Date.now()}_${session.user.id.slice(-6)}`;
+    const receipt = `rcpt_${Date.now()}_${user.id.slice(-6)}`;
 
     const order = await razorpay.orders.create({
       amount: amountInSubunits,
       currency: currency,
       receipt: receipt,
       notes: {
-        userId: session.user.id,
+        userId: user.id,
         planId: plan.id,
         planName: plan.name,
       },
@@ -92,7 +149,7 @@ export async function createRazorpayOrderAction(
 
     await db.payment.create({
       data: {
-        userId: session.user.id,
+        userId: user.id,
         razorpayOrderId: order.id,
         amount: basePrice,
         currency: currency,
@@ -113,7 +170,7 @@ export async function createRazorpayOrderAction(
     console.error("createRazorpayOrderAction error:", err);
     return {
       success: false,
-      error: "Failed to create payment order. Please try again.",
+      error: `Order creation error: ${err?.message || "Internal server error"}`,
     };
   }
 }
@@ -133,6 +190,11 @@ export async function verifyPaymentSignatureAction(payload: {
     const session = await auth();
     if (!session || !session.user) {
       return { success: false, error: "Unauthorized session." };
+    }
+
+    const user = await ensureUserExists(session.user);
+    if (!user) {
+      return { success: false, error: "User account not found." };
     }
 
     const {
@@ -165,11 +227,10 @@ export async function verifyPaymentSignatureAction(payload: {
     const membershipPlan = await getOrCreateMembershipPlan(plan);
     const classTimingLabel = selectedBatch ? selectedBatch : "02:30 PM to 03:30 PM (GMT)";
 
-    // Execute atomic enrollment and payment update
     const result = await db.$transaction(async (tx) => {
       const enrollment = await tx.enrollment.create({
         data: {
-          userId: session.user.id,
+          userId: user.id,
           membershipPlanId: membershipPlan.id,
           classTiming: classTimingLabel,
           daysPerWeek: daysPerWeek || (selectedDays ? selectedDays.length : 3),
@@ -198,15 +259,14 @@ export async function verifyPaymentSignatureAction(payload: {
       return { enrollment, updatedPayment };
     });
 
-    // Send confirmation email via Resend
     const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
     try {
       await resend.emails.send({
         from: EMAIL_FROM,
-        to: session.user.email as string,
+        to: user.email as string,
         subject: `Enrollment Confirmed - ${plan.name} (SELFFITS)`,
         react: PaymentSuccessEmail({
-          name: session.user.name || "Student",
+          name: user.name || "Student",
           planName: plan.name,
           amount: String(plan.priceINR),
           currency: "INR",
@@ -227,7 +287,7 @@ export async function verifyPaymentSignatureAction(payload: {
     console.error("verifyPaymentSignatureAction error:", err);
     return {
       success: false,
-      error: "Payment signature verification failed.",
+      error: `Payment signature verification error: ${err?.message || "Verification failed"}`,
     };
   }
 }
@@ -257,7 +317,6 @@ export async function getStudentEnrollmentAction() {
 
     const now = new Date();
 
-    // Batch update expired status in PostgreSQL database in a single query
     const expiredIds = rawEnrollments
       .filter((item) => (new Date(item.endDate) < now || item.remainingClasses <= 0) && item.status === "ACTIVE")
       .map((item) => item.id);
@@ -334,7 +393,6 @@ export async function getStudentEnrollmentAction() {
       };
     });
 
-    // Sample expired course demo record for testing functionality
     const sampleExpiredCourse = {
       id: "sample-expired-course-demo",
       programName: "Sample Expired Martial Arts Course (Demo)",
@@ -385,6 +443,11 @@ export async function createDirectCardEnrollmentAction(
       return { success: false, error: "Please log in to complete your enrollment purchase." };
     }
 
+    const user = await ensureUserExists(session.user);
+    if (!user) {
+      return { success: false, error: "User account record not found in database. Please log in again." };
+    }
+
     const plan = PLAN_MAP[planId] || PLAN_MAP["plan-3-day"];
     const basePrice = scheduleData?.monthlyPrice || (currency === "INR" ? plan.priceINR : plan.priceUSD);
     const startDate = new Date();
@@ -394,11 +457,12 @@ export async function createDirectCardEnrollmentAction(
     const membershipPlan = await getOrCreateMembershipPlan(plan);
     const classTimingLabel = scheduleData?.selectedBatch ? scheduleData.selectedBatch : "02:30 PM to 03:30 PM (GMT)";
 
-    // Execute atomic enrollment and payment creation in PostgreSQL
+    const uniqueNonce = Math.random().toString(36).substring(2, 7);
+
     const result = await db.$transaction(async (tx) => {
       const enrollment = await tx.enrollment.create({
         data: {
-          userId: session.user.id,
+          userId: user.id,
           membershipPlanId: membershipPlan.id,
           classTiming: classTimingLabel,
           daysPerWeek: scheduleData?.daysPerWeek || (scheduleData?.selectedDays ? scheduleData.selectedDays.length : 3),
@@ -416,10 +480,10 @@ export async function createDirectCardEnrollmentAction(
 
       const payment = await tx.payment.create({
         data: {
-          userId: session.user.id,
+          userId: user.id,
           enrollmentId: enrollment.id,
-          razorpayOrderId: `card_order_${Date.now()}`,
-          razorpayPaymentId: `card_pay_${Date.now()}`,
+          razorpayOrderId: `card_order_${Date.now()}_${uniqueNonce}`,
+          razorpayPaymentId: `card_pay_${Date.now()}_${uniqueNonce}`,
           razorpaySignature: "direct_card_authorization",
           amount: basePrice,
           currency: currency,
@@ -439,7 +503,7 @@ export async function createDirectCardEnrollmentAction(
     console.error("createDirectCardEnrollmentAction error:", err);
     return {
       success: false,
-      error: "Failed to authorize card payment and record enrollment.",
+      error: `Card payment authorization error: ${err?.message || "Internal database processing error"}`,
     };
   }
 }
