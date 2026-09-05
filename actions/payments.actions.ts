@@ -228,23 +228,40 @@ export async function verifyPaymentSignatureAction(payload: {
     const classTimingLabel = selectedBatch ? selectedBatch : "02:30 PM to 03:30 PM (GMT)";
 
     const result = await db.$transaction(async (tx) => {
-      const enrollment = await tx.enrollment.create({
-        data: {
-          userId: user.id,
-          membershipPlanId: membershipPlan.id,
-          classTiming: classTimingLabel,
-          daysPerWeek: daysPerWeek || (selectedDays ? selectedDays.length : 3),
-          selectedDays: selectedDays || ["Sunday", "Wednesday", "Saturday"],
-          selectedBatch: selectedBatch || "2nd Batch — 02:30 PM to 03:30 PM (GMT)",
-          monthlyPrice: monthlyPrice || plan.priceUSD,
-          timezone: timezone || "GMT (UTC+0)",
-          startDate,
-          endDate,
-          totalClassesGranted: plan.totalClasses,
-          remainingClasses: plan.totalClasses,
-          status: "ACTIVE",
-        },
-      });
+      let enrollment;
+      try {
+        enrollment = await tx.enrollment.create({
+          data: {
+            userId: user.id,
+            membershipPlanId: membershipPlan.id,
+            classTiming: classTimingLabel,
+            daysPerWeek: daysPerWeek || (selectedDays ? selectedDays.length : 3),
+            selectedDays: selectedDays || ["Sunday", "Wednesday", "Saturday"],
+            selectedBatch: selectedBatch || "2nd Batch — 02:30 PM to 03:30 PM (GMT)",
+            monthlyPrice: monthlyPrice || plan.priceUSD,
+            timezone: timezone || "GMT (UTC+0)",
+            startDate,
+            endDate,
+            totalClassesGranted: plan.totalClasses,
+            remainingClasses: plan.totalClasses,
+            status: "ACTIVE",
+          },
+        });
+      } catch (colErr: any) {
+        console.warn("Falling back to core enrollment fields in verifyPaymentSignatureAction:", colErr?.message);
+        enrollment = await tx.enrollment.create({
+          data: {
+            userId: user.id,
+            membershipPlanId: membershipPlan.id,
+            classTiming: classTimingLabel,
+            startDate,
+            endDate,
+            totalClassesGranted: plan.totalClasses,
+            remainingClasses: plan.totalClasses,
+            status: "ACTIVE",
+          },
+        });
+      }
 
       const updatedPayment = await tx.payment.update({
         where: { razorpayOrderId },
@@ -460,23 +477,40 @@ export async function createDirectCardEnrollmentAction(
     const uniqueNonce = Math.random().toString(36).substring(2, 7);
 
     const result = await db.$transaction(async (tx) => {
-      const enrollment = await tx.enrollment.create({
-        data: {
-          userId: user.id,
-          membershipPlanId: membershipPlan.id,
-          classTiming: classTimingLabel,
-          daysPerWeek: scheduleData?.daysPerWeek || (scheduleData?.selectedDays ? scheduleData.selectedDays.length : 3),
-          selectedDays: scheduleData?.selectedDays || ["Sunday", "Wednesday", "Saturday"],
-          selectedBatch: scheduleData?.selectedBatch || "2nd Batch — 02:30 PM to 03:30 PM (GMT)",
-          monthlyPrice: basePrice,
-          timezone: scheduleData?.timezone || "GMT (UTC+0)",
-          startDate,
-          endDate,
-          totalClassesGranted: plan.totalClasses,
-          remainingClasses: plan.totalClasses,
-          status: "ACTIVE",
-        },
-      });
+      let enrollment;
+      try {
+        enrollment = await tx.enrollment.create({
+          data: {
+            userId: user.id,
+            membershipPlanId: membershipPlan.id,
+            classTiming: classTimingLabel,
+            daysPerWeek: scheduleData?.daysPerWeek || (scheduleData?.selectedDays ? scheduleData.selectedDays.length : 3),
+            selectedDays: scheduleData?.selectedDays || ["Sunday", "Wednesday", "Saturday"],
+            selectedBatch: scheduleData?.selectedBatch || "2nd Batch — 02:30 PM to 03:30 PM (GMT)",
+            monthlyPrice: basePrice,
+            timezone: scheduleData?.timezone || "GMT (UTC+0)",
+            startDate,
+            endDate,
+            totalClassesGranted: plan.totalClasses,
+            remainingClasses: plan.totalClasses,
+            status: "ACTIVE",
+          },
+        });
+      } catch (colErr: any) {
+        console.warn("Falling back to core enrollment fields due to schema version:", colErr?.message);
+        enrollment = await tx.enrollment.create({
+          data: {
+            userId: user.id,
+            membershipPlanId: membershipPlan.id,
+            classTiming: classTimingLabel,
+            startDate,
+            endDate,
+            totalClassesGranted: plan.totalClasses,
+            remainingClasses: plan.totalClasses,
+            status: "ACTIVE",
+          },
+        });
+      }
 
       const payment = await tx.payment.create({
         data: {
