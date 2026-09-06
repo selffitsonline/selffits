@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { StudentShell } from "@/components/student/student-shell";
-import { Video, Calendar, User, ArrowRight, ShieldCheck, BookOpen, Trash2, AlertTriangle, X, Sparkles, ExternalLink } from "lucide-react";
+import { Video, Calendar, User, ArrowRight, ShieldCheck, BookOpen, Trash2, AlertTriangle, X, Sparkles, ExternalLink, FileText, Download } from "lucide-react";
 import { cancelStudentEnrollmentAction } from "@/actions/payments.actions";
 import { clearStudentEnrollmentCache } from "@/lib/enrollment-cache";
 
@@ -173,6 +173,32 @@ export function StudentProgramsView({ initialCourses }: StudentProgramsViewProps
                           />
                         </div>
                       </div>
+
+                      {course.includeDietNutrition && (
+                        <div className="p-3.5 rounded-xl bg-gradient-to-r from-[#0F231C] via-[#14161D] to-[#0F1117] border border-[#10B981]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-lg bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/40 flex items-center justify-center shrink-0">
+                              <FileText className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <span className="text-xs font-extrabold text-white font-[family-name:var(--font-outfit)] block">
+                                Diet & Nutrition Add-on Active
+                              </span>
+                              <span className="text-[10px] text-gray-400 block font-medium">
+                                Database-Verified PDF Download Access
+                              </span>
+                            </div>
+                          </div>
+
+                          <a
+                            href="/api/diet-nutrition/download"
+                            download
+                            className="px-3.5 py-2 rounded-lg bg-[#10B981] hover:bg-[#059669] text-white font-extrabold text-xs transition-all flex items-center justify-center gap-1.5 shadow-md shrink-0 cursor-pointer"
+                          >
+                            <Download className="w-3.5 h-3.5" /> Download PDF
+                          </a>
+                        </div>
+                      )}
                     </div>
                   </div>
 

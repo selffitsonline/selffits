@@ -9,13 +9,29 @@ import {
   calculateMonthlyPrice,
 } from "@/lib/schedule-config";
 import { getScheduleConfigAction } from "@/actions/schedule-config.actions";
-import { Calendar, Clock, Check, Zap, AlertCircle, ShieldCheck, Sparkles, Lock, BookOpen } from "lucide-react";
+import {
+  getDietNutritionConfigAction,
+  DietNutritionConfig,
+} from "@/actions/diet-nutrition.actions";
+import { Calendar, Clock, Check, Zap, AlertCircle, ShieldCheck, Sparkles, Lock, BookOpen, FileText } from "lucide-react";
+
+const DEFAULT_DIET_NUTRITION_CONFIG: DietNutritionConfig = {
+  title: "Diet & Nutrition Program",
+  description: "Personalized performance meal plan, calorie macro breakdown & healthy recipe guide (PDF download included).",
+  priceUSD: 10,
+  pdfUrl: null,
+  pdfFileName: null,
+  activeStatus: true,
+};
 
 export interface StudentScheduleSelectionState {
   daysPerWeek: number;
   selectedDays: string[];
   selectedBatch: string;
   monthlyPriceUSD: number;
+  includeDietNutrition: boolean;
+  dietNutritionPrice: number;
+  totalPriceUSD: number;
 }
 
 export interface StudentScheduleSelectorProps {
@@ -42,6 +58,8 @@ export function StudentScheduleSelector({
   onCheckoutSubmit,
 }: StudentScheduleSelectorProps) {
   const [config, setConfig] = useState<CentralScheduleConfig>(() => getDefaultScheduleConfig(category, group));
+  const [dietConfig, setDietConfig] = useState<DietNutritionConfig>(DEFAULT_DIET_NUTRITION_CONFIG);
+  const [includeDietNutrition, setIncludeDietNutrition] = useState<boolean>(false);
   const [daysPerWeek, setDaysPerWeek] = useState<number>(initialDaysPerWeek);
   const [selectedDays, setSelectedDays] = useState<string[]>(initialSelectedDays);
   const [selectedBatch, setSelectedBatch] = useState<string>(initialSelectedBatch);
@@ -49,11 +67,19 @@ export function StudentScheduleSelector({
   useEffect(() => {
     async function loadConfig() {
       try {
-        const res = await getScheduleConfigAction(category, group);
+        const [res, dietRes] = await Promise.all([
+          getScheduleConfigAction(category, group),
+          getDietNutritionConfigAction(),
+        ]);
+
         if (res.success && res.config) {
           setConfig(res.config);
         } else {
           setConfig(getDefaultScheduleConfig(category, group));
+        }
+
+        if (dietRes.success && dietRes.config) {
+          setDietConfig(dietRes.config);
         }
       } catch (err) {
         console.error("Failed to load central schedule config:", err);
@@ -133,6 +159,8 @@ export function StudentScheduleSelector({
   };
 
   const currentPricing = calculateMonthlyPrice(daysPerWeek, membershipPlans);
+  const addOnPriceUSD = includeDietNutrition && dietConfig.activeStatus ? dietConfig.priceUSD : 0;
+  const totalPriceUSD = currentPricing.priceUSD + addOnPriceUSD;
 
   // Emit selection state changes
   useEffect(() => {
@@ -142,9 +170,21 @@ export function StudentScheduleSelector({
         selectedDays,
         selectedBatch,
         monthlyPriceUSD: currentPricing.priceUSD,
+        includeDietNutrition: includeDietNutrition && dietConfig.activeStatus,
+        dietNutritionPrice: dietConfig.priceUSD,
+        totalPriceUSD,
       });
     }
-  }, [daysPerWeek, selectedDays, selectedBatch, currentPricing.priceUSD]);
+  }, [
+    daysPerWeek,
+    selectedDays,
+    selectedBatch,
+    currentPricing.priceUSD,
+    includeDietNutrition,
+    dietConfig.activeStatus,
+    dietConfig.priceUSD,
+    totalPriceUSD,
+  ]);
 
   const isSelectionValid = selectedDays.length === daysPerWeek && !!selectedBatch;
 
@@ -369,7 +409,71 @@ export function StudentScheduleSelector({
         </div>
       </div>
 
-      {/* STEP 5: SELECTION SUMMARY PREVIEW */}
+      {/* STEP 5: OPTIONAL DIET & NUTRITION PROGRAM ADD-ON */}
+      {dietConfig.activeStatus && (
+        <div className="space-y-3 pt-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-gray-200 flex items-center gap-2.5">
+              <span className="w-6 h-6 rounded-lg bg-[#10B981] text-white text-xs font-black flex items-center justify-center shrink-0 shadow-md">
+                5
+              </span>
+              <span>Optional Add-on Program</span>
+            </label>
+            <span className="px-2 py-0.5 rounded-full bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30 text-[10px] font-black uppercase tracking-wider">
+              OPTIONAL ADD-ON
+            </span>
+          </div>
+
+          <div
+            onClick={() => setIncludeDietNutrition(!includeDietNutrition)}
+            className={`p-4 sm:p-5 rounded-2xl border transition-all cursor-pointer flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
+              includeDietNutrition
+                ? "bg-gradient-to-r from-[#0F231C] to-[#14161D] border-[#10B981] text-white shadow-xl shadow-[#10B981]/15 ring-2 ring-[#10B981]"
+                : "bg-[#0F1117] border-white/10 text-gray-300 hover:border-white/20"
+            }`}
+          >
+            <div className="flex items-start gap-3.5">
+              <div
+                className={`w-6 h-6 rounded-lg border mt-0.5 flex items-center justify-center shrink-0 transition-colors ${
+                  includeDietNutrition
+                    ? "bg-[#10B981] border-[#10B981] text-white"
+                    : "bg-[#14161D] border-white/20 text-transparent"
+                }`}
+              >
+                <Check className="w-4 h-4 stroke-[3]" />
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm sm:text-base font-extrabold text-white font-[family-name:var(--font-outfit)] flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-[#10B981]" /> {dietConfig.title}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/40 text-[10px] font-bold">
+                    +${dietConfig.priceUSD} / month
+                  </span>
+                </div>
+                <p className="text-xs text-gray-400 leading-relaxed font-medium">
+                  {dietConfig.description}
+                </p>
+              </div>
+            </div>
+
+            <div className="shrink-0 w-full sm:w-auto text-right border-t sm:border-t-0 border-white/10 pt-2 sm:pt-0">
+              <span
+                className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider inline-block ${
+                  includeDietNutrition
+                    ? "bg-[#10B981] text-white shadow-md"
+                    : "bg-white/10 text-gray-300 hover:bg-white/20"
+                }`}
+              >
+                {includeDietNutrition ? "Add-on Selected" : `+ Add to Enrollment ($${dietConfig.priceUSD})`}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* STEP 6: SELECTION SUMMARY PREVIEW */}
       <div className="p-5 rounded-2xl bg-[#0F1117] border border-white/15 space-y-4">
         <div className="flex items-center justify-between border-b border-white/10 pb-3">
           <span className="text-xs font-extrabold uppercase tracking-wider text-white flex items-center gap-2">
@@ -384,7 +488,7 @@ export function StudentScheduleSelector({
           <div className="space-y-1">
             <span className="text-gray-400 font-semibold block">Selected Membership Plan:</span>
             <span className="font-extrabold text-white text-sm block">
-              {daysPerWeek} {daysPerWeek === 1 ? "Day" : "Days"} / Week
+              {daysPerWeek} {daysPerWeek === 1 ? "Day" : "Days"} / Week (${currentPricing.priceUSD})
             </span>
           </div>
 
@@ -403,11 +507,25 @@ export function StudentScheduleSelector({
           </div>
 
           <div className="space-y-1">
-            <span className="text-gray-400 font-semibold block">Monthly Price:</span>
-            <span className="font-black text-2xl text-white font-[family-name:var(--font-outfit)] block">
-              ${currentPricing.priceUSD}
-              <span className="text-xs text-gray-400 font-normal"> / month</span>
+            <span className="text-gray-400 font-semibold block">Diet & Nutrition Add-on:</span>
+            <span className={`font-extrabold text-sm block ${includeDietNutrition ? "text-[#10B981]" : "text-gray-500"}`}>
+              {includeDietNutrition ? `Selected (+${dietConfig.priceUSD})` : "Not Included"}
             </span>
+          </div>
+
+          <div className="space-y-1 sm:col-span-2 pt-2 border-t border-white/10">
+            <span className="text-gray-400 font-semibold block">Total Monthly Price:</span>
+            <div className="flex items-baseline gap-2">
+              <span className="font-black text-3xl text-white font-[family-name:var(--font-outfit)]">
+                ${totalPriceUSD}
+              </span>
+              <span className="text-xs text-gray-400 font-normal"> / month</span>
+              {includeDietNutrition && (
+                <span className="text-[11px] text-gray-400">
+                  (${currentPricing.priceUSD} program + ${dietConfig.priceUSD} diet add-on)
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -422,11 +540,14 @@ export function StudentScheduleSelector({
                   selectedDays,
                   selectedBatch,
                   monthlyPriceUSD: currentPricing.priceUSD,
+                  includeDietNutrition: includeDietNutrition && dietConfig.activeStatus,
+                  dietNutritionPrice: dietConfig.priceUSD,
+                  totalPriceUSD,
                 })
               }
               className="w-full py-4 rounded-xl bg-gradient-to-r from-[#E50914] to-[#FF1E27] text-white font-extrabold text-sm uppercase tracking-wider hover:opacity-95 transition-all shadow-xl shadow-[#E50914]/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Lock className="w-4 h-4" /> Proceed to Enrollment (${currentPricing.priceUSD})
+              <Lock className="w-4 h-4" /> Proceed to Enrollment (${totalPriceUSD})
             </button>
           </div>
         )}

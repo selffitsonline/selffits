@@ -27,6 +27,8 @@ interface RazorpayCheckoutProps {
     selectedBatch?: string;
     monthlyPrice?: number;
     timezone?: string;
+    includeDietNutrition?: boolean;
+    dietNutritionPrice?: number;
   };
 }
 
@@ -138,7 +140,7 @@ export function RazorpayCheckout({ planId, planName, priceUSD, scheduleData }: R
       return;
     }
 
-    const orderRes = await createRazorpayOrderAction(planId, currency);
+    const orderRes = await createRazorpayOrderAction(planId, currency, priceUSD);
     if (!orderRes.success || !orderRes.orderId) {
       setErrorMsg(orderRes.error || "Order creation failed.");
       setIsLoading(false);

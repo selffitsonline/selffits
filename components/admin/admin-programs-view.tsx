@@ -23,6 +23,8 @@ import {
   DollarSign,
   Check,
   BookOpen,
+  FileText,
+  Upload,
 } from "lucide-react";
 import {
   CentralScheduleConfig,
@@ -41,6 +43,20 @@ import {
 } from "@/lib/schedule-config";
 import { getScheduleConfigAction, updateScheduleConfigAction } from "@/actions/schedule-config.actions";
 import { getAdminProgramsCatalogAction, updateAdminProgramsCatalogAction } from "@/actions/admin.actions";
+import {
+  getDietNutritionConfigAction,
+  updateDietNutritionConfigAction,
+  DietNutritionConfig,
+} from "@/actions/diet-nutrition.actions";
+
+const DEFAULT_DIET_NUTRITION_CONFIG: DietNutritionConfig = {
+  title: "Diet & Nutrition Program",
+  description: "Personalized performance meal plan, calorie macro breakdown & healthy recipe guide (PDF download included).",
+  priceUSD: 10,
+  pdfUrl: null,
+  pdfFileName: null,
+  activeStatus: true,
+};
 
 type MainTab = "mma" | "hiit";
 type SubCat = "kids" | "adults" | "ladies";
@@ -122,13 +138,18 @@ export function AdminProgramsView() {
   const [newBatchStart, setNewBatchStart] = useState("05:15 PM");
   const [newBatchEnd, setNewBatchEnd] = useState("06:00 PM");
 
+  // Diet & Nutrition Add-on Config State
+  const [dietConfig, setDietConfig] = useState<DietNutritionConfig>(DEFAULT_DIET_NUTRITION_CONFIG);
+  const [isUploadingPdf, setIsUploadingPdf] = useState(false);
+
   useEffect(() => {
     async function loadData() {
       try {
         const [
           mmaKidsRes, mmaAdultsRes, mmaLadiesRes,
           hiitKidsRes, hiitAdultsRes, hiitLadiesRes,
-          catRes
+          catRes,
+          dietRes
         ] = await Promise.all([
           getScheduleConfigAction("mixed-martial-arts", "kids"),
           getScheduleConfigAction("mixed-martial-arts", "adults"),
@@ -137,6 +158,7 @@ export function AdminProgramsView() {
           getScheduleConfigAction("fitness-weight-management", "adults"),
           getScheduleConfigAction("fitness-weight-management", "ladies"),
           getAdminProgramsCatalogAction(),
+          getDietNutritionConfigAction(),
         ]);
 
         setScheduleConfigs({
@@ -154,6 +176,10 @@ export function AdminProgramsView() {
             setCategoryTitles((prev) => ({ ...prev, ...cat.categoryTitles }));
           }
         }
+
+        if (dietRes && dietRes.success && dietRes.config) {
+          setDietConfig(dietRes.config);
+        }
       } catch (err) {
         console.error("Failed to load admin schedule configuration:", err);
       } finally {
@@ -170,7 +196,7 @@ export function AdminProgramsView() {
 
     try {
       const [
-        s1, s2, s3, s4, s5, s6, catRes
+        s1, s2, s3, s4, s5, s6, catRes, dietRes
       ] = await Promise.all([
         updateScheduleConfigAction("mixed-martial-arts", "kids", scheduleConfigs["mma-kids"]),
         updateScheduleConfigAction("mixed-martial-arts", "adults", scheduleConfigs["mma-adults"]),
@@ -179,14 +205,15 @@ export function AdminProgramsView() {
         updateScheduleConfigAction("fitness-weight-management", "adults", scheduleConfigs["hiit-adults"]),
         updateScheduleConfigAction("fitness-weight-management", "ladies", scheduleConfigs["hiit-ladies"]),
         updateAdminProgramsCatalogAction({ categoryTitles }),
+        updateDietNutritionConfigAction(dietConfig),
       ]);
 
-      const allSuccess = s1.success && s2.success && s3.success && s4.success && s5.success && s6.success && catRes.success;
+      const allSuccess = s1.success && s2.success && s3.success && s4.success && s5.success && s6.success && catRes.success && dietRes.success;
 
       if (allSuccess) {
         setMsg({
           type: "success",
-          text: "All 6 Independent Category & Audience Group Configurations, Curriculums, Schedules, Prices, and Batch Timings published successfully to live website!",
+          text: "All Program Configurations, Curriculums, Schedules, Prices, Batch Timings, and Diet & Nutrition Add-on Settings published successfully to live website!",
         });
       } else {
         setMsg({
@@ -321,6 +348,46 @@ export function AdminProgramsView() {
       batchTimings: [...prev.batchTimings, newBatch],
     }));
     setNewBatchName("");
+  };
+
+  // Handler: Upload Diet & Nutrition PDF File
+  const handlePdfUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith(".pdf")) {
+      setMsg({ type: "error", text: "Selected file must be a PDF." });
+      return;
+    }
+
+    setIsUploadingPdf(true);
+    setMsg(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/admin/upload-pdf", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setDietConfig((prev) => ({
+          ...prev,
+          pdfUrl: "/uploads/protected/diet_nutrition_plan.pdf",
+          pdfFileName: data.fileName,
+        }));
+        setMsg({ type: "success", text: `PDF "${data.fileName}" uploaded successfully and saved to protected storage!` });
+      } else {
+        setMsg({ type: "error", text: data.error || "Failed to upload PDF." });
+      }
+    } catch (err: any) {
+      setMsg({ type: "error", text: "PDF upload network error." });
+    } finally {
+      setIsUploadingPdf(false);
+    }
   };
 
   // Context Key for Metadata
@@ -774,6 +841,107 @@ export function AdminProgramsView() {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* 4. DIET & NUTRITION PROGRAM ADD-ON MANAGER */}
+            <div className="bg-[#14161D] border border-white/10 rounded-2xl p-6 space-y-5 shadow-xl">
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <div>
+                  <h3 className="text-sm font-extrabold uppercase tracking-wider text-white flex items-center gap-2 font-[family-name:var(--font-outfit)]">
+                    <FileText className="w-4 h-4 text-[#10B981]" /> Optional Diet & Nutrition Program Add-on Settings
+                  </h3>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Configure optional Diet & Nutrition add-on title, description, USD price, active status, and upload downloadable PDF.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setDietConfig((prev) => ({ ...prev, activeStatus: !prev.activeStatus }))}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-extrabold uppercase border cursor-pointer transition-all ${
+                    dietConfig.activeStatus
+                      ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                      : "bg-white/10 text-gray-400 border-white/10"
+                  }`}
+                >
+                  {dietConfig.activeStatus ? "Add-on Enabled" : "Add-on Disabled"}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase text-gray-300 mb-1">
+                      Program Add-on Title
+                    </label>
+                    <input
+                      type="text"
+                      value={dietConfig.title}
+                      onChange={(e) => setDietConfig((prev) => ({ ...prev, title: e.target.value }))}
+                      className="w-full h-10 px-3.5 rounded-lg bg-[#0F1117] border border-white/10 text-white font-bold text-xs focus:outline-none focus:border-[#10B981]"
+                      placeholder="e.g. Diet & Nutrition Program"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase text-gray-300 mb-1">
+                      Add-on Price USD ($)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3 top-2.5 text-xs text-gray-400 font-bold">$</span>
+                      <input
+                        type="number"
+                        value={dietConfig.priceUSD}
+                        onChange={(e) =>
+                          setDietConfig((prev) => ({ ...prev, priceUSD: Number(e.target.value) || 0 }))
+                        }
+                        className="w-full h-10 pl-7 pr-3 rounded-lg bg-[#0F1117] border border-white/10 text-white font-mono text-xs font-bold focus:outline-none focus:border-[#10B981]"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase text-gray-300 mb-1">
+                      Upload / Replace Protected PDF File
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <label className="px-4 py-2.5 rounded-xl bg-[#10B981]/20 hover:bg-[#10B981]/30 border border-[#10B981]/40 text-[#10B981] text-xs font-bold transition-all cursor-pointer flex items-center gap-2">
+                        <Upload className="w-4 h-4" />
+                        <span>{isUploadingPdf ? "Uploading..." : "Select PDF File"}</span>
+                        <input
+                          type="file"
+                          accept=".pdf"
+                          onChange={handlePdfUpload}
+                          disabled={isUploadingPdf}
+                          className="hidden"
+                        />
+                      </label>
+
+                      {dietConfig.pdfFileName ? (
+                        <span className="text-xs text-emerald-400 font-bold flex items-center gap-1.5 bg-emerald-500/10 px-3 py-1.5 rounded-lg border border-emerald-500/20">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>PDF: {dietConfig.pdfFileName}</span>
+                        </span>
+                      ) : (
+                        <span className="text-xs text-amber-400 font-medium">No PDF file uploaded yet</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold uppercase text-gray-300 mb-1">
+                    Add-on Short Description
+                  </label>
+                  <textarea
+                    rows={6}
+                    value={dietConfig.description}
+                    onChange={(e) => setDietConfig((prev) => ({ ...prev, description: e.target.value }))}
+                    className="w-full p-3.5 rounded-xl bg-[#0F1117] border border-white/10 text-white text-xs leading-relaxed focus:outline-none focus:border-[#10B981]"
+                    placeholder="Enter short description for students..."
+                  />
+                </div>
               </div>
             </div>
           </div>

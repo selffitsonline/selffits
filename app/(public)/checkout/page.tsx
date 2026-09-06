@@ -16,6 +16,9 @@ function CheckoutContent() {
   const currencyParam = (searchParams.get("currency") as "INR" | "USD") || "USD";
   const priceParam = searchParams.get("price") || "55";
 
+  const dietAddonParam = searchParams.get("dietAddon") === "true";
+  const dietPriceParam = parseFloat(searchParams.get("dietPrice") || "10") || 10;
+
   const daysPerWeek = parseInt(freqParam, 10) || 3;
   const selectedDays = daysParam.split(",").map((d) => d.trim()).filter(Boolean);
   const selectedBatch = batchParam;
@@ -73,13 +76,24 @@ function CheckoutContent() {
               </span>
             </div>
 
+            {dietAddonParam && (
+              <div className="flex items-start justify-between text-sm p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                <span className="text-emerald-400 font-bold flex items-center gap-1.5">
+                  <Check className="w-4 h-4" /> Diet & Nutrition Program Add-on:
+                </span>
+                <span className="font-black text-emerald-400 text-right">
+                  +${dietPriceParam} / month
+                </span>
+              </div>
+            )}
+
             <div className="flex items-center justify-between text-sm pt-2 border-t border-white/10">
               <span className="text-gray-400 font-semibold">Timezone Standard:</span>
               <span className="font-bold text-gray-200">GMT (UTC+0)</span>
             </div>
 
             <div className="flex items-center justify-between text-sm pt-2 border-t border-white/10">
-              <span className="text-gray-400 font-semibold">Monthly Price:</span>
+              <span className="text-gray-400 font-semibold">Total Amount:</span>
               <span className="text-2xl font-black text-white font-[family-name:var(--font-outfit)]">
                 ${priceNum}
                 <span className="text-xs text-gray-400 font-normal"> / month</span>
@@ -104,6 +118,11 @@ function CheckoutContent() {
               <li className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-[#10B981]" /> Access to Student Dashboard & Timetables
               </li>
+              {dietAddonParam && (
+                <li className="flex items-center gap-2 font-bold text-emerald-400">
+                  <Check className="w-4 h-4 text-[#10B981]" /> Diet & Nutrition Program PDF Download Access
+                </li>
+              )}
             </ul>
           </div>
         </div>
@@ -120,6 +139,8 @@ function CheckoutContent() {
               selectedBatch,
               monthlyPrice: priceNum,
               timezone: "GMT (UTC+0)",
+              includeDietNutrition: dietAddonParam,
+              dietNutritionPrice: dietPriceParam,
             }}
           />
         </div>

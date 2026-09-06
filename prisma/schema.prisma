@@ -158,6 +158,8 @@ model Enrollment {
   selectedDays       Json?
   selectedBatch      String?
   monthlyPrice       Decimal?         @db.Decimal(10, 2)
+  includeDietNutrition Boolean        @default(false)
+  dietNutritionPrice   Decimal?         @db.Decimal(10, 2)
   timezone           String?          @default("GMT (UTC+0)")
   startDate          DateTime         @default(now())
   endDate            DateTime

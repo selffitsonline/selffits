@@ -117,7 +117,8 @@ async function getOrCreateMembershipPlan(plan: PaymentPlanDetail) {
 
 export async function createRazorpayOrderAction(
   planId: string,
-  currency: "INR" | "USD" = "INR"
+  currency: "INR" | "USD" = "USD",
+  amountOverride?: number
 ) {
   try {
     const session = await auth();
@@ -131,7 +132,7 @@ export async function createRazorpayOrderAction(
     }
 
     const plan = PLAN_MAP[planId] || PLAN_MAP["plan-3-day"];
-    const basePrice = currency === "INR" ? plan.priceINR : plan.priceUSD;
+    const basePrice = amountOverride && amountOverride > 0 ? amountOverride : (currency === "INR" ? plan.priceINR : plan.priceUSD);
     const amountInSubunits = Math.round(basePrice * 100);
 
     const receipt = `rcpt_${Date.now()}_${user.id.slice(-6)}`;
@@ -185,6 +186,8 @@ export async function verifyPaymentSignatureAction(payload: {
   selectedBatch?: string;
   monthlyPrice?: number;
   timezone?: string;
+  includeDietNutrition?: boolean;
+  dietNutritionPrice?: number;
 }) {
   try {
     const session = await auth();
@@ -207,6 +210,8 @@ export async function verifyPaymentSignatureAction(payload: {
       selectedBatch,
       monthlyPrice,
       timezone,
+      includeDietNutrition,
+      dietNutritionPrice,
     } = payload;
     const secret = process.env.RAZORPAY_KEY_SECRET || "secret_placeholder";
 
@@ -239,6 +244,8 @@ export async function verifyPaymentSignatureAction(payload: {
             selectedDays: selectedDays || ["Sunday", "Wednesday", "Saturday"],
             selectedBatch: selectedBatch || "2nd Batch — 02:30 PM to 03:30 PM (GMT)",
             monthlyPrice: monthlyPrice || plan.priceUSD,
+            includeDietNutrition: !!includeDietNutrition,
+            dietNutritionPrice: dietNutritionPrice || 0,
             timezone: timezone || "GMT (UTC+0)",
             startDate,
             endDate,
@@ -407,6 +414,8 @@ export async function getStudentEnrollmentAction() {
         meetingUrl: readiness.meetingUrl,
         batchStatus: readiness.batchStatus,
         isReady: readiness.isReady,
+        includeDietNutrition: !!item.includeDietNutrition,
+        dietNutritionPrice: item.dietNutritionPrice ? Number(item.dietNutritionPrice) : 0,
       };
     });
 
@@ -445,13 +454,15 @@ export async function getStudentEnrollmentAction() {
 
 export async function createDirectCardEnrollmentAction(
   planId: string,
-  currency: "INR" | "USD" = "INR",
+  currency: "INR" | "USD" = "USD",
   scheduleData?: {
     daysPerWeek?: number;
     selectedDays?: string[];
     selectedBatch?: string;
     monthlyPrice?: number;
     timezone?: string;
+    includeDietNutrition?: boolean;
+    dietNutritionPrice?: number;
   }
 ) {
   try {
@@ -488,6 +499,8 @@ export async function createDirectCardEnrollmentAction(
             selectedDays: scheduleData?.selectedDays || ["Sunday", "Wednesday", "Saturday"],
             selectedBatch: scheduleData?.selectedBatch || "2nd Batch — 02:30 PM to 03:30 PM (GMT)",
             monthlyPrice: basePrice,
+            includeDietNutrition: !!scheduleData?.includeDietNutrition,
+            dietNutritionPrice: scheduleData?.dietNutritionPrice || 0,
             timezone: scheduleData?.timezone || "GMT (UTC+0)",
             startDate,
             endDate,

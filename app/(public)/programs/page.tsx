@@ -63,7 +63,10 @@ function ProgramsContent() {
     params.set("days", state.selectedDays.join(","));
     params.set("batch", state.selectedBatch);
     params.set("currency", "USD");
-    params.set("price", String(state.monthlyPriceUSD));
+    params.set("basePrice", String(state.monthlyPriceUSD));
+    params.set("dietAddon", String(state.includeDietNutrition));
+    params.set("dietPrice", String(state.dietNutritionPrice || 10));
+    params.set("price", String(state.totalPriceUSD));
     params.set("plan", `plan-${state.daysPerWeek}-day`);
 
     router.push(`/checkout?${params.toString()}`);
