@@ -164,6 +164,7 @@ function ProgramsContent() {
         <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <StudentScheduleSelector
             category={mainTab === "mma" ? "mixed-martial-arts" : "fitness-weight-management"}
+            group={audienceCategory}
             title={contextTitle}
             initialDaysPerWeek={1}
             initialSelectedDays={["Sunday"]}

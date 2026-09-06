@@ -5,38 +5,37 @@ import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import {
   CentralScheduleConfig,
-  DEFAULT_CENTRAL_SCHEDULE_CONFIG,
   getDefaultScheduleConfig,
-  getDbKeyForCategory,
+  getCompositeDbKey,
   normalizeCategoryKey,
-  TrainingDayConfig,
-  BatchTimingConfig,
-  MembershipPlanConfig,
+  normalizeGroupKey,
 } from "@/lib/schedule-config";
 
-export async function getScheduleConfigAction(category?: string): Promise<{
+export async function getScheduleConfigAction(category?: string, group?: string): Promise<{
   success: boolean;
   config: CentralScheduleConfig;
   error?: string;
 }> {
   try {
-    const configKey = getDbKeyForCategory(category);
-    const defaultConfig = getDefaultScheduleConfig(category);
+    const configKey = getCompositeDbKey(category, group);
+    const defaultConfig = getDefaultScheduleConfig(category, group);
 
     let setting = await db.websiteSettings.findUnique({
       where: { key: configKey },
     });
 
-    // Fallback check for legacy key if MMA and new key not created yet
+    // Fallback checks for legacy keys if new composite key not created yet
+    if (!setting) {
+      const catKey = normalizeCategoryKey(category) === "fitness" ? "schedule_pricing_config_fitness" : "schedule_pricing_config_mma";
+      setting = await db.websiteSettings.findUnique({ where: { key: catKey } });
+    }
+
     if (!setting && normalizeCategoryKey(category) === "mma") {
-      setting = await db.websiteSettings.findUnique({
-        where: { key: "schedule_pricing_config" },
-      });
+      setting = await db.websiteSettings.findUnique({ where: { key: "schedule_pricing_config" } });
     }
 
     if (setting && setting.value) {
       const stored = setting.value as unknown as CentralScheduleConfig;
-      // Merge with defaults in case of missing fields
       const mergedConfig: CentralScheduleConfig = {
         trainingDays: stored.trainingDays || defaultConfig.trainingDays,
         batchTimings: stored.batchTimings || defaultConfig.batchTimings,
@@ -50,14 +49,15 @@ export async function getScheduleConfigAction(category?: string): Promise<{
     console.error("getScheduleConfigAction error:", err);
     return {
       success: true,
-      config: getDefaultScheduleConfig(category),
+      config: getDefaultScheduleConfig(category, group),
     };
   }
 }
 
 export async function updateScheduleConfigAction(
-  categoryOrConfig: string | CentralScheduleConfig,
-  maybeConfig?: CentralScheduleConfig
+  arg1: string | CentralScheduleConfig,
+  arg2?: string | CentralScheduleConfig,
+  arg3?: CentralScheduleConfig
 ): Promise<{
   success: boolean;
   message?: string;
@@ -66,28 +66,38 @@ export async function updateScheduleConfigAction(
   try {
     const session = await auth();
     if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
-      return { success: false, error: "Unauthorized access to update system schedule configuration." };
+      return { success: false, error: "Unauthorized access to update schedule configuration." };
     }
 
-    let category = "mixed-martial-arts";
-    let configData: CentralScheduleConfig;
+    let category = "mma";
+    let group = "adults";
+    let configData: CentralScheduleConfig | undefined;
 
-    if (typeof categoryOrConfig === "string") {
-      category = categoryOrConfig;
-      if (!maybeConfig) {
-        return { success: false, error: "Invalid schedule configuration payload." };
+    if (typeof arg1 === "string" && typeof arg2 === "string" && arg3) {
+      category = arg1;
+      group = arg2;
+      configData = arg3;
+    } else if (typeof arg1 === "string" && typeof arg2 === "object" && arg2 !== null) {
+      // arg1 might be composite key e.g. "mma-kids" or category name
+      if (arg1.includes("-")) {
+        const parts = arg1.split("-");
+        category = parts[0];
+        group = parts.slice(1).join("-");
+      } else {
+        category = arg1;
       }
-      configData = maybeConfig;
-    } else {
-      configData = categoryOrConfig;
+      configData = arg2 as CentralScheduleConfig;
+    } else if (typeof arg1 === "object" && arg1 !== null) {
+      configData = arg1 as CentralScheduleConfig;
     }
 
     if (!configData || !Array.isArray(configData.trainingDays) || !Array.isArray(configData.batchTimings) || !Array.isArray(configData.membershipPlans)) {
       return { success: false, error: "Invalid schedule configuration payload." };
     }
 
-    const configKey = getDbKeyForCategory(category);
+    const configKey = getCompositeDbKey(category, group);
     const categoryName = normalizeCategoryKey(category) === "fitness" ? "Fitness & Weight Management" : "Mixed Martial Arts";
+    const groupName = normalizeGroupKey(group) === "kids" ? "Kids" : normalizeGroupKey(group) === "ladies" ? "Ladies Only" : "Adults Mix";
 
     await db.websiteSettings.upsert({
       where: { key: configKey },
@@ -97,13 +107,12 @@ export async function updateScheduleConfigAction(
 
     revalidatePath("/programs");
     revalidatePath("/checkout");
-    revalidatePath("/admin/settings");
     revalidatePath("/admin/programs");
     revalidatePath("/dashboard");
 
     return {
       success: true,
-      message: `Weekly Schedule, Batch Timings, and Membership Pricing saved successfully for ${categoryName}!`,
+      message: `Saved schedule, batch timings, pricing & curriculum for ${categoryName} → ${groupName}!`,
     };
   } catch (err: any) {
     console.error("updateScheduleConfigAction error:", err);

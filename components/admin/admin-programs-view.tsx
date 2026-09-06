@@ -28,8 +28,12 @@ import {
   CentralScheduleConfig,
   DEFAULT_CENTRAL_SCHEDULE_CONFIG,
   DEFAULT_MEMBERSHIP_PLANS,
-  DEFAULT_MMA_SCHEDULE_CONFIG,
-  DEFAULT_FITNESS_SCHEDULE_CONFIG,
+  DEFAULT_MMA_KIDS_SCHEDULE_CONFIG,
+  DEFAULT_MMA_ADULTS_SCHEDULE_CONFIG,
+  DEFAULT_MMA_LADIES_SCHEDULE_CONFIG,
+  DEFAULT_FITNESS_KIDS_SCHEDULE_CONFIG,
+  DEFAULT_FITNESS_ADULTS_SCHEDULE_CONFIG,
+  DEFAULT_FITNESS_LADIES_SCHEDULE_CONFIG,
   getDefaultScheduleConfig,
   TrainingDayConfig,
   BatchTimingConfig,
@@ -53,18 +57,23 @@ export function AdminProgramsView() {
   // Admin Management Section Tabs: "schedule_builder" | "category_metadata"
   const [managementSection, setManagementSection] = useState<"schedule_builder" | "category_metadata">("schedule_builder");
 
-  // 1. Central Schedule & Pricing Configuration State per Category
-  const [scheduleConfigs, setScheduleConfigs] = useState<Record<MainTab, CentralScheduleConfig>>({
-    mma: DEFAULT_MMA_SCHEDULE_CONFIG,
-    hiit: DEFAULT_FITNESS_SCHEDULE_CONFIG,
+  // 1. Central Schedule & Pricing Configuration State per (Category x Audience Group)
+  const [scheduleConfigs, setScheduleConfigs] = useState<Record<string, CentralScheduleConfig>>({
+    "mma-kids": DEFAULT_MMA_KIDS_SCHEDULE_CONFIG,
+    "mma-adults": DEFAULT_MMA_ADULTS_SCHEDULE_CONFIG,
+    "mma-ladies": DEFAULT_MMA_LADIES_SCHEDULE_CONFIG,
+    "hiit-kids": DEFAULT_FITNESS_KIDS_SCHEDULE_CONFIG,
+    "hiit-adults": DEFAULT_FITNESS_ADULTS_SCHEDULE_CONFIG,
+    "hiit-ladies": DEFAULT_FITNESS_LADIES_SCHEDULE_CONFIG,
   });
 
-  const scheduleConfig = scheduleConfigs[activeCategory] || getDefaultScheduleConfig(activeCategory);
+  const currentCompositeKey = `${activeCategory}-${activeSubCat}`;
+  const scheduleConfig = scheduleConfigs[currentCompositeKey] || getDefaultScheduleConfig(activeCategory, activeSubCat);
 
   const updateActiveScheduleConfig = (updater: (prev: CentralScheduleConfig) => CentralScheduleConfig) => {
     setScheduleConfigs((prev) => ({
       ...prev,
-      [activeCategory]: updater(prev[activeCategory] || getDefaultScheduleConfig(activeCategory)),
+      [currentCompositeKey]: updater(prev[currentCompositeKey] || getDefaultScheduleConfig(activeCategory, activeSubCat)),
     }));
   };
 
@@ -116,15 +125,27 @@ export function AdminProgramsView() {
   useEffect(() => {
     async function loadData() {
       try {
-        const [mmaRes, hiitRes, catRes] = await Promise.all([
-          getScheduleConfigAction("mixed-martial-arts"),
-          getScheduleConfigAction("fitness-weight-management"),
+        const [
+          mmaKidsRes, mmaAdultsRes, mmaLadiesRes,
+          hiitKidsRes, hiitAdultsRes, hiitLadiesRes,
+          catRes
+        ] = await Promise.all([
+          getScheduleConfigAction("mixed-martial-arts", "kids"),
+          getScheduleConfigAction("mixed-martial-arts", "adults"),
+          getScheduleConfigAction("mixed-martial-arts", "ladies"),
+          getScheduleConfigAction("fitness-weight-management", "kids"),
+          getScheduleConfigAction("fitness-weight-management", "adults"),
+          getScheduleConfigAction("fitness-weight-management", "ladies"),
           getAdminProgramsCatalogAction(),
         ]);
 
         setScheduleConfigs({
-          mma: (mmaRes && mmaRes.success && mmaRes.config) ? mmaRes.config : DEFAULT_MMA_SCHEDULE_CONFIG,
-          hiit: (hiitRes && hiitRes.success && hiitRes.config) ? hiitRes.config : DEFAULT_FITNESS_SCHEDULE_CONFIG,
+          "mma-kids": (mmaKidsRes && mmaKidsRes.success && mmaKidsRes.config) ? mmaKidsRes.config : DEFAULT_MMA_KIDS_SCHEDULE_CONFIG,
+          "mma-adults": (mmaAdultsRes && mmaAdultsRes.success && mmaAdultsRes.config) ? mmaAdultsRes.config : DEFAULT_MMA_ADULTS_SCHEDULE_CONFIG,
+          "mma-ladies": (mmaLadiesRes && mmaLadiesRes.success && mmaLadiesRes.config) ? mmaLadiesRes.config : DEFAULT_MMA_LADIES_SCHEDULE_CONFIG,
+          "hiit-kids": (hiitKidsRes && hiitKidsRes.success && hiitKidsRes.config) ? hiitKidsRes.config : DEFAULT_FITNESS_KIDS_SCHEDULE_CONFIG,
+          "hiit-adults": (hiitAdultsRes && hiitAdultsRes.success && hiitAdultsRes.config) ? hiitAdultsRes.config : DEFAULT_FITNESS_ADULTS_SCHEDULE_CONFIG,
+          "hiit-ladies": (hiitLadiesRes && hiitLadiesRes.success && hiitLadiesRes.config) ? hiitLadiesRes.config : DEFAULT_FITNESS_LADIES_SCHEDULE_CONFIG,
         });
 
         if (catRes && catRes.success && catRes.catalog) {
@@ -142,27 +163,35 @@ export function AdminProgramsView() {
     loadData();
   }, []);
 
-  // Save Central Program Configuration to Database (Separately per Category)
+  // Save Central Program Configuration to Database (Completely Isolated per Category & Audience Group)
   const handleSaveAllConfig = async () => {
     setIsSaving(true);
     setMsg(null);
 
     try {
-      const [mmaSaveRes, hiitSaveRes, catRes] = await Promise.all([
-        updateScheduleConfigAction("mixed-martial-arts", scheduleConfigs.mma),
-        updateScheduleConfigAction("fitness-weight-management", scheduleConfigs.hiit),
+      const [
+        s1, s2, s3, s4, s5, s6, catRes
+      ] = await Promise.all([
+        updateScheduleConfigAction("mixed-martial-arts", "kids", scheduleConfigs["mma-kids"]),
+        updateScheduleConfigAction("mixed-martial-arts", "adults", scheduleConfigs["mma-adults"]),
+        updateScheduleConfigAction("mixed-martial-arts", "ladies", scheduleConfigs["mma-ladies"]),
+        updateScheduleConfigAction("fitness-weight-management", "kids", scheduleConfigs["hiit-kids"]),
+        updateScheduleConfigAction("fitness-weight-management", "adults", scheduleConfigs["hiit-adults"]),
+        updateScheduleConfigAction("fitness-weight-management", "ladies", scheduleConfigs["hiit-ladies"]),
         updateAdminProgramsCatalogAction({ categoryTitles }),
       ]);
 
-      if (mmaSaveRes.success && hiitSaveRes.success && catRes.success) {
+      const allSuccess = s1.success && s2.success && s3.success && s4.success && s5.success && s6.success && catRes.success;
+
+      if (allSuccess) {
         setMsg({
           type: "success",
-          text: "Independent Category Configurations, Schedules, Prices, Batch Timings, and Curriculums published successfully to live website!",
+          text: "All 6 Independent Category & Audience Group Configurations, Curriculums, Schedules, Prices, and Batch Timings published successfully to live website!",
         });
       } else {
         setMsg({
           type: "error",
-          text: mmaSaveRes.error || hiitSaveRes.error || catRes.error || "Failed to publish program configuration.",
+          text: "Failed to publish some program configurations. Please try again.",
         });
       }
     } catch (err: any) {
@@ -173,11 +202,13 @@ export function AdminProgramsView() {
   };
 
   const handleResetDefaults = () => {
-    const defaultCfg = getDefaultScheduleConfig(activeCategory);
+    const defaultCfg = getDefaultScheduleConfig(activeCategory, activeSubCat);
     updateActiveScheduleConfig(() => defaultCfg);
+    const catLabel = activeCategory === "mma" ? "Mixed Martial Arts" : "Fitness & Weight Management";
+    const subLabel = activeSubCat === "kids" ? "Kids" : activeSubCat === "ladies" ? "Ladies Only" : "Adults Mix";
     setMsg({
       type: "success",
-      text: `Reset ${activeCategory === "mma" ? "Mixed Martial Arts" : "Fitness & Weight Management"} configuration to default values. Click 'Publish All Program Changes' to save.`,
+      text: `Reset configuration for ${catLabel} → ${subLabel} to default values. Click 'Publish All Program Changes' to save.`,
     });
   };
 
