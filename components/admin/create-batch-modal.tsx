@@ -39,12 +39,60 @@ export function CreateBatchModal({
   const [programId, setProgramId] = useState("");
   const [membershipPlanId, setMembershipPlanId] = useState("");
   const [coachId, setCoachId] = useState("");
-  const [dayCombination, setDayCombination] = useState(dayCombinations[0] || "Sunday & Wednesday");
-  const [timeSlot, setTimeSlot] = useState(timeSlots[0] || "Morning");
+  const [selectedDays, setSelectedDays] = useState<string[]>([
+    "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"
+  ]);
+  const [timeSlot, setTimeSlot] = useState(timeSlots[0] || "1st Batch");
   const [meetingUrl, setMeetingUrl] = useState("");
   const [maxCapacity, setMaxCapacity] = useState(8);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
+  const parseDayCombinationToDays = (dcStr: string): string[] => {
+    if (!dcStr) return ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+    if (dcStr.includes("Monday to Friday")) return ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+    if (dcStr.includes("Tuesday to Saturday")) return ["Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    if (dcStr.includes("Sunday to Thursday")) return ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"];
+    if (dcStr.includes("Mon, Wed, Fri")) return ["Monday", "Wednesday", "Friday"];
+    if (dcStr.includes("Tue, Thu, Sat")) return ["Tuesday", "Thursday", "Saturday"];
+    if (dcStr.includes("Sunday & Wednesday")) return ["Sunday", "Wednesday"];
+    if (dcStr.includes("Monday & Thursday")) return ["Monday", "Thursday"];
+    if (dcStr.includes("Saturday & Tuesday")) return ["Saturday", "Tuesday"];
+
+    const weekDays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    const found = weekDays.filter((d) => dcStr.toLowerCase().includes(d.toLowerCase()) || dcStr.toLowerCase().includes(d.slice(0, 3).toLowerCase()));
+    return found.length > 0 ? found : ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+  };
+
+  const getComputedScheduleName = (days: string[]): string => {
+    if (days.length === 0) return "Select at least 1 training day";
+    const joined = days.join(",");
+    if (days.length === 5 && joined === "Monday,Tuesday,Wednesday,Thursday,Friday") {
+      return "5 Days / Week (Monday to Friday)";
+    }
+    if (days.length === 5 && joined === "Tuesday,Wednesday,Thursday,Friday,Saturday") {
+      return "5 Days / Week (Tuesday to Saturday)";
+    }
+    if (days.length === 5 && joined === "Sunday,Monday,Tuesday,Wednesday,Thursday") {
+      return "5 Days / Week (Sunday to Thursday)";
+    }
+    if (days.length === 3 && joined === "Monday,Wednesday,Friday") {
+      return "3 Days / Week (Mon, Wed, Fri)";
+    }
+    if (days.length === 3 && joined === "Tuesday,Thursday,Saturday") {
+      return "3 Days / Week (Tue, Thu, Sat)";
+    }
+    if (days.length === 2 && (joined === "Sunday,Wednesday" || joined === "Wednesday,Sunday")) {
+      return "Sunday & Wednesday";
+    }
+    if (days.length === 2 && (joined === "Saturday,Sunday" || joined === "Sunday,Saturday")) {
+      return "2 Days / Week (Sat, Sun)";
+    }
+    const shortNames = days.map((d) => d.slice(0, 3)).join(", ");
+    return `${days.length} Days / Week (${shortNames})`;
+  };
+
+  const computedDayCombination = getComputedScheduleName(selectedDays);
 
   useEffect(() => {
     if (initialData) {
@@ -52,8 +100,8 @@ export function CreateBatchModal({
       setProgramId(initialData.programId || "");
       setMembershipPlanId(initialData.membershipPlanId || "");
       setCoachId(initialData.coachId || "");
-      setDayCombination(initialData.dayCombination || dayCombinations[0] || "Sunday & Wednesday");
-      setTimeSlot(initialData.timeSlot || timeSlots[0] || "Morning");
+      setSelectedDays(parseDayCombinationToDays(initialData.dayCombination));
+      setTimeSlot(initialData.timeSlot || timeSlots[0] || "1st Batch");
       setMeetingUrl(initialData.meetingUrl || "");
       setMaxCapacity(initialData.maxCapacity || 8);
     } else {
@@ -61,8 +109,8 @@ export function CreateBatchModal({
       setProgramId(programs[0]?.id || "");
       setMembershipPlanId("");
       setCoachId(coaches[0]?.id || "");
-      setDayCombination(dayCombinations[0] || "Sunday & Wednesday");
-      setTimeSlot(timeSlots[0] || "Morning");
+      setSelectedDays(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]);
+      setTimeSlot(timeSlots[0] || "1st Batch");
       setMeetingUrl("");
       setMaxCapacity(8);
     }
@@ -88,6 +136,10 @@ export function CreateBatchModal({
       setErrorMsg("Please select an Active Coach.");
       return;
     }
+    if (selectedDays.length === 0) {
+      setErrorMsg("Please select at least 1 training day.");
+      return;
+    }
 
     setLoading(true);
     setErrorMsg("");
@@ -97,7 +149,7 @@ export function CreateBatchModal({
         programId,
         membershipPlanId: membershipPlanId || undefined,
         coachId,
-        dayCombination,
+        dayCombination: computedDayCombination,
         timeSlot,
         meetingUrl: meetingUrl.trim() || undefined,
         maxCapacity: Number(maxCapacity) || 8,
@@ -228,57 +280,135 @@ export function CreateBatchModal({
             </select>
           </div>
 
-          {/* Day Combinations */}
-          <div className="space-y-1.5">
-            <label className="block font-bold text-gray-300 uppercase tracking-wider text-[10px]">
-              Select Day Combination *
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              {dayCombinations.map((dc) => {
-                const isSelected = dayCombination === dc;
+          {/* Training Schedule & Days Selection (Tickable Days) */}
+          <div className="space-y-2 p-3.5 rounded-2xl bg-[#0F1117] border border-white/10">
+            <div className="flex items-center justify-between">
+              <label className="block font-bold text-gray-300 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-[#0080FF]" /> Select Training Days (Tick Days) *
+              </label>
+              <span className="text-[10px] font-black text-[#0080FF] bg-[#0080FF]/15 px-2 py-0.5 rounded-md border border-[#0080FF]/30">
+                {selectedDays.length} Days Selected
+              </span>
+            </div>
+
+            {/* Quick Presets */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              <span className="text-[10px] text-gray-500 font-bold uppercase tracking-wider mr-1">Presets:</span>
+              <button
+                type="button"
+                onClick={() => setSelectedDays(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"])}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold border transition-all cursor-pointer ${
+                  selectedDays.join(",") === "Monday,Tuesday,Wednesday,Thursday,Friday"
+                    ? "bg-[#0080FF] text-white border-[#0080FF] shadow-sm"
+                    : "bg-white/5 text-gray-400 border-white/10 hover:text-white hover:bg-white/10"
+                }`}
+              >
+                5 Days (Mon–Fri)
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedDays(["Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"])}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold border transition-all cursor-pointer ${
+                  selectedDays.join(",") === "Tuesday,Wednesday,Thursday,Friday,Saturday"
+                    ? "bg-[#0080FF] text-white border-[#0080FF] shadow-sm"
+                    : "bg-white/5 text-gray-400 border-white/10 hover:text-white hover:bg-white/10"
+                }`}
+              >
+                5 Days (Tue–Sat)
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedDays(["Monday", "Wednesday", "Friday"])}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold border transition-all cursor-pointer ${
+                  selectedDays.join(",") === "Monday,Wednesday,Friday"
+                    ? "bg-[#0080FF] text-white border-[#0080FF] shadow-sm"
+                    : "bg-white/5 text-gray-400 border-white/10 hover:text-white hover:bg-white/10"
+                }`}
+              >
+                3 Days (MWF)
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedDays(["Saturday", "Sunday"])}
+                className={`px-2.5 py-1 rounded-lg text-[10px] font-extrabold border transition-all cursor-pointer ${
+                  selectedDays.join(",") === "Saturday,Sunday" || selectedDays.join(",") === "Sunday,Saturday"
+                    ? "bg-[#0080FF] text-white border-[#0080FF] shadow-sm"
+                    : "bg-white/5 text-gray-400 border-white/10 hover:text-white hover:bg-white/10"
+                }`}
+              >
+                2 Days (Sat–Sun)
+              </button>
+            </div>
+
+            {/* 7 Interactive Tickable Day Pills */}
+            <div className="grid grid-cols-7 gap-1.5 pt-1.5">
+              {[
+                { full: "Sunday", short: "Sun" },
+                { full: "Monday", short: "Mon" },
+                { full: "Tuesday", short: "Tue" },
+                { full: "Wednesday", short: "Wed" },
+                { full: "Thursday", short: "Thu" },
+                { full: "Friday", short: "Fri" },
+                { full: "Saturday", short: "Sat" },
+              ].map((day) => {
+                const isSelected = selectedDays.includes(day.full);
                 return (
                   <button
-                    key={dc}
+                    key={day.full}
                     type="button"
-                    onClick={() => setDayCombination(dc)}
-                    className={`p-2.5 rounded-xl border text-[11px] font-extrabold transition-all text-center ${
+                    onClick={() => {
+                      if (isSelected) {
+                        setSelectedDays(selectedDays.filter((d) => d !== day.full));
+                      } else {
+                        // Keep chronological order
+                        const weekOrder = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+                        const next = [...selectedDays, day.full].sort(
+                          (a, b) => weekOrder.indexOf(a) - weekOrder.indexOf(b)
+                        );
+                        setSelectedDays(next);
+                      }
+                    }}
+                    className={`py-2 rounded-xl border text-[11px] font-extrabold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
                       isSelected
-                        ? "bg-[#0080FF]/20 border-[#0080FF] text-white shadow-md shadow-[#0080FF]/15"
-                        : "bg-[#0F1117] border-white/10 text-gray-400 hover:border-white/20 hover:text-white"
+                        ? "bg-[#0080FF] text-white border-[#0080FF] shadow-md shadow-[#0080FF]/25 ring-2 ring-[#0080FF]/30"
+                        : "bg-[#14161D] border-white/10 text-gray-400 hover:border-white/20 hover:text-white"
                     }`}
                   >
-                    {dc}
+                    <span>{day.short}</span>
+                    {isSelected ? (
+                      <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                    ) : (
+                      <span className="w-1.5 h-1.5 rounded-full bg-gray-600" />
+                    )}
                   </button>
                 );
               })}
             </div>
+
+            {/* Summary Label */}
+            <p className="text-[10px] text-gray-400 pt-1 font-mono">
+              Schedule Summary: <span className="text-white font-bold">{computedDayCombination}</span>
+            </p>
           </div>
 
-          {/* Time Slot Select */}
+          {/* Time Slot Select & Capacity */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <label className="block font-bold text-gray-300 uppercase tracking-wider text-[10px]">
-                Time Slot *
+                Time Slot & Batch Timing *
               </label>
-              <div className="grid grid-cols-3 gap-1.5">
-                {timeSlots.map((ts) => {
-                  const isSelected = timeSlot === ts;
-                  return (
-                    <button
-                      key={ts}
-                      type="button"
-                      onClick={() => setTimeSlot(ts)}
-                      className={`p-2 rounded-xl border text-[11px] font-extrabold transition-all text-center ${
-                        isSelected
-                          ? "bg-emerald-500/20 border-emerald-500 text-white shadow-md shadow-emerald-500/15"
-                          : "bg-[#0F1117] border-white/10 text-gray-400 hover:border-white/20 hover:text-white"
-                      }`}
-                    >
-                      {ts}
-                    </button>
-                  );
-                })}
-              </div>
+              <select
+                value={timeSlot}
+                onChange={(e) => setTimeSlot(e.target.value)}
+                className="w-full h-10 px-3 rounded-xl bg-[#0F1117] border border-white/10 text-white text-xs font-semibold focus:outline-none focus:border-[#0080FF] cursor-pointer"
+                required
+              >
+                {timeSlots.map((ts) => (
+                  <option key={ts} value={ts} className="bg-[#14161D]">
+                    {ts}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* Max Capacity */}

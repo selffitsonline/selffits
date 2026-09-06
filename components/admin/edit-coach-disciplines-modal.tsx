@@ -76,7 +76,7 @@ export function EditCoachDisciplinesModal({
           </div>
           <div>
             <h3 className="text-base font-extrabold text-white font-[family-name:var(--font-outfit)]">
-              Edit Coach Specializations
+              Edit Coaching Disciplines
             </h3>
             <p className="text-xs text-gray-400 mt-0.5">
               Coach: <span className="text-white font-semibold">{coach.fullName}</span>
@@ -86,7 +86,7 @@ export function EditCoachDisciplinesModal({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <p className="text-xs text-gray-300">
-            Select one or multiple teaching specializations for this coach:
+            Select one or multiple teaching disciplines for this coach:
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -124,7 +124,7 @@ export function EditCoachDisciplinesModal({
               disabled={loading}
               className="px-5 py-2 rounded-xl bg-[#0080FF] hover:bg-[#0066CC] text-white text-xs font-extrabold transition-all shadow-lg shadow-[#0080FF]/20"
             >
-              {loading ? "Saving..." : "Save Specializations"}
+              {loading ? "Saving..." : "Save Disciplines"}
             </button>
           </div>
         </form>

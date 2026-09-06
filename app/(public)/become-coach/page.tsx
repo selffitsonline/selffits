@@ -53,40 +53,13 @@ export default function BecomeCoachPage() {
 
   // 3. Qualifications & Certifications
   const [highestRank, setHighestRank] = useState("");
-  const [certificationName, setCertificationName] = useState("");
-  const [issuingOrganization, setIssuingOrganization] = useState("");
-  const [yearObtained, setYearObtained] = useState("");
-  const [certificateNumber, setCertificateNumber] = useState("");
-  const [certificateUploadUrl, setCertificateUploadUrl] = useState("");
 
   // 4. Coaching Experience
   const [totalExperience, setTotalExperience] = useState("");
-  const [previousAcademy, setPreviousAcademy] = useState("");
-  const [coachingBio, setCoachingBio] = useState("");
   const ageGroupOptions = ["Kids", "Teens", "Adults", "Seniors"];
   const [selectedAgeGroups, setSelectedAgeGroups] = useState<string[]>([]);
 
-  // 5. Specializations
-  const specializationOptions = [
-    "Martial Arts",
-    "Self Defence",
-    "Fitness Training",
-    "Weight Loss",
-    "Strength & Conditioning",
-    "Flexibility",
-    "Yoga & Meditation",
-    "Kids Training",
-    "Competition Preparation",
-    "Online Coaching",
-  ];
-  const [selectedSpecializations, setSelectedSpecializations] = useState<string[]>([]);
-
-  // 6. Online Coaching
-  const [hasOnlineExperience, setHasOnlineExperience] = useState("Yes");
-  const [preferredPlatform, setPreferredPlatform] = useState("Zoom");
-  const [isLiveClassAvailable, setIsLiveClassAvailable] = useState("Yes");
-
-  // 7. Availability Grid (Days x Time Slots)
+  // 5. Availability Grid (Days x Time Slots)
   const daysList = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
   const timeSlots = ["Morning", "Afternoon", "Evening"];
   const [availability, setAvailability] = useState<Record<string, string[]>>({
@@ -109,30 +82,17 @@ export default function BecomeCoachPage() {
     });
   };
 
-  // 8. Coach Introduction
-  const [aboutSelf, setAboutSelf] = useState("");
-  const [whyJoinSelffits, setWhyJoinSelffits] = useState("");
-  const [whatMakesGoodCoach, setWhatMakesGoodCoach] = useState("");
-
-  // 9. Portfolio & Social Media
+  // 6. Portfolio & Social Media
   const [instagramUrl, setInstagramUrl] = useState("");
   const [facebookUrl, setFacebookUrl] = useState("");
   const [youtubeUrl, setYoutubeUrl] = useState("");
-  const [websiteUrl, setWebsiteUrl] = useState("");
-  const [trainingVideoUrl, setTrainingVideoUrl] = useState("");
 
-  // 10. Documents Upload States
+  // 7. Documents Upload States
   const [resumeUrl, setResumeUrl] = useState("");
   const [resumeFileName, setResumeFileName] = useState("");
 
   const [qualificationCertsUrl, setQualificationCertsUrl] = useState("");
   const [qualificationFileName, setQualificationFileName] = useState("");
-
-  const [licenseUrl, setLicenseUrl] = useState("");
-  const [licenseFileName, setLicenseFileName] = useState("");
-
-  const [idPassportUrl, setIdPassportUrl] = useState("");
-  const [idPassportFileName, setIdPassportFileName] = useState("");
 
   // 11. Declaration
   const [agreedDeclaration, setAgreedDeclaration] = useState(false);
@@ -206,39 +166,18 @@ export default function BecomeCoachPage() {
       disciplines: finalDisciplines,
 
       highestRank,
-      certificationName,
-      issuingOrganization,
-      yearObtained,
-      certificateNumber,
-      certificateUploadUrl,
 
       totalExperience,
-      previousAcademy,
-      coachingBio,
       targetAgeGroups: selectedAgeGroups,
 
-      specializations: selectedSpecializations,
-
-      hasOnlineExperience,
-      preferredPlatform,
-      isLiveClassAvailable,
-
       availability,
-
-      aboutSelf,
-      whyJoinSelffits,
-      whatMakesGoodCoach,
 
       instagramUrl,
       facebookUrl,
       youtubeUrl,
-      websiteUrl,
-      trainingVideoUrl,
 
       resumeUrl,
       qualificationCertsUrl,
-      licenseUrl,
-      idPassportUrl,
 
       agreedDeclaration: true,
     });
@@ -483,7 +422,7 @@ export default function BecomeCoachPage() {
             </div>
 
             {/* ----------------------------------------
-                3. Qualifications & Certifications
+                3. Qualifications & Experience
             ---------------------------------------- */}
             <div className="bg-[#14161D] border border-white/10 p-6 sm:p-8 rounded-3xl space-y-6">
               <div className="flex items-center gap-3 pb-4 border-b border-white/10">
@@ -492,9 +431,9 @@ export default function BecomeCoachPage() {
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-white font-[family-name:var(--font-outfit)]">
-                    3. Qualifications & Certifications
+                    3. Qualifications & Experience
                   </h2>
-                  <p className="text-xs text-gray-400">Details of rank degree and accreditation certificates</p>
+                  <p className="text-xs text-gray-400 font-medium">Rank degree, years of teaching experience, and target age groups</p>
                 </div>
               </div>
 
@@ -514,90 +453,6 @@ export default function BecomeCoachPage() {
 
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
-                    Certification Name
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Certified Martial Arts Instructor"
-                    value={certificationName}
-                    onChange={(e) => setCertificationName(e.target.value)}
-                    className="w-full h-11 px-4 rounded-xl bg-[#0F1117] border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-[#10B981] text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
-                    Issuing Organization
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. World Taekwondo Federation / ACE"
-                    value={issuingOrganization}
-                    onChange={(e) => setIssuingOrganization(e.target.value)}
-                    className="w-full h-11 px-4 rounded-xl bg-[#0F1117] border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-[#10B981] text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
-                    Year Obtained
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 2018"
-                    value={yearObtained}
-                    onChange={(e) => setYearObtained(e.target.value)}
-                    className="w-full h-11 px-4 rounded-xl bg-[#0F1117] border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-[#10B981] text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
-                    Certificate Number
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. CERT-987654"
-                    value={certificateNumber}
-                    onChange={(e) => setCertificateNumber(e.target.value)}
-                    className="w-full h-11 px-4 rounded-xl bg-[#0F1117] border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-[#10B981] text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
-                    Upload Certificates (File or Drive URL)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="https://drive.google.com/..."
-                    value={certificateUploadUrl}
-                    onChange={(e) => setCertificateUploadUrl(e.target.value)}
-                    className="w-full h-11 px-4 rounded-xl bg-[#0F1117] border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-[#10B981] text-sm"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* ----------------------------------------
-                4. Coaching Experience
-            ---------------------------------------- */}
-            <div className="bg-[#14161D] border border-white/10 p-6 sm:p-8 rounded-3xl space-y-6">
-              <div className="flex items-center gap-3 pb-4 border-b border-white/10">
-                <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/15 border border-[#F59E0B]/30 flex items-center justify-center text-[#F59E0B] font-bold">
-                  <Briefcase className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-white font-[family-name:var(--font-outfit)]">
-                    4. Coaching Experience
-                  </h2>
-                  <p className="text-xs text-gray-400">Previous academy teaching experience and target age groups</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
                     Total Coaching Experience
                   </label>
                   <input
@@ -605,35 +460,9 @@ export default function BecomeCoachPage() {
                     placeholder="e.g. 8 Years"
                     value={totalExperience}
                     onChange={(e) => setTotalExperience(e.target.value)}
-                    className="w-full h-11 px-4 rounded-xl bg-[#0F1117] border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-[#F59E0B] text-sm"
+                    className="w-full h-11 px-4 rounded-xl bg-[#0F1117] border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-[#10B981] text-sm"
                   />
                 </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
-                    Previous Academy / Organization
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. National Dojang Academy"
-                    value={previousAcademy}
-                    onChange={(e) => setPreviousAcademy(e.target.value)}
-                    className="w-full h-11 px-4 rounded-xl bg-[#0F1117] border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-[#F59E0B] text-sm"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
-                  Describe Your Coaching Experience
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="Provide a brief summary of your teaching history and student success stories..."
-                  value={coachingBio}
-                  onChange={(e) => setCoachingBio(e.target.value)}
-                  className="w-full p-4 rounded-xl bg-[#0F1117] border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-[#F59E0B] text-sm"
-                />
               </div>
 
               <div>
@@ -650,7 +479,7 @@ export default function BecomeCoachPage() {
                         onClick={() => toggleArrayItem(selectedAgeGroups, ageGroup, setSelectedAgeGroups)}
                         className={`p-3 rounded-xl border text-xs font-bold transition-all text-center cursor-pointer ${
                           isSelected
-                            ? "bg-[#F59E0B]/20 border-[#F59E0B] text-white"
+                            ? "bg-[#10B981]/20 border-[#10B981] text-white"
                             : "bg-[#0F1117] border-white/10 text-gray-400 hover:border-white/20 hover:text-white"
                         }`}
                       >
@@ -663,138 +492,16 @@ export default function BecomeCoachPage() {
             </div>
 
             {/* ----------------------------------------
-                5. Specializations
+                4. Availability Table
             ---------------------------------------- */}
             <div className="bg-[#14161D] border border-white/10 p-6 sm:p-8 rounded-3xl space-y-6">
               <div className="flex items-center gap-3 pb-4 border-b border-white/10">
-                <div className="w-10 h-10 rounded-xl bg-[#E50914]/15 border border-[#E50914]/30 flex items-center justify-center text-[#E50914] font-bold">
-                  <Sparkles className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-white font-[family-name:var(--font-outfit)]">
-                    5. Specializations
-                  </h2>
-                  <p className="text-xs text-gray-400">Select all applicable specializations</p>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2.5">
-                {specializationOptions.map((spec) => {
-                  const isSelected = selectedSpecializations.includes(spec);
-                  return (
-                    <button
-                      key={spec}
-                      type="button"
-                      onClick={() => toggleArrayItem(selectedSpecializations, spec, setSelectedSpecializations)}
-                      className={`px-4 py-2.5 rounded-full border text-xs font-bold transition-all cursor-pointer ${
-                        isSelected
-                          ? "bg-[#E50914] border-[#E50914] text-white shadow-lg shadow-[#E50914]/25"
-                          : "bg-[#0F1117] border-white/10 text-gray-300 hover:border-white/25 hover:text-white"
-                      }`}
-                    >
-                      {spec}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* ----------------------------------------
-                6. Online Coaching
-            ---------------------------------------- */}
-            <div className="bg-[#14161D] border border-white/10 p-6 sm:p-8 rounded-3xl space-y-6">
-              <div className="flex items-center gap-3 pb-4 border-b border-white/10">
-                <div className="w-10 h-10 rounded-xl bg-[#0080FF]/15 border border-[#0080FF]/30 flex items-center justify-center text-[#0080FF] font-bold">
-                  <Video className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-white font-[family-name:var(--font-outfit)]">
-                    6. Online Coaching
-                  </h2>
-                  <p className="text-xs text-gray-400">Virtual class experience and platform readiness</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-2">
-                    Previous online coaching experience?
-                  </label>
-                  <div className="flex items-center gap-2">
-                    {["Yes", "No"].map((opt) => (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => setHasOnlineExperience(opt)}
-                        className={`flex-1 py-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                          hasOnlineExperience === opt
-                            ? "bg-[#0080FF] border-[#0080FF] text-white"
-                            : "bg-[#0F1117] border-white/10 text-gray-400"
-                        }`}
-                      >
-                        {opt}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-2">
-                    Preferred Platform:
-                  </label>
-                  <div className="flex items-center gap-2">
-                    {["Zoom", "Other"].map((opt) => (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => setPreferredPlatform(opt)}
-                        className={`flex-1 py-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                          preferredPlatform === opt
-                            ? "bg-[#0080FF] border-[#0080FF] text-white"
-                            : "bg-[#0F1117] border-white/10 text-gray-400"
-                        }`}
-                      >
-                        {opt}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-2">
-                    Available for live online classes?
-                  </label>
-                  <div className="flex items-center gap-2">
-                    {["Yes", "No"].map((opt) => (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => setIsLiveClassAvailable(opt)}
-                        className={`flex-1 py-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                          isLiveClassAvailable === opt
-                            ? "bg-[#0080FF] border-[#0080FF] text-white"
-                            : "bg-[#0F1117] border-white/10 text-gray-400"
-                        }`}
-                      >
-                        {opt}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* ----------------------------------------
-                7. Availability Table
-            ---------------------------------------- */}
-            <div className="bg-[#14161D] border border-white/10 p-6 sm:p-8 rounded-3xl space-y-6">
-              <div className="flex items-center gap-3 pb-4 border-b border-white/10">
-                <div className="w-10 h-10 rounded-xl bg-[#10B981]/15 border border-[#10B981]/30 flex items-center justify-center text-[#10B981] font-bold">
+                <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/15 border border-[#F59E0B]/30 flex items-center justify-center text-[#F59E0B] font-bold">
                   <Calendar className="w-5 h-5" />
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-white font-[family-name:var(--font-outfit)]">
-                    7. Availability
+                    4. Availability
                   </h2>
                   <p className="text-xs text-gray-400">Click to select available teaching time slots for each day</p>
                 </div>
@@ -843,65 +550,7 @@ export default function BecomeCoachPage() {
             </div>
 
             {/* ----------------------------------------
-                8. Coach Introduction
-            ---------------------------------------- */}
-            <div className="bg-[#14161D] border border-white/10 p-6 sm:p-8 rounded-3xl space-y-6">
-              <div className="flex items-center gap-3 pb-4 border-b border-white/10">
-                <div className="w-10 h-10 rounded-xl bg-[#F59E0B]/15 border border-[#F59E0B]/30 flex items-center justify-center text-[#F59E0B] font-bold">
-                  <FileText className="w-5 h-5" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-bold text-white font-[family-name:var(--font-outfit)]">
-                    8. Coach Introduction
-                  </h2>
-                  <p className="text-xs text-gray-400">Tell us about your philosophy and motivation</p>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
-                    Tell us about yourself
-                  </label>
-                  <textarea
-                    rows={3}
-                    placeholder="Share your personal journey in fitness or martial arts..."
-                    value={aboutSelf}
-                    onChange={(e) => setAboutSelf(e.target.value)}
-                    className="w-full p-4 rounded-xl bg-[#0F1117] border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-[#F59E0B] text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
-                    Why would you like to join SELFFITS?
-                  </label>
-                  <textarea
-                    rows={3}
-                    placeholder="What excites you about teaching in SELFFITS global virtual academy?..."
-                    value={whyJoinSelffits}
-                    onChange={(e) => setWhyJoinSelffits(e.target.value)}
-                    className="w-full p-4 rounded-xl bg-[#0F1117] border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-[#F59E0B] text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
-                    What makes you a good coach?
-                  </label>
-                  <textarea
-                    rows={3}
-                    placeholder="Highlight your key teaching strengths, patience, form evaluation techniques..."
-                    value={whatMakesGoodCoach}
-                    onChange={(e) => setWhatMakesGoodCoach(e.target.value)}
-                    className="w-full p-4 rounded-xl bg-[#0F1117] border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-[#F59E0B] text-sm"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* ----------------------------------------
-                9. Portfolio & Social Media
+                5. Portfolio & Social Media
             ---------------------------------------- */}
             <div className="bg-[#14161D] border border-white/10 p-6 sm:p-8 rounded-3xl space-y-6">
               <div className="flex items-center gap-3 pb-4 border-b border-white/10">
@@ -910,9 +559,9 @@ export default function BecomeCoachPage() {
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-white font-[family-name:var(--font-outfit)]">
-                    9. Portfolio & Social Media
+                    5. Portfolio & Social Media
                   </h2>
-                  <p className="text-xs text-gray-400">Social profiles and demo training videos</p>
+                  <p className="text-xs text-gray-400">Social profile links</p>
                 </div>
               </div>
 
@@ -956,36 +605,11 @@ export default function BecomeCoachPage() {
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
-                    Website / Portfolio Link
-                  </label>
-                  <input
-                    type="url"
-                    placeholder="https://yourportfolio.com"
-                    value={websiteUrl}
-                    onChange={(e) => setWebsiteUrl(e.target.value)}
-                    className="w-full h-11 px-4 rounded-xl bg-[#0F1117] border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-[#0080FF] text-sm"
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
-                    Training Videos — Upload File or Video URL
-                  </label>
-                  <input
-                    type="url"
-                    placeholder="https://youtube.com/watch?v=... or Google Drive demo video link"
-                    value={trainingVideoUrl}
-                    onChange={(e) => setTrainingVideoUrl(e.target.value)}
-                    className="w-full h-11 px-4 rounded-xl bg-[#0F1117] border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-[#0080FF] text-sm"
-                  />
-                </div>
               </div>
             </div>
 
             {/* ----------------------------------------
-                10. Documents Upload Section
+                6. Documents Upload Section
             ---------------------------------------- */}
             <div className="bg-[#14161D] border border-white/10 p-6 sm:p-8 rounded-3xl space-y-6">
               <div className="flex items-center gap-3 pb-4 border-b border-white/10">
@@ -994,7 +618,7 @@ export default function BecomeCoachPage() {
                 </div>
                 <div>
                   <h2 className="text-lg font-bold text-white font-[family-name:var(--font-outfit)]">
-                    10. Documents Upload
+                    6. Documents Upload
                   </h2>
                   <p className="text-xs text-gray-400">Choose document files directly from your device OR paste Drive links</p>
                 </div>
@@ -1072,88 +696,16 @@ export default function BecomeCoachPage() {
                     />
                   )}
                 </div>
-
-                {/* 10c. Instructor License */}
-                <div className="p-4 rounded-2xl bg-[#0F1117] border border-white/10 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold uppercase tracking-wider text-gray-200">
-                      Instructor License
-                    </label>
-                    <span className="text-[10px] text-gray-400">PDF, JPG, PNG</span>
-                  </div>
-
-                  <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-white/20 hover:border-[#10B981] rounded-xl cursor-pointer transition-colors bg-white/[0.02] hover:bg-white/[0.05] text-center space-y-2">
-                    <FileUp className="w-6 h-6 text-[#10B981]" />
-                    <span className="text-xs font-bold text-white">Click to Select License File</span>
-                    <input
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      onChange={(e) => handleFileSelection(e, setLicenseUrl, setLicenseFileName, "License")}
-                      className="hidden"
-                    />
-                  </label>
-
-                  {licenseFileName ? (
-                    <div className="p-2.5 rounded-lg bg-[#10B981]/15 border border-[#10B981]/30 text-[#10B981] text-xs font-bold flex items-center gap-1.5 truncate">
-                      <Check className="w-4 h-4 shrink-0" />
-                      <span className="truncate">Selected: {licenseFileName}</span>
-                    </div>
-                  ) : (
-                    <input
-                      type="text"
-                      placeholder="Or paste License Document Link"
-                      value={licenseUrl}
-                      onChange={(e) => setLicenseUrl(e.target.value)}
-                      className="w-full h-9 px-3 rounded-lg bg-black/40 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-[#10B981] text-xs"
-                    />
-                  )}
-                </div>
-
-                {/* 10d. ID / Passport */}
-                <div className="p-4 rounded-2xl bg-[#0F1117] border border-white/10 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-bold uppercase tracking-wider text-gray-200">
-                      ID / Passport
-                    </label>
-                    <span className="text-[10px] text-gray-400">PDF, JPG, PNG</span>
-                  </div>
-
-                  <label className="flex flex-col items-center justify-center p-4 border-2 border-dashed border-white/20 hover:border-[#10B981] rounded-xl cursor-pointer transition-colors bg-white/[0.02] hover:bg-white/[0.05] text-center space-y-2">
-                    <FileUp className="w-6 h-6 text-[#10B981]" />
-                    <span className="text-xs font-bold text-white">Click to Select ID/Passport</span>
-                    <input
-                      type="file"
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      onChange={(e) => handleFileSelection(e, setIdPassportUrl, setIdPassportFileName, "ID")}
-                      className="hidden"
-                    />
-                  </label>
-
-                  {idPassportFileName ? (
-                    <div className="p-2.5 rounded-lg bg-[#10B981]/15 border border-[#10B981]/30 text-[#10B981] text-xs font-bold flex items-center gap-1.5 truncate">
-                      <Check className="w-4 h-4 shrink-0" />
-                      <span className="truncate">Selected: {idPassportFileName}</span>
-                    </div>
-                  ) : (
-                    <input
-                      type="text"
-                      placeholder="Or paste Passport Copy Link"
-                      value={idPassportUrl}
-                      onChange={(e) => setIdPassportUrl(e.target.value)}
-                      className="w-full h-9 px-3 rounded-lg bg-black/40 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-[#10B981] text-xs"
-                    />
-                  )}
-                </div>
               </div>
             </div>
 
             {/* ----------------------------------------
-                11. Declaration & Final Button
+                7. Declaration & Final Button
             ---------------------------------------- */}
             <div className="bg-[#14161D] border border-white/10 p-6 sm:p-8 rounded-3xl space-y-6">
               <div className="p-5 rounded-2xl bg-[#0F1117] border border-white/10 space-y-3">
                 <h3 className="text-sm font-bold text-white uppercase tracking-wider">
-                  11. Declaration
+                  7. Declaration
                 </h3>
                 <p className="text-xs text-gray-300 leading-relaxed italic">
                   &ldquo;I confirm that the information provided is accurate and that I am qualified to teach the disciplines selected above. I authorize SELFFITS to verify my qualifications and experience.&rdquo;

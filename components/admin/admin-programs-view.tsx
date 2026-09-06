@@ -25,7 +25,9 @@ import {
   BookOpen,
   FileText,
   Upload,
+  Loader2,
 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   CentralScheduleConfig,
   DEFAULT_CENTRAL_SCHEDULE_CONFIG,
@@ -64,7 +66,7 @@ type SubCat = "kids" | "adults" | "ladies";
 export function AdminProgramsView() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [isSaved, setIsSaved] = useState(false);
 
   // Active Category Context in Admin
   const [activeCategory, setActiveCategory] = useState<MainTab>("mma");
@@ -192,7 +194,6 @@ export function AdminProgramsView() {
   // Save Central Program Configuration to Database (Completely Isolated per Category & Audience Group)
   const handleSaveAllConfig = async () => {
     setIsSaving(true);
-    setMsg(null);
 
     try {
       const [
@@ -211,32 +212,53 @@ export function AdminProgramsView() {
       const allSuccess = s1.success && s2.success && s3.success && s4.success && s5.success && s6.success && catRes.success && dietRes.success;
 
       if (allSuccess) {
-        setMsg({
-          type: "success",
-          text: "All Program Configurations, Curriculums, Schedules, Prices, Batch Timings, and Diet & Nutrition Add-on Settings published successfully to live website!",
-        });
-      } else {
-        setMsg({
-          type: "error",
-          text: "Failed to publish some program configurations. Please try again.",
-        });
+        setIsSaved(true);
+        setTimeout(() => setIsSaved(false), 3000);
       }
     } catch (err: any) {
-      setMsg({ type: "error", text: err.message || "An error occurred while saving." });
+      console.error("Save config error:", err);
     } finally {
       setIsSaving(false);
     }
   };
 
+  const renderPublishButton = (isFullWidth: boolean = false) => (
+    <button
+      type="button"
+      onClick={handleSaveAllConfig}
+      disabled={isSaving}
+      className={`relative overflow-hidden px-5 py-2.5 rounded-xl text-white font-extrabold text-xs transition-all duration-300 transform active:scale-95 shadow-lg flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 ${
+        isFullWidth ? "w-full sm:w-auto px-8 py-4 text-sm uppercase tracking-wider" : ""
+      } ${
+        isSaved
+          ? "bg-gradient-to-r from-[#10B981] to-[#059669] shadow-[#10B981]/30 ring-2 ring-[#10B981]/50 scale-105"
+          : isSaving
+          ? "bg-gradient-to-r from-[#0080FF] to-[#2563EB] animate-pulse"
+          : "bg-gradient-to-r from-[#0080FF] to-[#2563EB] hover:from-[#0070E0] hover:to-[#1D4ED8] shadow-[#0080FF]/25 hover:shadow-[#0080FF]/40"
+      }`}
+    >
+      {isSaved ? (
+        <>
+          <CheckCircle2 className="w-4 h-4 text-white animate-bounce shrink-0" />
+          <span>Published Live!</span>
+        </>
+      ) : isSaving ? (
+        <>
+          <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+          <span>Publishing...</span>
+        </>
+      ) : (
+        <>
+          <Save className="w-4 h-4 shrink-0" />
+          <span>Publish All Program Changes</span>
+        </>
+      )}
+    </button>
+  );
+
   const handleResetDefaults = () => {
     const defaultCfg = getDefaultScheduleConfig(activeCategory, activeSubCat);
     updateActiveScheduleConfig(() => defaultCfg);
-    const catLabel = activeCategory === "mma" ? "Mixed Martial Arts" : "Fitness & Weight Management";
-    const subLabel = activeSubCat === "kids" ? "Kids" : activeSubCat === "ladies" ? "Ladies Only" : "Adults Mix";
-    setMsg({
-      type: "success",
-      text: `Reset configuration for ${catLabel} → ${subLabel} to default values. Click 'Publish All Program Changes' to save.`,
-    });
   };
 
   // Handler: Toggle Training Day vs Rest Day
@@ -356,12 +378,10 @@ export function AdminProgramsView() {
     if (!file) return;
 
     if (!file.name.toLowerCase().endsWith(".pdf")) {
-      setMsg({ type: "error", text: "Selected file must be a PDF." });
       return;
     }
 
     setIsUploadingPdf(true);
-    setMsg(null);
 
     try {
       const formData = new FormData();
@@ -379,12 +399,9 @@ export function AdminProgramsView() {
           pdfUrl: "/uploads/protected/diet_nutrition_plan.pdf",
           pdfFileName: data.fileName,
         }));
-        setMsg({ type: "success", text: `PDF "${data.fileName}" uploaded successfully and saved to protected storage!` });
-      } else {
-        setMsg({ type: "error", text: data.error || "Failed to upload PDF." });
       }
     } catch (err: any) {
-      setMsg({ type: "error", text: "PDF upload network error." });
+      // PDF upload network error
     } finally {
       setIsUploadingPdf(false);
     }
@@ -443,29 +460,10 @@ export function AdminProgramsView() {
               <RotateCcw className="w-3.5 h-3.5 text-amber-400" /> Reset System Defaults
             </button>
 
-            <button
-              type="button"
-              onClick={handleSaveAllConfig}
-              disabled={isSaving}
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#0080FF] to-[#2563EB] text-white font-extrabold text-xs hover:opacity-95 transition-all shadow-lg shadow-[#0080FF]/25 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-            >
-              <Save className="w-4 h-4" /> {isSaving ? "Publishing Updates..." : "Publish All Program Changes"}
-            </button>
+            {renderPublishButton(false)}
           </div>
         </div>
 
-        {msg && (
-          <div
-            className={`p-4 rounded-xl text-xs font-bold flex items-center gap-2 ${
-              msg.type === "success"
-                ? "bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30"
-                : "bg-[#E50914]/15 text-[#EF4444] border border-[#E50914]/30"
-            }`}
-          >
-            {msg.type === "success" ? <CheckCircle2 className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
-            <span>{msg.text}</span>
-          </div>
-        )}
 
         {/* 1. Category Context Navigation Bar */}
         <div className="bg-[#14161D] p-3 rounded-2xl border border-white/10 shadow-xl space-y-3">
@@ -1021,14 +1019,7 @@ export function AdminProgramsView() {
 
         {/* Global Save Button at bottom */}
         <div className="pt-4 border-t border-white/10 flex items-center justify-end">
-          <button
-            type="button"
-            onClick={handleSaveAllConfig}
-            disabled={isSaving}
-            className="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-[#0080FF] to-[#2563EB] text-white font-extrabold text-sm uppercase tracking-wider hover:opacity-95 transition-all shadow-xl shadow-[#0080FF]/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
-          >
-            <Save className="w-5 h-5" /> {isSaving ? "Publishing Updates..." : "Publish All Program Changes"}
-          </button>
+          {renderPublishButton(true)}
         </div>
       </div>
     </AdminShell>

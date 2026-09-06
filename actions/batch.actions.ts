@@ -5,12 +5,45 @@ import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 
 const TIME_SLOT_MAP: Record<string, string> = {
+  "1st Batch": "05:15 PM to 06:00 PM (GMT)",
+  "2nd Batch": "06:15 PM to 07:00 PM (GMT)",
+  "3rd Batch": "07:15 PM to 08:00 PM (GMT)",
+  "Junior Batch 1": "04:00 PM to 04:45 PM (GMT)",
+  "Junior Batch 2": "05:00 PM to 05:45 PM (GMT)",
+  "Ladies Morning Batch": "10:00 AM to 10:45 AM (GMT)",
+  "Ladies Evening Batch": "04:30 PM to 05:15 PM (GMT)",
+  "Morning Batch": "09:00 AM to 09:45 AM (GMT)",
+  "Afternoon Shred Batch": "01:30 PM to 02:30 PM (GMT)",
+  "Evening Burn Batch": "05:00 PM to 06:00 PM (GMT)",
   Morning: "09:00 AM to 09:45 AM (GMT)",
   Evening: "04:00 PM to 04:45 PM (GMT)",
   Night: "08:00 PM to 08:45 PM (GMT)",
 };
 
+const TIME_SLOTS = [
+  "1st Batch",
+  "2nd Batch",
+  "3rd Batch",
+  "Junior Batch 1",
+  "Junior Batch 2",
+  "Ladies Morning Batch",
+  "Ladies Evening Batch",
+  "Morning Batch",
+  "Afternoon Shred Batch",
+  "Evening Burn Batch",
+  "Morning",
+  "Evening",
+  "Night",
+];
+
 const DAY_COMBINATIONS = [
+  "5 Days / Week (Monday to Friday)",
+  "5 Days / Week (Tuesday to Saturday)",
+  "5 Days / Week (Sunday to Thursday)",
+  "3 Days / Week (Mon, Wed, Fri)",
+  "3 Days / Week (Tue, Thu, Sat)",
+  "3 Days / Week (Sun, Wed, Sat)",
+  "2 Days / Week (Sat, Sun)",
   "Sunday & Wednesday",
   "Monday & Thursday",
   "Saturday & Tuesday",
@@ -234,7 +267,7 @@ export async function getBatchFormDataAction() {
         coaches: formattedCoaches,
         students: formattedStudents,
         dayCombinations: DAY_COMBINATIONS,
-        timeSlots: ["Morning", "Evening", "Night"],
+        timeSlots: TIME_SLOTS,
       },
     };
   } catch (err: any) {
@@ -251,6 +284,7 @@ export async function createBatchAction(data: {
   coachId: string;
   dayCombination: string;
   timeSlot: string;
+  clockTiming?: string;
   meetingUrl?: string;
   maxCapacity?: number;
 }) {
@@ -264,11 +298,7 @@ export async function createBatchAction(data: {
       return { success: false, error: "All required batch fields must be specified." };
     }
 
-    if (!DAY_COMBINATIONS.includes(data.dayCombination)) {
-      return { success: false, error: "Invalid day combination selected." };
-    }
-
-    const clockTiming = TIME_SLOT_MAP[data.timeSlot] || "03:30 PM to 04:15 PM (GMT)";
+    const clockTiming = data.clockTiming || TIME_SLOT_MAP[data.timeSlot] || `${data.timeSlot} (GMT)`;
     const maxCap = Math.max(1, Number(data.maxCapacity) || 8);
 
     // Coach Schedule Conflict Validation
@@ -336,6 +366,7 @@ export async function updateBatchAction(
     coachId?: string;
     dayCombination?: string;
     timeSlot?: string;
+    clockTiming?: string;
     meetingUrl?: string | null;
     maxCapacity?: number;
     status?: "ACTIVE" | "FULL" | "INACTIVE";
@@ -385,7 +416,7 @@ export async function updateBatchAction(
       }
     }
 
-    const clockTiming = TIME_SLOT_MAP[timeSlot] || existingBatch.clockTiming;
+    const clockTiming = data.clockTiming || TIME_SLOT_MAP[timeSlot] || existingBatch.clockTiming;
     const maxCapacity = data.maxCapacity !== undefined ? Math.max(1, Number(data.maxCapacity)) : existingBatch.maxCapacity;
     const studentCount = existingBatch.students.length;
 

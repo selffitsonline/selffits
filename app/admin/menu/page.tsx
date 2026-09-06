@@ -2,7 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import { AdminShell } from "@/components/admin/admin-shell";
-import { Plus, Save, Trash2, CheckCircle2, AlertCircle, LayoutList, Navigation } from "lucide-react";
+import { Plus, Save, Trash2, CheckCircle2, AlertCircle, LayoutList, Navigation, Loader2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { getAdminMenuItemsAction, updateAdminMenuItemsAction } from "@/actions/admin.actions";
 
 export default function AdminMenuManagementPage() {
@@ -11,7 +12,7 @@ export default function AdminMenuManagementPage() {
   const [footerMenu, setFooterMenu] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [isSaved, setIsSaved] = useState(false);
 
   useEffect(() => {
     async function loadMenus() {
@@ -62,16 +63,14 @@ export default function AdminMenuManagementPage() {
 
   const handleSaveAllMenus = async () => {
     setIsSaving(true);
-    setMsg(null);
     try {
       const res = await updateAdminMenuItemsAction(headerMenu, footerMenu);
       if (res && res.success) {
-        setMsg({ type: "success", text: res.message || "Header & Footer navigation menus saved successfully!" });
-      } else {
-        setMsg({ type: "error", text: res?.error || "Failed to save menu changes." });
+        setIsSaved(true);
+        setTimeout(() => setIsSaved(false), 3000);
       }
     } catch (err: any) {
-      setMsg({ type: "error", text: err.message || "An unexpected error occurred while saving." });
+      console.error("Save menu error:", err);
     } finally {
       setIsSaving(false);
     }
@@ -87,7 +86,7 @@ export default function AdminMenuManagementPage() {
 
   return (
     <AdminShell>
-      <div className="space-y-6 max-w-5xl mx-auto">
+      <div className="space-y-6 max-w-5xl mx-auto relative">
         {/* Header Title & Global Save */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
@@ -112,9 +111,30 @@ export default function AdminMenuManagementPage() {
               type="button"
               onClick={handleSaveAllMenus}
               disabled={isSaving}
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#0080FF] to-[#2563EB] text-white font-extrabold text-xs hover:opacity-95 transition-all shadow-lg shadow-[#0080FF]/25 flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+              className={`relative overflow-hidden px-5 py-2.5 rounded-xl text-white font-extrabold text-xs transition-all duration-300 transform active:scale-95 shadow-lg flex items-center gap-2 cursor-pointer disabled:opacity-60 ${
+                isSaved
+                  ? "bg-gradient-to-r from-[#10B981] to-[#059669] shadow-[#10B981]/25 ring-2 ring-[#10B981]/50 scale-105"
+                  : isSaving
+                  ? "bg-gradient-to-r from-[#0080FF] to-[#2563EB] animate-pulse"
+                  : "bg-gradient-to-r from-[#0080FF] to-[#2563EB] hover:from-[#0070E0] hover:to-[#1D4ED8] shadow-[#0080FF]/25"
+              }`}
             >
-              <Save className="w-4 h-4" /> {isSaving ? "Saving Changes..." : "Save Navigation Changes"}
+              {isSaved ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 text-white animate-bounce shrink-0" />
+                  <span>Saved Live!</span>
+                </>
+              ) : isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 shrink-0" />
+                  <span>Save Navigation Changes</span>
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -147,19 +167,6 @@ export default function AdminMenuManagementPage() {
             📌 Footer Menu (Bottom Page Quick Links)
           </button>
         </div>
-
-        {msg && (
-          <div
-            className={`p-4 rounded-xl text-xs font-bold flex items-center gap-2 ${
-              msg.type === "success"
-                ? "bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30"
-                : "bg-[#E50914]/15 text-[#EF4444] border border-[#E50914]/30"
-            }`}
-          >
-            {msg.type === "success" ? <CheckCircle2 className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
-            <span>{msg.text}</span>
-          </div>
-        )}
 
         {/* List Table */}
         <div className="bg-[#14161D] border border-white/10 rounded-2xl p-6 space-y-4 shadow-xl">

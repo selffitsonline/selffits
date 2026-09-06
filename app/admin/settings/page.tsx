@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { AdminShell } from "@/components/admin/admin-shell";
 import { Settings, Save, CheckCircle2, ShieldCheck, Database, Globe } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function AdminSettingsPage() {
   const [siteName, setSiteName] = useState("SELFFITS - Global Virtual Martial Arts & Fitness Academy");
@@ -19,7 +20,7 @@ export default function AdminSettingsPage() {
 
   return (
     <AdminShell>
-      <div className="space-y-6 max-w-3xl mx-auto">
+      <div className="space-y-6 max-w-3xl mx-auto relative">
         <div>
           <h1 className="text-2xl font-extrabold text-white font-[family-name:var(--font-outfit)]">
             System & Website Settings
@@ -29,11 +30,6 @@ export default function AdminSettingsPage() {
           </p>
         </div>
 
-        {isSaved && (
-          <div className="p-4 rounded-xl bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30 text-xs font-bold flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4" /> Website configurations saved successfully!
-          </div>
-        )}
 
         <form onSubmit={handleSave} className="bg-[#14161D] border border-white/10 rounded-2xl p-6 space-y-5 shadow-xl">
           <div>
@@ -91,9 +87,23 @@ export default function AdminSettingsPage() {
           <div className="pt-2">
             <button
               type="submit"
-              className="w-full py-4 rounded-xl bg-gradient-to-r from-[#0080FF] to-[#2563EB] text-white font-extrabold text-xs uppercase tracking-wider hover:opacity-95 transition-all shadow-xl shadow-[#0080FF]/25 flex items-center justify-center gap-2 cursor-pointer"
+              className={`relative overflow-hidden w-full py-4 rounded-xl text-white font-extrabold text-xs uppercase tracking-wider transition-all duration-300 transform active:scale-95 shadow-xl flex items-center justify-center gap-2 cursor-pointer ${
+                isSaved
+                  ? "bg-gradient-to-r from-[#10B981] to-[#059669] shadow-[#10B981]/30 ring-2 ring-[#10B981]/50 scale-[1.02]"
+                  : "bg-gradient-to-r from-[#0080FF] to-[#2563EB] hover:from-[#0070E0] hover:to-[#1D4ED8] shadow-[#0080FF]/25"
+              }`}
             >
-              <Save className="w-4 h-4" /> Save System Settings
+              {isSaved ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 text-white animate-bounce shrink-0" />
+                  <span>Saved Live!</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4 shrink-0" />
+                  <span>Save System Settings</span>
+                </>
+              )}
             </button>
           </div>
         </form>
@@ -101,3 +111,4 @@ export default function AdminSettingsPage() {
     </AdminShell>
   );
 }
+

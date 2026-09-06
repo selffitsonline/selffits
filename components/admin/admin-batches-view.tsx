@@ -478,8 +478,18 @@ export function AdminBatchesView({
                         <h3 className="text-lg font-extrabold text-white font-[family-name:var(--font-outfit)] leading-tight">
                           {b.name}
                         </h3>
-                        <div className="flex items-center gap-2 mt-1">
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                           <span className="text-xs text-[#0080FF] font-bold">{b.programTitle}</span>
+                          {b.programCategory && (
+                            <span className="px-2 py-0.5 rounded-md bg-[#0080FF]/15 text-[#0080FF] border border-[#0080FF]/30 font-extrabold text-[10px]">
+                              {b.programCategory === "mixed-martial-arts" || b.programCategory?.toUpperCase().includes("MMA") ? "MMA" : "Fitness"}
+                            </span>
+                          )}
+                          {b.targetAudience && (
+                            <span className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-400 border border-amber-500/30 font-extrabold text-[10px]">
+                              {b.targetAudience.replace(/_/g, " ")}
+                            </span>
+                          )}
                           <span className="px-2 py-0.5 rounded-md bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30 font-black text-[10px]">
                             {b.levelName}
                           </span>

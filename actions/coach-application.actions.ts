@@ -130,17 +130,7 @@ export async function submitCoachApplicationAction(data: CoachApplicationInput) 
         coachingBio: data.coachingBio || null,
         targetAgeGroups: safeTargetAgeGroups,
 
-        specializations: safeSpecializations,
-
-        hasOnlineExperience: data.hasOnlineExperience || null,
-        preferredPlatform: data.preferredPlatform || null,
-        isLiveClassAvailable: data.isLiveClassAvailable || null,
-
         availability: safeAvailability,
-
-        aboutSelf: data.aboutSelf || null,
-        whyJoinSelffits: data.whyJoinSelffits || null,
-        whatMakesGoodCoach: data.whatMakesGoodCoach || null,
 
         instagramUrl: data.instagramUrl || null,
         facebookUrl: data.facebookUrl || null,

@@ -40,7 +40,7 @@ export function AdminShell({ children }: AdminShellProps) {
   const navigationItems = [
     { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
     { label: "Menu Management", href: "/admin/menu", icon: MenuIcon },
-    { label: "Homepage Banner", href: "/admin/banner", icon: ImageIcon },
+    { label: "Homepage Management", href: "/admin/banner", icon: ImageIcon },
     { label: "Programs & Pricing", href: "/admin/programs", icon: BookOpen },
     { label: "Registered Students", href: "/admin/students", icon: Users },
     { label: "Batch Management", href: "/admin/batches", icon: Layers },
