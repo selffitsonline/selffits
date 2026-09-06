@@ -94,8 +94,8 @@ function ProgramsContent() {
         </section>
 
         {/* UNIFIED COMPACT PROGRAM CONTROL DOCK */}
-        <section className="sticky top-[64px] sm:top-[72px] md:top-[76px] z-40 max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 mb-8 py-2 bg-[#0A0B0E]/95 backdrop-blur-md transition-all">
-          <div className="bg-[#14161D] p-2.5 sm:p-3 rounded-2xl border border-white/15 shadow-2xl space-y-2.5">
+        <section className="sticky top-[68px] sm:top-[76px] md:top-[80px] z-40 max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+          <div className="bg-[#14161D]/95 backdrop-blur-xl p-2.5 sm:p-3 rounded-2xl border border-white/15 shadow-2xl space-y-2.5">
             {/* Row 1: Program Category Tabs */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <button
