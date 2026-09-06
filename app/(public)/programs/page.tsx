@@ -62,8 +62,8 @@ function ProgramsContent() {
     params.set("freq", String(state.daysPerWeek));
     params.set("days", state.selectedDays.join(","));
     params.set("batch", state.selectedBatch);
-    params.set("currency", state.currency);
-    params.set("price", String(state.currency === "INR" ? state.monthlyPriceINR : state.monthlyPriceUSD));
+    params.set("currency", "USD");
+    params.set("price", String(state.monthlyPriceUSD));
     params.set("plan", `plan-${state.daysPerWeek}-day`);
 
     router.push(`/checkout?${params.toString()}`);

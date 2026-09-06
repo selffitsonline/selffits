@@ -19,7 +19,7 @@ declare global {
 interface RazorpayCheckoutProps {
   planId: string;
   planName: string;
-  priceINR: number;
+  priceINR?: number;
   priceUSD: number;
   scheduleData?: {
     daysPerWeek?: number;
@@ -30,10 +30,10 @@ interface RazorpayCheckoutProps {
   };
 }
 
-export function RazorpayCheckout({ planId, planName, priceINR, priceUSD, scheduleData }: RazorpayCheckoutProps) {
+export function RazorpayCheckout({ planId, planName, priceUSD, scheduleData }: RazorpayCheckoutProps) {
   const router = useRouter();
   const { data: session } = useSession();
-  const [currency, setCurrency] = useState<"INR" | "USD">("USD");
+  const currency = "USD";
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -187,35 +187,10 @@ export function RazorpayCheckout({ planId, planName, priceINR, priceUSD, schedul
     rzp.open();
   };
 
-  const priceDisplay = currency === "INR" ? `₹${priceINR}` : `$${priceUSD}`;
+  const priceDisplay = `$${priceUSD}`;
 
   return (
     <div className="space-y-6 bg-[#14161D] border border-white/10 p-6 sm:p-8 rounded-3xl">
-      {/* Currency Switcher Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-white/10">
-        <span className="text-xs font-bold text-gray-300">Select Billing Currency:</span>
-        <div className="flex items-center bg-[#0F1117] p-1 rounded-xl border border-white/10">
-          <button
-            type="button"
-            onClick={() => setCurrency("INR")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              currency === "INR" ? "bg-[#0080FF] text-white" : "text-gray-400 hover:text-white"
-            }`}
-          >
-            🇮🇳 INR (₹)
-          </button>
-          <button
-            type="button"
-            onClick={() => setCurrency("USD")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-              currency === "USD" ? "bg-[#0080FF] text-white" : "text-gray-400 hover:text-white"
-            }`}
-          >
-            🌐 USD ($)
-          </button>
-        </div>
-      </div>
-
       {/* Plan Summary Box */}
       <div className="p-5 rounded-2xl bg-[#0F1117] border border-white/10 space-y-2">
         <div className="flex items-center justify-between">

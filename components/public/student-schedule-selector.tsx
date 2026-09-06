@@ -16,8 +16,6 @@ export interface StudentScheduleSelectionState {
   selectedDays: string[];
   selectedBatch: string;
   monthlyPriceUSD: number;
-  monthlyPriceINR: number;
-  currency: "INR" | "USD";
 }
 
 export interface StudentScheduleSelectorProps {
@@ -27,8 +25,6 @@ export interface StudentScheduleSelectorProps {
   initialDaysPerWeek?: number;
   initialSelectedDays?: string[];
   initialSelectedBatch?: string;
-  currency?: "INR" | "USD";
-  onCurrencyChange?: (c: "INR" | "USD") => void;
   onSelectionChange?: (state: StudentScheduleSelectionState) => void;
   showCheckoutCta?: boolean;
   onCheckoutSubmit?: (state: StudentScheduleSelectionState) => void;
@@ -41,8 +37,6 @@ export function StudentScheduleSelector({
   initialDaysPerWeek = 1,
   initialSelectedDays = ["Sunday"],
   initialSelectedBatch = "2nd Batch — 02:30 PM to 03:30 PM (GMT)",
-  currency = "USD",
-  onCurrencyChange,
   onSelectionChange,
   showCheckoutCta = false,
   onCheckoutSubmit,
@@ -51,7 +45,6 @@ export function StudentScheduleSelector({
   const [daysPerWeek, setDaysPerWeek] = useState<number>(initialDaysPerWeek);
   const [selectedDays, setSelectedDays] = useState<string[]>(initialSelectedDays);
   const [selectedBatch, setSelectedBatch] = useState<string>(initialSelectedBatch);
-  const [curr, setCurr] = useState<"INR" | "USD">(currency);
 
   useEffect(() => {
     async function loadConfig() {
@@ -69,10 +62,6 @@ export function StudentScheduleSelector({
     }
     loadConfig();
   }, [category, group]);
-
-  useEffect(() => {
-    setCurr(currency);
-  }, [currency]);
 
   // Available days vs Rest Days
   const availableTrainingDays = (config.trainingDays || DEFAULT_CENTRAL_SCHEDULE_CONFIG.trainingDays).filter(
@@ -109,7 +98,6 @@ export function StudentScheduleSelector({
     if (freq === 5) {
       setSelectedDays(selectableDaysList);
     } else {
-      // Keep existing selected days if valid, otherwise adjust to match target frequency
       const currentValid = selectedDays.filter((d) => selectableDaysList.includes(d));
       if (currentValid.length > freq) {
         setSelectedDays(currentValid.slice(0, freq));
@@ -124,10 +112,9 @@ export function StudentScheduleSelector({
   };
 
   const handleDayToggle = (dayName: string, isRestDay: boolean) => {
-    if (isRestDay) return; // Rest days cannot be selected
+    if (isRestDay) return;
 
     if (daysPerWeek === 5) {
-      // For 5 days, all available days are required
       return;
     }
 
@@ -139,7 +126,6 @@ export function StudentScheduleSelector({
       if (selectedDays.length < daysPerWeek) {
         setSelectedDays([...selectedDays, dayName]);
       } else {
-        // Replace oldest or replace last if max count reached
         const newSelection = [...selectedDays.slice(1), dayName];
         setSelectedDays(newSelection);
       }
@@ -156,20 +142,15 @@ export function StudentScheduleSelector({
         selectedDays,
         selectedBatch,
         monthlyPriceUSD: currentPricing.priceUSD,
-        monthlyPriceINR: currentPricing.priceINR,
-        currency: curr,
       });
     }
-  }, [daysPerWeek, selectedDays, selectedBatch, curr, currentPricing.priceUSD, currentPricing.priceINR]);
+  }, [daysPerWeek, selectedDays, selectedBatch, currentPricing.priceUSD]);
 
-  const handleCurrencySwitch = (newCurr: "INR" | "USD") => {
-    setCurr(newCurr);
-    if (onCurrencyChange) onCurrencyChange(newCurr);
-  };
+  const isSelectionValid = selectedDays.length === daysPerWeek && !!selectedBatch;
 
-  const isSelectionValid = selectedDays.length === daysPerWeek && !!selectedBatch;  return (
+  return (
     <div className="space-y-8 bg-[#14161D] border border-white/15 p-4 sm:p-8 rounded-2xl sm:rounded-3xl shadow-2xl">
-      {/* Header & Currency Toggle */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-6 border-b border-white/10">
         <div>
           <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#E50914] px-2.5 py-1 rounded-full bg-[#E50914]/15 border border-[#E50914]/30">
@@ -178,31 +159,6 @@ export function StudentScheduleSelector({
           <h3 className="text-xl sm:text-2xl font-extrabold text-white font-[family-name:var(--font-outfit)] mt-2">
             {title}
           </h3>
-        </div>
-
-        {/* Currency Switcher */}
-        <div className="flex items-center gap-2 text-xs font-semibold text-gray-300">
-          <span>Billing Currency:</span>
-          <div className="flex items-center bg-[#0F1117] p-1 rounded-xl border border-white/10">
-            <button
-              type="button"
-              onClick={() => handleCurrencySwitch("INR")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                curr === "INR" ? "bg-[#0080FF] text-white shadow-md" : "text-gray-400 hover:text-white"
-              }`}
-            >
-              🇮🇳 INR (₹)
-            </button>
-            <button
-              type="button"
-              onClick={() => handleCurrencySwitch("USD")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                curr === "USD" ? "bg-[#0080FF] text-white shadow-md" : "text-gray-400 hover:text-white"
-              }`}
-            >
-              🌐 USD ($)
-            </button>
-          </div>
         </div>
       </div>
 
@@ -223,7 +179,7 @@ export function StudentScheduleSelector({
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 sm:gap-3">
           {membershipPlans.map((plan) => {
             const isSelected = daysPerWeek === plan.daysPerWeek;
-            const priceLabel = curr === "INR" ? `₹${plan.monthlyPriceINR}` : `$${plan.monthlyPriceUSD}`;
+            const priceLabel = `$${plan.monthlyPriceUSD}`;
 
             return (
               <button
@@ -449,7 +405,7 @@ export function StudentScheduleSelector({
           <div className="space-y-1">
             <span className="text-gray-400 font-semibold block">Monthly Price:</span>
             <span className="font-black text-2xl text-white font-[family-name:var(--font-outfit)] block">
-              {curr === "INR" ? `₹${currentPricing.priceINR}` : `$${currentPricing.priceUSD}`}
+              ${currentPricing.priceUSD}
               <span className="text-xs text-gray-400 font-normal"> / month</span>
             </span>
           </div>
@@ -466,13 +422,11 @@ export function StudentScheduleSelector({
                   selectedDays,
                   selectedBatch,
                   monthlyPriceUSD: currentPricing.priceUSD,
-                  monthlyPriceINR: currentPricing.priceINR,
-                  currency: curr,
                 })
               }
               className="w-full py-4 rounded-xl bg-gradient-to-r from-[#E50914] to-[#FF1E27] text-white font-extrabold text-sm uppercase tracking-wider hover:opacity-95 transition-all shadow-xl shadow-[#E50914]/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <Lock className="w-4 h-4" /> Proceed to Enrollment ({curr === "INR" ? `₹${currentPricing.priceINR}` : `$${currentPricing.priceUSD}`})
+              <Lock className="w-4 h-4" /> Proceed to Enrollment (${currentPricing.priceUSD})
             </button>
           </div>
         )}

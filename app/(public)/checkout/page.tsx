@@ -81,7 +81,7 @@ function CheckoutContent() {
             <div className="flex items-center justify-between text-sm pt-2 border-t border-white/10">
               <span className="text-gray-400 font-semibold">Monthly Price:</span>
               <span className="text-2xl font-black text-white font-[family-name:var(--font-outfit)]">
-                {currencyParam === "INR" ? `₹${priceNum}` : `$${priceNum}`}
+                ${priceNum}
                 <span className="text-xs text-gray-400 font-normal"> / month</span>
               </span>
             </div>
@@ -113,8 +113,7 @@ function CheckoutContent() {
           <RazorpayCheckout
             planId={planId}
             planName={planName}
-            priceINR={currencyParam === "INR" ? priceNum : 4399}
-            priceUSD={currencyParam === "USD" ? priceNum : 55}
+            priceUSD={priceNum}
             scheduleData={{
               daysPerWeek,
               selectedDays,

@@ -641,7 +641,7 @@ export function AdminProgramsView() {
                     <DollarSign className="w-4 h-4 text-emerald-400" /> Weekly Membership Pricing & Plan Curriculums (1–5 Days/Wk)
                   </h3>
                   <p className="text-xs text-gray-400 mt-0.5">
-                    Configure monthly USD & INR pricing, badges, and learning topics for each frequency tier.
+                    Configure monthly USD ($) pricing, badges, and learning topics for each frequency tier.
                   </p>
                 </div>
               </div>
@@ -689,8 +689,8 @@ export function AdminProgramsView() {
                       </div>
                     </div>
 
-                    {/* Inputs: USD Price, INR Price, Badge */}
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    {/* Inputs: USD Price, Badge */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-[11px] font-bold uppercase text-gray-400 mb-1">
                           Price USD ($)
@@ -704,27 +704,6 @@ export function AdminProgramsView() {
                               handleUpdatePlanPrice(
                                 plan.daysPerWeek,
                                 "monthlyPriceUSD",
-                                Number(e.target.value) || 0
-                              )
-                            }
-                            className="w-full h-10 pl-7 pr-3 rounded-lg bg-[#14161D] border border-white/10 text-white font-mono text-xs font-bold focus:outline-none focus:border-[#0080FF]"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-bold uppercase text-gray-400 mb-1">
-                          Price INR (₹)
-                        </label>
-                        <div className="relative">
-                          <span className="absolute left-3 top-2.5 text-xs text-gray-400 font-bold">₹</span>
-                          <input
-                            type="number"
-                            value={plan.monthlyPriceINR}
-                            onChange={(e) =>
-                              handleUpdatePlanPrice(
-                                plan.daysPerWeek,
-                                "monthlyPriceINR",
                                 Number(e.target.value) || 0
                               )
                             }

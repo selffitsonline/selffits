@@ -7,7 +7,6 @@ import { ShieldCheck, Check, Zap, Sparkles } from "lucide-react";
 
 export function PricingCards() {
   const router = useRouter();
-  const [currency, setCurrency] = useState<"INR" | "USD">("USD");
   const [scheduleState, setScheduleState] = useState<StudentScheduleSelectionState | null>(null);
 
   const handleCheckout = (state: StudentScheduleSelectionState) => {
@@ -15,8 +14,8 @@ export function PricingCards() {
     params.set("freq", String(state.daysPerWeek));
     params.set("days", state.selectedDays.join(","));
     params.set("batch", state.selectedBatch);
-    params.set("currency", state.currency);
-    params.set("price", String(state.currency === "INR" ? state.monthlyPriceINR : state.monthlyPriceUSD));
+    params.set("currency", "USD");
+    params.set("price", String(state.monthlyPriceUSD));
     params.set("plan", `plan-${state.daysPerWeek}-day`);
 
     router.push(`/checkout?${params.toString()}`);
@@ -26,8 +25,6 @@ export function PricingCards() {
     <div className="space-y-10 max-w-5xl mx-auto">
       {/* Centralized Schedule & Pricing Selector */}
       <StudentScheduleSelector
-        currency={currency}
-        onCurrencyChange={(c) => setCurrency(c)}
         onSelectionChange={(s) => setScheduleState(s)}
         showCheckoutCta={true}
         onCheckoutSubmit={handleCheckout}
