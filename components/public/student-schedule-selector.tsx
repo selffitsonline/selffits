@@ -436,7 +436,7 @@ export function StudentScheduleSelector({
                   <FileText className="w-4 h-4 text-[#10B981]" /> {dietConfig.title} (Optional)
                 </span>
                 <span className="px-2 py-0.5 rounded-full bg-[#10B981]/20 text-[#10B981] border border-[#10B981]/40 text-[10px] font-bold">
-                  +${dietConfig.priceUSD} / month
+                  +${dietConfig.priceUSD}
                 </span>
               </div>
               <p className="text-xs text-gray-400 leading-relaxed font-medium">
@@ -474,7 +474,7 @@ export function StudentScheduleSelector({
           <div className="space-y-1">
             <span className="text-gray-400 font-semibold block">Selected Membership Plan:</span>
             <span className="font-extrabold text-white text-sm block">
-              {daysPerWeek} {daysPerWeek === 1 ? "Day" : "Days"} / Week (${currentPricing.priceUSD})
+              {daysPerWeek} {daysPerWeek === 1 ? "Day" : "Days"} / Week (${currentPricing.priceUSD}/mo)
             </span>
           </div>
 
@@ -495,20 +495,20 @@ export function StudentScheduleSelector({
           <div className="space-y-1">
             <span className="text-gray-400 font-semibold block">Diet & Nutrition Add-on:</span>
             <span className={`font-extrabold text-sm block ${includeDietNutrition ? "text-[#10B981]" : "text-gray-500"}`}>
-              {includeDietNutrition ? `Selected (+${dietConfig.priceUSD})` : "Not Included"}
+              {includeDietNutrition ? `Selected (+$${dietConfig.priceUSD})` : "Not Included"}
             </span>
           </div>
 
           <div className="space-y-1 sm:col-span-2 pt-2 border-t border-white/10">
-            <span className="text-gray-400 font-semibold block">Total Monthly Price:</span>
+            <span className="text-gray-400 font-semibold block">Total Price:</span>
             <div className="flex items-baseline gap-2">
               <span className="font-black text-3xl text-white font-[family-name:var(--font-outfit)]">
                 ${totalPriceUSD}
               </span>
-              <span className="text-xs text-gray-400 font-normal"> / month</span>
+              {!includeDietNutrition && <span className="text-xs text-gray-400 font-normal"> / month</span>}
               {includeDietNutrition && (
                 <span className="text-[11px] text-gray-400">
-                  (${currentPricing.priceUSD} program + ${dietConfig.priceUSD} diet add-on)
+                  (${currentPricing.priceUSD}/mo program + ${dietConfig.priceUSD} add-on)
                 </span>
               )}
             </div>

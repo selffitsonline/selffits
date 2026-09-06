@@ -82,7 +82,7 @@ function CheckoutContent() {
                   <Check className="w-4 h-4" /> Diet & Nutrition Program Add-on:
                 </span>
                 <span className="font-black text-emerald-400 text-right">
-                  +${dietPriceParam} / month
+                  +${dietPriceParam}
                 </span>
               </div>
             )}
@@ -94,10 +94,12 @@ function CheckoutContent() {
 
             <div className="flex items-center justify-between text-sm pt-2 border-t border-white/10">
               <span className="text-gray-400 font-semibold">Total Amount:</span>
-              <span className="text-2xl font-black text-white font-[family-name:var(--font-outfit)]">
-                ${priceNum}
-                <span className="text-xs text-gray-400 font-normal"> / month</span>
-              </span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-black text-white font-[family-name:var(--font-outfit)]">
+                  ${priceNum}
+                </span>
+                {!dietAddonParam && <span className="text-xs text-gray-400 font-normal"> / month</span>}
+              </div>
             </div>
           </div>
 
