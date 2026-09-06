@@ -31,7 +31,7 @@ export interface CentralScheduleConfig {
   membershipPlans: MembershipPlanConfig[];
 }
 
-export const DEFAULT_TRAINING_DAYS: TrainingDayConfig[] = [
+export const DEFAULT_MMA_TRAINING_DAYS: TrainingDayConfig[] = [
   { dayName: "Sunday", selectable: true, restDay: false, activeStatus: true },
   { dayName: "Monday", selectable: true, restDay: false, activeStatus: true },
   { dayName: "Tuesday", selectable: false, restDay: true, activeStatus: true },
@@ -41,9 +41,9 @@ export const DEFAULT_TRAINING_DAYS: TrainingDayConfig[] = [
   { dayName: "Saturday", selectable: true, restDay: false, activeStatus: true },
 ];
 
-export const DEFAULT_BATCH_TIMINGS: BatchTimingConfig[] = [
+export const DEFAULT_MMA_BATCH_TIMINGS: BatchTimingConfig[] = [
   {
-    id: "batch-1",
+    id: "mma-batch-1",
     batchName: "1st Batch",
     startTime: "01:00 PM",
     endTime: "02:00 PM",
@@ -52,7 +52,7 @@ export const DEFAULT_BATCH_TIMINGS: BatchTimingConfig[] = [
     activeStatus: true,
   },
   {
-    id: "batch-2",
+    id: "mma-batch-2",
     batchName: "2nd Batch",
     startTime: "02:30 PM",
     endTime: "03:30 PM",
@@ -61,7 +61,7 @@ export const DEFAULT_BATCH_TIMINGS: BatchTimingConfig[] = [
     activeStatus: true,
   },
   {
-    id: "batch-3",
+    id: "mma-batch-3",
     batchName: "3rd Batch",
     startTime: "04:00 PM",
     endTime: "05:00 PM",
@@ -71,7 +71,7 @@ export const DEFAULT_BATCH_TIMINGS: BatchTimingConfig[] = [
   },
 ];
 
-export const DEFAULT_MEMBERSHIP_PLANS: MembershipPlanConfig[] = [
+export const DEFAULT_MMA_MEMBERSHIP_PLANS: MembershipPlanConfig[] = [
   {
     daysPerWeek: 1,
     monthlyPriceUSD: 25,
@@ -145,11 +145,163 @@ export const DEFAULT_MEMBERSHIP_PLANS: MembershipPlanConfig[] = [
   },
 ];
 
-export const DEFAULT_CENTRAL_SCHEDULE_CONFIG: CentralScheduleConfig = {
-  trainingDays: DEFAULT_TRAINING_DAYS,
-  batchTimings: DEFAULT_BATCH_TIMINGS,
-  membershipPlans: DEFAULT_MEMBERSHIP_PLANS,
+export const DEFAULT_MMA_SCHEDULE_CONFIG: CentralScheduleConfig = {
+  trainingDays: DEFAULT_MMA_TRAINING_DAYS,
+  batchTimings: DEFAULT_MMA_BATCH_TIMINGS,
+  membershipPlans: DEFAULT_MMA_MEMBERSHIP_PLANS,
 };
+
+export const DEFAULT_FITNESS_TRAINING_DAYS: TrainingDayConfig[] = [
+  { dayName: "Sunday", selectable: true, restDay: false, activeStatus: true },
+  { dayName: "Monday", selectable: true, restDay: false, activeStatus: true },
+  { dayName: "Tuesday", selectable: true, restDay: false, activeStatus: true },
+  { dayName: "Wednesday", selectable: false, restDay: true, activeStatus: true },
+  { dayName: "Thursday", selectable: true, restDay: false, activeStatus: true },
+  { dayName: "Friday", selectable: true, restDay: false, activeStatus: true },
+  { dayName: "Saturday", selectable: false, restDay: true, activeStatus: true },
+];
+
+export const DEFAULT_FITNESS_BATCH_TIMINGS: BatchTimingConfig[] = [
+  {
+    id: "fitness-batch-1",
+    batchName: "Morning HIIT Batch",
+    startTime: "07:00 AM",
+    endTime: "08:00 AM",
+    timezone: "GMT (UTC+0)",
+    displayLabel: "07:00 AM – 08:00 AM",
+    activeStatus: true,
+  },
+  {
+    id: "fitness-batch-2",
+    batchName: "Afternoon Shred Batch",
+    startTime: "01:30 PM",
+    endTime: "02:30 PM",
+    timezone: "GMT (UTC+0)",
+    displayLabel: "01:30 PM – 02:30 PM",
+    activeStatus: true,
+  },
+  {
+    id: "fitness-batch-3",
+    batchName: "Evening Burn Batch",
+    startTime: "05:00 PM",
+    endTime: "06:00 PM",
+    timezone: "GMT (UTC+0)",
+    displayLabel: "05:00 PM – 06:00 PM",
+    activeStatus: true,
+  },
+];
+
+export const DEFAULT_FITNESS_MEMBERSHIP_PLANS: MembershipPlanConfig[] = [
+  {
+    daysPerWeek: 1,
+    monthlyPriceUSD: 20,
+    monthlyPriceINR: 1599,
+    label: "1 Day / Week",
+    badge: null,
+    activeStatus: true,
+    curriculum: [
+      "Introduction to HIIT cardio & fat burning basics",
+      "Dynamic bodyweight stretching & warm-up",
+      "Core stabilization & posture correction",
+      "Guided hydration & basic nutrition guidelines",
+    ],
+  },
+  {
+    daysPerWeek: 2,
+    monthlyPriceUSD: 35,
+    monthlyPriceINR: 2799,
+    label: "2 Days / Week",
+    badge: null,
+    activeStatus: true,
+    curriculum: [
+      "Full body fat loss & metabolic conditioning",
+      "Calisthenics & bodyweight strength circuits",
+      "Targeted abdominal & core sculpting drills",
+      "Stamina building & cardiovascular endurance",
+    ],
+  },
+  {
+    daysPerWeek: 3,
+    monthlyPriceUSD: 50,
+    monthlyPriceINR: 3999,
+    label: "3 Days / Week",
+    badge: "MOST POPULAR",
+    activeStatus: true,
+    curriculum: [
+      "High-intensity interval training (HIIT) burner",
+      "Lower body toning & leg endurance workouts",
+      "Upper body strength & arm toning routines",
+      "Agility, speed & flexibility conditioning",
+    ],
+  },
+  {
+    daysPerWeek: 4,
+    monthlyPriceUSD: 65,
+    monthlyPriceINR: 5199,
+    label: "4 Days / Week",
+    badge: null,
+    activeStatus: true,
+    curriculum: [
+      "Advanced tabata & high-volume calorie torching",
+      "Plyometric explosive movement circuits",
+      "Full body muscle toning & posture realignment",
+      "Customized recovery & mobility routines",
+    ],
+  },
+  {
+    daysPerWeek: 5,
+    monthlyPriceUSD: 80,
+    monthlyPriceINR: 6399,
+    label: "5 Days / Week",
+    badge: "BEST VALUE",
+    activeStatus: true,
+    curriculum: [
+      "Extreme weight loss & physique transformation challenge",
+      "Daily progressive overload & conditioning mastery",
+      "Core power, waist slimming & athletic agility",
+      "Personalized 1-on-1 diet & fitness evaluation",
+      "Full body transformation tracking & feedback",
+    ],
+  },
+];
+
+export const DEFAULT_FITNESS_SCHEDULE_CONFIG: CentralScheduleConfig = {
+  trainingDays: DEFAULT_FITNESS_TRAINING_DAYS,
+  batchTimings: DEFAULT_FITNESS_BATCH_TIMINGS,
+  membershipPlans: DEFAULT_FITNESS_MEMBERSHIP_PLANS,
+};
+
+// Aliases for legacy compatibility
+export const DEFAULT_TRAINING_DAYS = DEFAULT_MMA_TRAINING_DAYS;
+export const DEFAULT_BATCH_TIMINGS = DEFAULT_MMA_BATCH_TIMINGS;
+export const DEFAULT_MEMBERSHIP_PLANS = DEFAULT_MMA_MEMBERSHIP_PLANS;
+export const DEFAULT_CENTRAL_SCHEDULE_CONFIG = DEFAULT_MMA_SCHEDULE_CONFIG;
+
+export type CategoryKey = "mma" | "fitness";
+
+export function normalizeCategoryKey(category?: string): CategoryKey {
+  if (!category) return "mma";
+  const c = category.toLowerCase().trim();
+  if (
+    c.includes("fitness") ||
+    c.includes("hiit") ||
+    c.includes("weight") ||
+    c === "fitness-weight-management"
+  ) {
+    return "fitness";
+  }
+  return "mma";
+}
+
+export function getDbKeyForCategory(category?: string): string {
+  const norm = normalizeCategoryKey(category);
+  return norm === "fitness" ? "schedule_pricing_config_fitness" : "schedule_pricing_config_mma";
+}
+
+export function getDefaultScheduleConfig(category?: string): CentralScheduleConfig {
+  const norm = normalizeCategoryKey(category);
+  return norm === "fitness" ? DEFAULT_FITNESS_SCHEDULE_CONFIG : DEFAULT_MMA_SCHEDULE_CONFIG;
+}
 
 export function calculateMonthlyPrice(
   daysPerWeek: number,

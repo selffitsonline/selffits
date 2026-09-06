@@ -5,6 +5,7 @@ import {
   CentralScheduleConfig,
   DEFAULT_CENTRAL_SCHEDULE_CONFIG,
   DEFAULT_MEMBERSHIP_PLANS,
+  getDefaultScheduleConfig,
   calculateMonthlyPrice,
 } from "@/lib/schedule-config";
 import { getScheduleConfigAction } from "@/actions/schedule-config.actions";
@@ -20,6 +21,7 @@ export interface StudentScheduleSelectionState {
 }
 
 export interface StudentScheduleSelectorProps {
+  category?: string;
   title?: string;
   initialDaysPerWeek?: number;
   initialSelectedDays?: string[];
@@ -32,6 +34,7 @@ export interface StudentScheduleSelectorProps {
 }
 
 export function StudentScheduleSelector({
+  category = "mixed-martial-arts",
   title = "Mixed Martial Arts",
   initialDaysPerWeek = 1,
   initialSelectedDays = ["Sunday"],
@@ -42,7 +45,7 @@ export function StudentScheduleSelector({
   showCheckoutCta = false,
   onCheckoutSubmit,
 }: StudentScheduleSelectorProps) {
-  const [config, setConfig] = useState<CentralScheduleConfig>(DEFAULT_CENTRAL_SCHEDULE_CONFIG);
+  const [config, setConfig] = useState<CentralScheduleConfig>(() => getDefaultScheduleConfig(category));
   const [daysPerWeek, setDaysPerWeek] = useState<number>(initialDaysPerWeek);
   const [selectedDays, setSelectedDays] = useState<string[]>(initialSelectedDays);
   const [selectedBatch, setSelectedBatch] = useState<string>(initialSelectedBatch);
@@ -51,16 +54,19 @@ export function StudentScheduleSelector({
   useEffect(() => {
     async function loadConfig() {
       try {
-        const res = await getScheduleConfigAction();
+        const res = await getScheduleConfigAction(category);
         if (res.success && res.config) {
           setConfig(res.config);
+        } else {
+          setConfig(getDefaultScheduleConfig(category));
         }
       } catch (err) {
         console.error("Failed to load central schedule config:", err);
+        setConfig(getDefaultScheduleConfig(category));
       }
     }
     loadConfig();
-  }, []);
+  }, [category]);
 
   useEffect(() => {
     setCurr(currency);

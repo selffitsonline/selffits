@@ -163,6 +163,7 @@ function ProgramsContent() {
         {/* SINGLE SOURCE OF TRUTH: PROMINENT INTERACTIVE SCHEDULE & BATCH BUILDER */}
         <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <StudentScheduleSelector
+            category={mainTab === "mma" ? "mixed-martial-arts" : "fitness-weight-management"}
             title={contextTitle}
             initialDaysPerWeek={1}
             initialSelectedDays={["Sunday"]}

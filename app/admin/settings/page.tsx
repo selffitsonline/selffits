@@ -4,7 +4,9 @@ import React, { useState, useEffect } from "react";
 import { AdminShell } from "@/components/admin/admin-shell";
 import {
   CentralScheduleConfig,
-  DEFAULT_CENTRAL_SCHEDULE_CONFIG,
+  DEFAULT_MMA_SCHEDULE_CONFIG,
+  DEFAULT_FITNESS_SCHEDULE_CONFIG,
+  getDefaultScheduleConfig,
   TrainingDayConfig,
   BatchTimingConfig,
   MembershipPlanConfig,
@@ -24,29 +26,49 @@ import {
   Plus,
   Trash2,
   BookOpen,
+  Flame,
 } from "lucide-react";
 
+type MainCategory = "mixed-martial-arts" | "fitness-weight-management";
+
 export default function AdminSettingsPage() {
-  const [config, setConfig] = useState<CentralScheduleConfig>(DEFAULT_CENTRAL_SCHEDULE_CONFIG);
+  const [selectedCategory, setSelectedCategory] = useState<MainCategory>("mixed-martial-arts");
+  const [configs, setConfigs] = useState<Record<MainCategory, CentralScheduleConfig>>({
+    "mixed-martial-arts": DEFAULT_MMA_SCHEDULE_CONFIG,
+    "fitness-weight-management": DEFAULT_FITNESS_SCHEDULE_CONFIG,
+  });
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [statusMsg, setStatusMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+  const config = configs[selectedCategory] || getDefaultScheduleConfig(selectedCategory);
+
+  const updateSelectedConfig = (updater: (prev: CentralScheduleConfig) => CentralScheduleConfig) => {
+    setConfigs((prev) => ({
+      ...prev,
+      [selectedCategory]: updater(prev[selectedCategory] || getDefaultScheduleConfig(selectedCategory)),
+    }));
+  };
+
   useEffect(() => {
-    async function loadConfig() {
+    async function loadConfigs() {
       setIsLoading(true);
       try {
-        const res = await getScheduleConfigAction();
-        if (res.success && res.config) {
-          setConfig(res.config);
-        }
+        const [mmaRes, fitnessRes] = await Promise.all([
+          getScheduleConfigAction("mixed-martial-arts"),
+          getScheduleConfigAction("fitness-weight-management"),
+        ]);
+        setConfigs({
+          "mixed-martial-arts": (mmaRes.success && mmaRes.config) ? mmaRes.config : DEFAULT_MMA_SCHEDULE_CONFIG,
+          "fitness-weight-management": (fitnessRes.success && fitnessRes.config) ? fitnessRes.config : DEFAULT_FITNESS_SCHEDULE_CONFIG,
+        });
       } catch (err) {
-        console.error("Failed to load schedule config:", err);
+        console.error("Failed to load schedule configs:", err);
       } finally {
         setIsLoading(false);
       }
     }
-    loadConfig();
+    loadConfigs();
   }, []);
 
   const handleSaveConfig = async (e: React.FormEvent) => {
@@ -54,7 +76,7 @@ export default function AdminSettingsPage() {
     setIsSaving(true);
     setStatusMsg(null);
 
-    const res = await updateScheduleConfigAction(config);
+    const res = await updateScheduleConfigAction(selectedCategory, config);
     if (res.success) {
       setStatusMsg({ type: "success", text: res.message || "Schedule & pricing configuration updated successfully!" });
     } else {
@@ -66,45 +88,58 @@ export default function AdminSettingsPage() {
   };
 
   const handleDayRestToggle = (dayIndex: number) => {
-    const updatedDays = [...config.trainingDays];
-    const target = updatedDays[dayIndex];
-    target.restDay = !target.restDay;
-    target.selectable = !target.restDay;
-    setConfig({ ...config, trainingDays: updatedDays });
+    updateSelectedConfig((prev) => {
+      const updatedDays = [...prev.trainingDays];
+      const target = { ...updatedDays[dayIndex] };
+      target.restDay = !target.restDay;
+      target.selectable = !target.restDay;
+      updatedDays[dayIndex] = target;
+      return { ...prev, trainingDays: updatedDays };
+    });
   };
 
   const handleBatchTimingChange = (batchIndex: number, field: keyof BatchTimingConfig, value: string) => {
-    const updatedBatches = [...config.batchTimings];
-    (updatedBatches[batchIndex] as any)[field] = value;
-    setConfig({ ...config, batchTimings: updatedBatches });
+    updateSelectedConfig((prev) => {
+      const updatedBatches = [...prev.batchTimings];
+      updatedBatches[batchIndex] = { ...updatedBatches[batchIndex], [field]: value };
+      return { ...prev, batchTimings: updatedBatches };
+    });
   };
 
   const handlePlanPriceChange = (planIndex: number, field: "monthlyPriceUSD" | "monthlyPriceINR" | "badge", value: any) => {
-    const updatedPlans = [...config.membershipPlans];
-    (updatedPlans[planIndex] as any)[field] = value;
-    setConfig({ ...config, membershipPlans: updatedPlans });
+    updateSelectedConfig((prev) => {
+      const updatedPlans = [...prev.membershipPlans];
+      updatedPlans[planIndex] = { ...updatedPlans[planIndex], [field]: value };
+      return { ...prev, membershipPlans: updatedPlans };
+    });
   };
 
   const handlePlanCurriculumChange = (planIndex: number, topicIndex: number, text: string) => {
-    const updatedPlans = [...config.membershipPlans];
-    const curr = [...(updatedPlans[planIndex].curriculum || [])];
-    curr[topicIndex] = text;
-    updatedPlans[planIndex].curriculum = curr;
-    setConfig({ ...config, membershipPlans: updatedPlans });
+    updateSelectedConfig((prev) => {
+      const updatedPlans = [...prev.membershipPlans];
+      const curr = [...(updatedPlans[planIndex].curriculum || [])];
+      curr[topicIndex] = text;
+      updatedPlans[planIndex] = { ...updatedPlans[planIndex], curriculum: curr };
+      return { ...prev, membershipPlans: updatedPlans };
+    });
   };
 
   const handleAddPlanCurriculumItem = (planIndex: number) => {
-    const updatedPlans = [...config.membershipPlans];
-    const curr = [...(updatedPlans[planIndex].curriculum || []), "New learning syllabus topic"];
-    updatedPlans[planIndex].curriculum = curr;
-    setConfig({ ...config, membershipPlans: updatedPlans });
+    updateSelectedConfig((prev) => {
+      const updatedPlans = [...prev.membershipPlans];
+      const curr = [...(updatedPlans[planIndex].curriculum || []), "New learning syllabus topic"];
+      updatedPlans[planIndex] = { ...updatedPlans[planIndex], curriculum: curr };
+      return { ...prev, membershipPlans: updatedPlans };
+    });
   };
 
   const handleDeletePlanCurriculumItem = (planIndex: number, topicIndex: number) => {
-    const updatedPlans = [...config.membershipPlans];
-    const curr = (updatedPlans[planIndex].curriculum || []).filter((_, i) => i !== topicIndex);
-    updatedPlans[planIndex].curriculum = curr;
-    setConfig({ ...config, membershipPlans: updatedPlans });
+    updateSelectedConfig((prev) => {
+      const updatedPlans = [...prev.membershipPlans];
+      const curr = (updatedPlans[planIndex].curriculum || []).filter((_, i) => i !== topicIndex);
+      updatedPlans[planIndex] = { ...updatedPlans[planIndex], curriculum: curr };
+      return { ...prev, membershipPlans: updatedPlans };
+    });
   };
 
   return (
@@ -116,11 +151,40 @@ export default function AdminSettingsPage() {
             Admin Configuration Hub
           </span>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white font-[family-name:var(--font-outfit)] mt-2">
-            Central Schedule, Batch, Curriculum & Pricing Management
+            Independent Schedule, Batch, Curriculum & Pricing Management
           </h1>
           <p className="text-xs text-gray-400 mt-1">
-            Manage global training days, rest days, GMT batch timings, membership pricing, and syllabus curriculum. Changes instantly reflect across the entire student enrollment system.
+            Manage category-specific training days, rest days, GMT batch timings, membership pricing, and syllabus curriculum. Changes save exclusively to the selected category.
           </p>
+        </div>
+
+        {/* Category Context Selector Dock */}
+        <div className="bg-[#14161D] p-3 rounded-2xl border border-white/10 shadow-xl flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setSelectedCategory("mixed-martial-arts")}
+            className={`flex-1 px-5 py-3 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-2 ${
+              selectedCategory === "mixed-martial-arts"
+                ? "bg-[#E50914] text-white shadow-lg shadow-[#E50914]/25 ring-2 ring-[#E50914]"
+                : "text-gray-400 hover:text-white hover:bg-white/5"
+            }`}
+          >
+            <ShieldCheck className="w-4 h-4" />
+            <span>Mixed Martial Arts</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setSelectedCategory("fitness-weight-management")}
+            className={`flex-1 px-5 py-3 rounded-xl text-xs font-black transition-all cursor-pointer flex items-center justify-center gap-2 ${
+              selectedCategory === "fitness-weight-management"
+                ? "bg-[#E50914] text-white shadow-lg shadow-[#E50914]/25 ring-2 ring-[#E50914]"
+                : "text-gray-400 hover:text-white hover:bg-white/5"
+            }`}
+          >
+            <Flame className="w-4 h-4" />
+            <span>Fitness & Weight Management</span>
+          </button>
         </div>
 
         {statusMsg && (

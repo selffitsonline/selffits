@@ -28,6 +28,9 @@ import {
   CentralScheduleConfig,
   DEFAULT_CENTRAL_SCHEDULE_CONFIG,
   DEFAULT_MEMBERSHIP_PLANS,
+  DEFAULT_MMA_SCHEDULE_CONFIG,
+  DEFAULT_FITNESS_SCHEDULE_CONFIG,
+  getDefaultScheduleConfig,
   TrainingDayConfig,
   BatchTimingConfig,
   MembershipPlanConfig,
@@ -50,8 +53,20 @@ export function AdminProgramsView() {
   // Admin Management Section Tabs: "schedule_builder" | "category_metadata"
   const [managementSection, setManagementSection] = useState<"schedule_builder" | "category_metadata">("schedule_builder");
 
-  // 1. Central Schedule & Pricing Configuration State
-  const [scheduleConfig, setScheduleConfig] = useState<CentralScheduleConfig>(DEFAULT_CENTRAL_SCHEDULE_CONFIG);
+  // 1. Central Schedule & Pricing Configuration State per Category
+  const [scheduleConfigs, setScheduleConfigs] = useState<Record<MainTab, CentralScheduleConfig>>({
+    mma: DEFAULT_MMA_SCHEDULE_CONFIG,
+    hiit: DEFAULT_FITNESS_SCHEDULE_CONFIG,
+  });
+
+  const scheduleConfig = scheduleConfigs[activeCategory] || getDefaultScheduleConfig(activeCategory);
+
+  const updateActiveScheduleConfig = (updater: (prev: CentralScheduleConfig) => CentralScheduleConfig) => {
+    setScheduleConfigs((prev) => ({
+      ...prev,
+      [activeCategory]: updater(prev[activeCategory] || getDefaultScheduleConfig(activeCategory)),
+    }));
+  };
 
   // 2. Category Titles, Descriptions & Age Groups State
   const [categoryTitles, setCategoryTitles] = useState<Record<string, { title: string; age: string; description: string; classInfo: string }>>({
@@ -101,14 +116,16 @@ export function AdminProgramsView() {
   useEffect(() => {
     async function loadData() {
       try {
-        const [schRes, catRes] = await Promise.all([
-          getScheduleConfigAction(),
+        const [mmaRes, hiitRes, catRes] = await Promise.all([
+          getScheduleConfigAction("mixed-martial-arts"),
+          getScheduleConfigAction("fitness-weight-management"),
           getAdminProgramsCatalogAction(),
         ]);
 
-        if (schRes && schRes.success && schRes.config) {
-          setScheduleConfig(schRes.config);
-        }
+        setScheduleConfigs({
+          mma: (mmaRes && mmaRes.success && mmaRes.config) ? mmaRes.config : DEFAULT_MMA_SCHEDULE_CONFIG,
+          hiit: (hiitRes && hiitRes.success && hiitRes.config) ? hiitRes.config : DEFAULT_FITNESS_SCHEDULE_CONFIG,
+        });
 
         if (catRes && catRes.success && catRes.catalog) {
           const cat = catRes.catalog as any;
@@ -125,26 +142,27 @@ export function AdminProgramsView() {
     loadData();
   }, []);
 
-  // Save Central Program Configuration to Database
+  // Save Central Program Configuration to Database (Separately per Category)
   const handleSaveAllConfig = async () => {
     setIsSaving(true);
     setMsg(null);
 
     try {
-      const [schRes, catRes] = await Promise.all([
-        updateScheduleConfigAction(scheduleConfig),
+      const [mmaSaveRes, hiitSaveRes, catRes] = await Promise.all([
+        updateScheduleConfigAction("mixed-martial-arts", scheduleConfigs.mma),
+        updateScheduleConfigAction("fitness-weight-management", scheduleConfigs.hiit),
         updateAdminProgramsCatalogAction({ categoryTitles }),
       ]);
 
-      if (schRes.success && catRes.success) {
+      if (mmaSaveRes.success && hiitSaveRes.success && catRes.success) {
         setMsg({
           type: "success",
-          text: "All Program Architecture, Weekly Schedule, Prices, Training Days, Batch Timings, and Curriculums published successfully to live website!",
+          text: "Independent Category Configurations, Schedules, Prices, Batch Timings, and Curriculums published successfully to live website!",
         });
       } else {
         setMsg({
           type: "error",
-          text: schRes.error || catRes.error || "Failed to publish program configuration.",
+          text: mmaSaveRes.error || hiitSaveRes.error || catRes.error || "Failed to publish program configuration.",
         });
       }
     } catch (err: any) {
@@ -155,23 +173,24 @@ export function AdminProgramsView() {
   };
 
   const handleResetDefaults = () => {
-    setScheduleConfig(DEFAULT_CENTRAL_SCHEDULE_CONFIG);
+    const defaultCfg = getDefaultScheduleConfig(activeCategory);
+    updateActiveScheduleConfig(() => defaultCfg);
     setMsg({
       type: "success",
-      text: "Reset configuration to system default 1–5 Days/Wk pricing, training days, and batch timings. Click 'Publish All Program Changes' to save.",
+      text: `Reset ${activeCategory === "mma" ? "Mixed Martial Arts" : "Fitness & Weight Management"} configuration to default values. Click 'Publish All Program Changes' to save.`,
     });
   };
 
   // Handler: Toggle Training Day vs Rest Day
   const handleToggleDayRestState = (dayName: string) => {
-    setScheduleConfig((prev) => ({
+    updateActiveScheduleConfig((prev) => ({
       ...prev,
       trainingDays: prev.trainingDays.map((d) =>
         d.dayName === dayName
           ? {
               ...d,
               restDay: !d.restDay,
-              selectable: d.restDay, // If it was restDay, making it non-rest makes it selectable
+              selectable: d.restDay,
             }
           : d
       ),
@@ -184,7 +203,7 @@ export function AdminProgramsView() {
     field: "monthlyPriceUSD" | "monthlyPriceINR" | "badge" | "label" | "activeStatus",
     value: any
   ) => {
-    setScheduleConfig((prev) => ({
+    updateActiveScheduleConfig((prev) => ({
       ...prev,
       membershipPlans: prev.membershipPlans.map((p) =>
         p.daysPerWeek === daysPerWeek ? { ...p, [field]: value } : p
@@ -194,7 +213,7 @@ export function AdminProgramsView() {
 
   // Handler: Update Curriculum Topic
   const handleUpdateCurriculumItem = (daysPerWeek: number, idx: number, text: string) => {
-    setScheduleConfig((prev) => ({
+    updateActiveScheduleConfig((prev) => ({
       ...prev,
       membershipPlans: prev.membershipPlans.map((p) => {
         if (p.daysPerWeek === daysPerWeek) {
@@ -209,7 +228,7 @@ export function AdminProgramsView() {
 
   // Handler: Add Curriculum Item
   const handleAddCurriculumItem = (daysPerWeek: number) => {
-    setScheduleConfig((prev) => ({
+    updateActiveScheduleConfig((prev) => ({
       ...prev,
       membershipPlans: prev.membershipPlans.map((p) => {
         if (p.daysPerWeek === daysPerWeek) {
@@ -223,7 +242,7 @@ export function AdminProgramsView() {
 
   // Handler: Delete Curriculum Item
   const handleDeleteCurriculumItem = (daysPerWeek: number, idx: number) => {
-    setScheduleConfig((prev) => ({
+    updateActiveScheduleConfig((prev) => ({
       ...prev,
       membershipPlans: prev.membershipPlans.map((p) => {
         if (p.daysPerWeek === daysPerWeek) {
@@ -237,7 +256,7 @@ export function AdminProgramsView() {
 
   // Handler: Toggle Batch Active Status
   const handleToggleBatchStatus = (batchId: string) => {
-    setScheduleConfig((prev) => ({
+    updateActiveScheduleConfig((prev) => ({
       ...prev,
       batchTimings: prev.batchTimings.map((b) =>
         b.id === batchId ? { ...b, activeStatus: !b.activeStatus } : b
@@ -247,7 +266,7 @@ export function AdminProgramsView() {
 
   // Handler: Delete Batch
   const handleDeleteBatch = (batchId: string) => {
-    setScheduleConfig((prev) => ({
+    updateActiveScheduleConfig((prev) => ({
       ...prev,
       batchTimings: prev.batchTimings.filter((b) => b.id !== batchId),
     }));
@@ -266,7 +285,7 @@ export function AdminProgramsView() {
       displayLabel: `${newBatchStart.trim()} – ${newBatchEnd.trim()}`,
       activeStatus: true,
     };
-    setScheduleConfig((prev) => ({
+    updateActiveScheduleConfig((prev) => ({
       ...prev,
       batchTimings: [...prev.batchTimings, newBatch],
     }));

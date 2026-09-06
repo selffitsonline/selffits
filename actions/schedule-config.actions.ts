@@ -6,45 +6,59 @@ import { revalidatePath } from "next/cache";
 import {
   CentralScheduleConfig,
   DEFAULT_CENTRAL_SCHEDULE_CONFIG,
+  getDefaultScheduleConfig,
+  getDbKeyForCategory,
+  normalizeCategoryKey,
   TrainingDayConfig,
   BatchTimingConfig,
   MembershipPlanConfig,
 } from "@/lib/schedule-config";
 
-const CONFIG_KEY = "schedule_pricing_config";
-
-export async function getScheduleConfigAction(): Promise<{
+export async function getScheduleConfigAction(category?: string): Promise<{
   success: boolean;
   config: CentralScheduleConfig;
   error?: string;
 }> {
   try {
-    const setting = await db.websiteSettings.findUnique({
-      where: { key: CONFIG_KEY },
+    const configKey = getDbKeyForCategory(category);
+    const defaultConfig = getDefaultScheduleConfig(category);
+
+    let setting = await db.websiteSettings.findUnique({
+      where: { key: configKey },
     });
+
+    // Fallback check for legacy key if MMA and new key not created yet
+    if (!setting && normalizeCategoryKey(category) === "mma") {
+      setting = await db.websiteSettings.findUnique({
+        where: { key: "schedule_pricing_config" },
+      });
+    }
 
     if (setting && setting.value) {
       const stored = setting.value as unknown as CentralScheduleConfig;
       // Merge with defaults in case of missing fields
       const mergedConfig: CentralScheduleConfig = {
-        trainingDays: stored.trainingDays || DEFAULT_CENTRAL_SCHEDULE_CONFIG.trainingDays,
-        batchTimings: stored.batchTimings || DEFAULT_CENTRAL_SCHEDULE_CONFIG.batchTimings,
-        membershipPlans: stored.membershipPlans || DEFAULT_CENTRAL_SCHEDULE_CONFIG.membershipPlans,
+        trainingDays: stored.trainingDays || defaultConfig.trainingDays,
+        batchTimings: stored.batchTimings || defaultConfig.batchTimings,
+        membershipPlans: stored.membershipPlans || defaultConfig.membershipPlans,
       };
       return { success: true, config: mergedConfig };
     }
 
-    return { success: true, config: DEFAULT_CENTRAL_SCHEDULE_CONFIG };
+    return { success: true, config: defaultConfig };
   } catch (err: any) {
     console.error("getScheduleConfigAction error:", err);
     return {
       success: true,
-      config: DEFAULT_CENTRAL_SCHEDULE_CONFIG,
+      config: getDefaultScheduleConfig(category),
     };
   }
 }
 
-export async function updateScheduleConfigAction(configData: CentralScheduleConfig): Promise<{
+export async function updateScheduleConfigAction(
+  categoryOrConfig: string | CentralScheduleConfig,
+  maybeConfig?: CentralScheduleConfig
+): Promise<{
   success: boolean;
   message?: string;
   error?: string;
@@ -55,14 +69,30 @@ export async function updateScheduleConfigAction(configData: CentralScheduleConf
       return { success: false, error: "Unauthorized access to update system schedule configuration." };
     }
 
+    let category = "mixed-martial-arts";
+    let configData: CentralScheduleConfig;
+
+    if (typeof categoryOrConfig === "string") {
+      category = categoryOrConfig;
+      if (!maybeConfig) {
+        return { success: false, error: "Invalid schedule configuration payload." };
+      }
+      configData = maybeConfig;
+    } else {
+      configData = categoryOrConfig;
+    }
+
     if (!configData || !Array.isArray(configData.trainingDays) || !Array.isArray(configData.batchTimings) || !Array.isArray(configData.membershipPlans)) {
       return { success: false, error: "Invalid schedule configuration payload." };
     }
 
+    const configKey = getDbKeyForCategory(category);
+    const categoryName = normalizeCategoryKey(category) === "fitness" ? "Fitness & Weight Management" : "Mixed Martial Arts";
+
     await db.websiteSettings.upsert({
-      where: { key: CONFIG_KEY },
+      where: { key: configKey },
       update: { value: JSON.parse(JSON.stringify(configData)) },
-      create: { key: CONFIG_KEY, value: JSON.parse(JSON.stringify(configData)) },
+      create: { key: configKey, value: JSON.parse(JSON.stringify(configData)) },
     });
 
     revalidatePath("/programs");
@@ -73,7 +103,7 @@ export async function updateScheduleConfigAction(configData: CentralScheduleConf
 
     return {
       success: true,
-      message: "Weekly Schedule, Batch Timings, and Membership Pricing configuration saved successfully!",
+      message: `Weekly Schedule, Batch Timings, and Membership Pricing saved successfully for ${categoryName}!`,
     };
   } catch (err: any) {
     console.error("updateScheduleConfigAction error:", err);
