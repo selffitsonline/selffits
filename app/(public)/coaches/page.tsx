@@ -1,12 +1,17 @@
-"use client";
+export const dynamic = "force-dynamic";
 
+import React from "react";
 import Link from "next/link";
 import { Header } from "@/components/public/header";
 import { Footer } from "@/components/public/footer";
 import { CoachesCarousel } from "@/components/public/coaches-carousel";
-import { Award, ShieldCheck, Sparkles, ArrowRight } from "lucide-react";
+import { getAdminHomepageManagementAction } from "@/actions/admin.actions";
+import { Award, Sparkles, ArrowRight } from "lucide-react";
 
-export default function CoachesPage() {
+export default async function CoachesPage() {
+  const res = await getAdminHomepageManagementAction();
+  const coachesItems = res && res.success ? res.homepageData?.coaches?.items : undefined;
+
   return (
     <div className="min-h-screen bg-[#0A0B0E] text-white flex flex-col selection:bg-[#E50914] selection:text-white">
       <Header />
@@ -26,9 +31,9 @@ export default function CoachesPage() {
           </p>
         </section>
 
-        {/* Interactive Coaches Carousel (3 per view) */}
+        {/* Interactive Coaches Carousel (Server-fetched items) */}
         <section className="py-6">
-          <CoachesCarousel />
+          <CoachesCarousel items={coachesItems} />
         </section>
 
         {/* Why Train With Our Master Instructors Section */}
@@ -66,10 +71,9 @@ export default function CoachesPage() {
           </div>
         </section>
 
-        {/* BECOME A SELFFITS COACH CTA BANNER (Just Above Footer) */}
+        {/* BECOME A SELFFITS COACH CTA BANNER */}
         <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="rounded-3xl p-8 sm:p-12 bg-[#0A0B0E] border border-white/15 text-center space-y-6 shadow-2xl relative overflow-hidden">
-            {/* Glow Accent */}
             <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-tr from-[#E50914]/15 to-[#0080FF]/15 rounded-full blur-[100px] pointer-events-none" />
 
             <div className="relative z-10 space-y-3">

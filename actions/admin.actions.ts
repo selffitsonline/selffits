@@ -717,6 +717,8 @@ export async function updateAdminHomepageSectionAction(sectionKey: string, data:
     });
 
     revalidatePath("/");
+    revalidatePath("/coaches");
+    revalidatePath("/programs");
     return { success: true, message: "Section published successfully!" };
   } catch (err: any) {
     console.error("updateAdminHomepageSectionAction error:", err);
