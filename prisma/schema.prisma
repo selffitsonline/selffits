@@ -55,6 +55,14 @@ enum ContactStatus {
   RESOLVED
 }
 
+enum ExaminationStatus {
+  PENDING
+  PASSED
+  FAILED
+  ABSENT
+}
+
+
 model User {
   id            String          @id @default(cuid())
   firstName     String?
@@ -76,6 +84,9 @@ model User {
   issuedCerts    Certificate[]  @relation("AdminIssuedCertificates")
   notifications  Notification[]
   batchStudents  BatchStudent[]
+  examinations   Examination[]
+  beltProgressions BeltProgression[]
+
 
   @@index([email])
   @@index([role])
@@ -94,6 +105,8 @@ model StudentProfile {
   ageGroup         AgeGroup?
   age              Int?
   gender           String?
+  currentBelt      String    @default("White Belt")
+  beltAwardedAt    DateTime?
 }
 
 model VerificationToken {
@@ -129,6 +142,7 @@ model Program {
   membershipPlans MembershipPlan[]
   certificates    Certificate[]
   batches         Batch[]
+  examinations    Examination[]
 }
 
 model MembershipPlan {
@@ -204,9 +218,48 @@ model Certificate {
   issuedDate        DateTime @default(now())
   issuedByUserId    String
   issuedByUser      User     @relation("AdminIssuedCertificates", fields: [issuedByUserId], references: [id])
+  beltName          String?
+  beltProgression   BeltProgression?
 
   @@index([userId])
 }
+
+model Examination {
+  id               String            @id @default(cuid())
+  userId           String
+  user             User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  programId        String?
+  program          Program?          @relation(fields: [programId], references: [id])
+  targetBelt       String
+  examDate         DateTime
+  status           ExaminationStatus @default(PENDING)
+  remarks          String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  beltProgressions BeltProgression[]
+
+  @@index([userId])
+  @@index([status])
+}
+
+model BeltProgression {
+  id              String       @id @default(cuid())
+  userId          String
+  user            User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  examinationId   String?
+  examination     Examination? @relation(fields: [examinationId], references: [id])
+  previousBelt    String?
+  currentBelt     String
+  awardDate       DateTime     @default(now())
+  certificateId  String?      @unique
+  certificate     Certificate? @relation(fields: [certificateId], references: [id], onDelete: SetNull)
+  notes           String?
+  createdAt       DateTime     @default(now())
+
+  @@index([userId])
+}
+
 
 model Notification {
   id        String   @id @default(cuid())
@@ -325,6 +378,7 @@ model Batch {
   program          Program          @relation(fields: [programId], references: [id], onDelete: Cascade)
   membershipPlanId String?
   membershipPlan   MembershipPlan?  @relation(fields: [membershipPlanId], references: [id])
+  beltLevel        String           @default("Yellow Belt")
   coachId          String
   coach            CoachApplication @relation(fields: [coachId], references: [id])
 
@@ -332,6 +386,7 @@ model Batch {
   timeSlot         String           // "Morning" | "Evening" | "Night"
   clockTiming      String           // e.g. "09:00 AM to 09:45 AM (GMT)"
   meetingUrl       String?          // Google Meet / Zoom URL e.g. "https://meet.google.com/abc-defg-hij"
+  examDate         DateTime?        // Scheduled examination date for this batch
 
   maxCapacity      Int              @default(8)
   status           BatchStatus      @default(ACTIVE)

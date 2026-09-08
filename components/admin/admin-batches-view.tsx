@@ -72,7 +72,8 @@ export function AdminBatchesView({
   // Filter States
   const [activeTab, setActiveTab] = useState<"ALL" | "ACTIVE" | "FULL" | "INACTIVE">("ALL");
   const [selectedProgram, setSelectedProgram] = useState<string>("ALL");
-  const [selectedCoach, setSelectedCoach] = useState<string>("ALL");
+  const [selectedDateFilter, setSelectedDateFilter] = useState<string>("ALL");
+  const [selectedBeltFilter, setSelectedBeltFilter] = useState<string>("ALL");
   const [selectedSchedule, setSelectedSchedule] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
@@ -97,8 +98,13 @@ export function AdminBatchesView({
     setCurrentPage(1);
   };
 
-  const handleCoachChange = (c: string) => {
-    setSelectedCoach(c);
+  const handleDateFilterChange = (df: string) => {
+    setSelectedDateFilter(df);
+    setCurrentPage(1);
+  };
+
+  const handleBeltFilterChange = (belt: string) => {
+    setSelectedBeltFilter(belt);
     setCurrentPage(1);
   };
 
@@ -128,8 +134,27 @@ export function AdminBatchesView({
     // Program filter
     if (selectedProgram !== "ALL" && b.programId !== selectedProgram) return false;
 
-    // Coach filter
-    if (selectedCoach !== "ALL" && b.coachId !== selectedCoach) return false;
+    // Date filter (Exam Date or Date Created)
+    if (selectedDateFilter !== "ALL") {
+      const targetDateStr = b.examDateISO || b.createdAtISO;
+      if (targetDateStr) {
+        const targetDate = new Date(targetDateStr);
+        const now = new Date();
+        if (selectedDateFilter === "THIS_MONTH") {
+          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          if (targetDate < startOfMonth) return false;
+        } else if (selectedDateFilter === "LAST_30_DAYS") {
+          const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          if (targetDate < thirtyDaysAgo) return false;
+        } else if (selectedDateFilter === "THIS_YEAR") {
+          const startOfYear = new Date(now.getFullYear(), 0, 1);
+          if (targetDate < startOfYear) return false;
+        }
+      }
+    }
+
+    // Belt Level filter
+    if (selectedBeltFilter !== "ALL" && b.beltLevel !== selectedBeltFilter) return false;
 
     // Schedule filter
     if (selectedSchedule !== "ALL" && b.dayCombination !== selectedSchedule) return false;
@@ -213,6 +238,13 @@ export function AdminBatchesView({
       alert(res.error || "Failed to update batch.");
     }
     setTimeout(() => setNotification(null), 4000);
+  };
+
+  const handleBatchUpdated = (updatedFields: any) => {
+    setBatches((prev) =>
+      prev.map((b) => (b.id === updatedFields.id ? { ...b, ...updatedFields } : b))
+    );
+    setSelectedBatchForDetails((prev: any) => (prev ? { ...prev, ...updatedFields } : null));
   };
 
   return (
@@ -363,20 +395,43 @@ export function AdminBatchesView({
               </select>
             </div>
 
-            {/* Coach Dropdown */}
+            {/* REPLACED: DATE FILTER DROPDOWN (Replaces "All Active Coaches") */}
             <div className="flex items-center gap-2 bg-[#0F1117] border border-white/10 rounded-xl px-3 py-1.5">
-              <UserCheck className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+              <Calendar className="w-3.5 h-3.5 text-[#0080FF] shrink-0" />
               <select
-                value={selectedCoach}
-                onChange={(e) => handleCoachChange(e.target.value)}
+                value={selectedDateFilter}
+                onChange={(e) => handleDateFilterChange(e.target.value)}
                 className="bg-transparent text-white text-xs font-semibold focus:outline-none cursor-pointer"
               >
                 <option value="ALL" className="bg-[#14161D]">
-                  All Active Coaches
+                  All Dates
                 </option>
-                {coaches.map((c) => (
-                  <option key={c.id} value={c.id} className="bg-[#14161D]">
-                    {c.fullName}
+                <option value="THIS_MONTH" className="bg-[#14161D]">
+                  This Month
+                </option>
+                <option value="LAST_30_DAYS" className="bg-[#14161D]">
+                  Last 30 Days
+                </option>
+                <option value="THIS_YEAR" className="bg-[#14161D]">
+                  This Year
+                </option>
+              </select>
+            </div>
+
+            {/* NEW: BELT LEVEL FILTER DROPDOWN */}
+            <div className="flex items-center gap-2 bg-[#0F1117] border border-white/10 rounded-xl px-3 py-1.5">
+              <span className="text-xs">🥋</span>
+              <select
+                value={selectedBeltFilter}
+                onChange={(e) => handleBeltFilterChange(e.target.value)}
+                className="bg-transparent text-white text-xs font-semibold focus:outline-none cursor-pointer"
+              >
+                <option value="ALL" className="bg-[#14161D]">
+                  All Belts
+                </option>
+                {["Yellow Belt", "Orange Belt", "Green Belt", "Blue Belt", "Purple Belt", "Brown Belt", "Black Belt"].map((b) => (
+                  <option key={b} value={b} className="bg-[#14161D]">
+                    {b}
                   </option>
                 ))}
               </select>
@@ -384,7 +439,7 @@ export function AdminBatchesView({
 
             {/* Schedule Dropdown */}
             <div className="flex items-center gap-2 bg-[#0F1117] border border-white/10 rounded-xl px-3 py-1.5">
-              <Calendar className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+              <Clock className="w-3.5 h-3.5 text-gray-400 shrink-0" />
               <select
                 value={selectedSchedule}
                 onChange={(e) => handleScheduleChange(e.target.value)}
@@ -403,13 +458,15 @@ export function AdminBatchesView({
 
             {/* Clear Filters Button */}
             {(selectedProgram !== "ALL" ||
-              selectedCoach !== "ALL" ||
+              selectedDateFilter !== "ALL" ||
+              selectedBeltFilter !== "ALL" ||
               selectedSchedule !== "ALL" ||
               searchQuery !== "") && (
               <button
                 onClick={() => {
                   setSelectedProgram("ALL");
-                  setSelectedCoach("ALL");
+                  setSelectedDateFilter("ALL");
+                  setSelectedBeltFilter("ALL");
                   setSelectedSchedule("ALL");
                   setSearchQuery("");
                   setCurrentPage(1);
@@ -480,6 +537,18 @@ export function AdminBatchesView({
                         </h3>
                         <div className="flex flex-wrap items-center gap-1.5 mt-1.5">
                           <span className="text-xs text-[#0080FF] font-bold">{b.programTitle}</span>
+                          <span className="px-2.5 py-0.5 rounded-md bg-amber-400/20 text-amber-300 border border-amber-400/30 font-black text-[10px]">
+                            🥋 {b.beltLevel || "Yellow Belt"}
+                          </span>
+                          {b.examDate ? (
+                            <span className="px-2.5 py-0.5 rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/30 font-black text-[10px]">
+                              📅 Exam: {b.examDate}
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-md bg-white/5 text-gray-500 border border-white/10 font-semibold text-[10px]">
+                              No Exam Date
+                            </span>
+                          )}
                           {b.programCategory && (
                             <span className="px-2 py-0.5 rounded-md bg-[#0080FF]/15 text-[#0080FF] border border-[#0080FF]/30 font-extrabold text-[10px]">
                               {b.programCategory === "mixed-martial-arts" || b.programCategory?.toUpperCase().includes("MMA") ? "MMA" : "Fitness"}
@@ -715,6 +784,7 @@ export function AdminBatchesView({
           onOpenAssignModal={(b) => setSelectedBatchForAssign(b)}
           onRemoveStudent={handleRemoveStudent}
           onDeactivateBatch={handleDeactivateBatch}
+          onBatchUpdated={handleBatchUpdated}
         />
 
         <AssignStudentModal

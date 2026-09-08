@@ -13,7 +13,7 @@ import {
   getDietNutritionConfigAction,
   DietNutritionConfig,
 } from "@/actions/diet-nutrition.actions";
-import { Calendar, Clock, Check, Zap, AlertCircle, ShieldCheck, Sparkles, Lock, BookOpen, FileText } from "lucide-react";
+import { Calendar, Clock, Check, Zap, AlertCircle, ShieldCheck, Sparkles, Lock, BookOpen, FileText, ChevronDown } from "lucide-react";
 
 const DEFAULT_DIET_NUTRITION_CONFIG: DietNutritionConfig = {
   title: "Diet & Nutrition Program",
@@ -63,6 +63,7 @@ export function StudentScheduleSelector({
   const [daysPerWeek, setDaysPerWeek] = useState<number>(initialDaysPerWeek);
   const [selectedDays, setSelectedDays] = useState<string[]>(initialSelectedDays);
   const [selectedBatch, setSelectedBatch] = useState<string>(initialSelectedBatch);
+  const [isCurriculumOpen, setIsCurriculumOpen] = useState<boolean>(false);
 
   useEffect(() => {
     async function loadConfig() {
@@ -374,37 +375,63 @@ export function StudentScheduleSelector({
         </div>
       </div>
 
-      {/* STEP 4: CURRICULUM & LEARNING SYLLABUS BREAKDOWN */}
-      <div className="space-y-3 pt-2">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-4">
-          <label className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-gray-200 flex items-center gap-2.5">
-            <span className="w-6 h-6 rounded-lg bg-[#E50914] text-white text-xs font-black flex items-center justify-center shrink-0 shadow-md">
-              4
-            </span>
-            <span>Curriculum & Learning Syllabus ({daysPerWeek} {daysPerWeek === 1 ? "Day" : "Days"} / Wk Plan)</span>
-          </label>
-          <span className="text-xs font-bold text-[#0080FF] flex items-center gap-1 pl-8 sm:pl-0">
-            <BookOpen className="w-3.5 h-3.5" /> Verified Academy Curriculum
-          </span>
-        </div>
-
-        <div className="p-4 sm:p-5 rounded-2xl bg-[#0F1117] border border-white/10 space-y-3">
-          <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
-            <span className="text-xs font-extrabold text-white uppercase tracking-wider">
-              Included Topics in {daysPerWeek} {daysPerWeek === 1 ? "Day" : "Days"} / Week Tier:
-            </span>
-            <span className="text-[10px] font-bold text-gray-400">Zoom Live Online Classes</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-            {activeCurriculum.map((topic, tIdx) => (
-              <div key={tIdx} className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[#14161D] border border-white/5 text-xs text-gray-200 font-medium">
-                <span className="w-5 h-5 rounded-full bg-[#E50914]/20 border border-[#E50914]/40 text-[#E50914] text-[10px] font-black flex items-center justify-center shrink-0 mt-0.5">
-                  {tIdx + 1}
+      {/* STEP 4: CURRICULUM & LEARNING SYLLABUS BREAKDOWN (SINGLE CONTAINER ACCORDION) */}
+      <div className="pt-2">
+        <div className="rounded-2xl bg-[#0F1117] border border-white/10 transition-all duration-300 overflow-hidden shadow-md hover:border-white/20">
+          {/* Accordion Header / Toggle */}
+          <button
+            type="button"
+            onClick={() => setIsCurriculumOpen(!isCurriculumOpen)}
+            className="w-full flex items-center justify-between p-4 sm:p-5 text-left cursor-pointer group focus:outline-none"
+            aria-expanded={isCurriculumOpen}
+          >
+            <div className="flex items-center gap-3">
+              <span className="w-6 h-6 rounded-lg bg-[#E50914] text-white text-xs font-black flex items-center justify-center shrink-0 shadow-md">
+                4
+              </span>
+              <div>
+                <span className="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-gray-200 block">
+                  Curriculum & Learning Syllabus ({daysPerWeek} {daysPerWeek === 1 ? "Day" : "Days"} / Wk Plan)
                 </span>
-                <span>{topic}</span>
+                <span className="text-[11px] font-medium text-gray-400 block mt-0.5">
+                  {isCurriculumOpen ? "Click to collapse syllabus details" : "Click to expand & view full learning syllabus"}
+                </span>
               </div>
-            ))}
+            </div>
+
+            <div className="flex items-center gap-2.5 shrink-0">
+              <span className="hidden sm:flex items-center gap-1 text-xs font-bold text-[#0080FF]">
+                <BookOpen className="w-3.5 h-3.5" /> Verified Curriculum
+              </span>
+              <div className="w-8 h-8 rounded-xl bg-white/5 group-hover:bg-white/10 border border-white/10 flex items-center justify-center text-gray-300 transition-colors">
+                <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isCurriculumOpen ? "rotate-180 text-[#0080FF]" : ""}`} />
+              </div>
+            </div>
+          </button>
+
+          {/* Smooth Expandable Content Body inside the SAME Container */}
+          <div
+            className={`grid transition-all duration-300 ease-in-out ${
+              isCurriculumOpen
+                ? "grid-rows-[1fr] opacity-100 border-t border-white/10 p-4 sm:p-5"
+                : "grid-rows-[0fr] opacity-0 p-0"
+            }`}
+          >
+            <div className="overflow-hidden">
+              <div className="space-y-3">
+                {activeCurriculum.map((topic, tIdx) => (
+                  <div
+                    key={tIdx}
+                    className="flex items-start sm:items-center gap-3 text-xs sm:text-sm text-gray-200 font-medium leading-relaxed"
+                  >
+                    <span className="w-5 h-5 rounded-md bg-[#E50914]/15 text-[#E50914] text-xs font-black flex items-center justify-center shrink-0">
+                      {tIdx + 1}
+                    </span>
+                    <span className="flex-1">{topic}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>

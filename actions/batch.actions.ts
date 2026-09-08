@@ -138,6 +138,11 @@ export async function getAdminBatchesAction() {
         };
       });
 
+      const examDateFormatted = b.examDate
+        ? b.examDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+        : null;
+      const examDateISO = b.examDate ? b.examDate.toISOString().split("T")[0] : null;
+
       return {
         id: b.id,
         batchId: b.batchId,
@@ -148,6 +153,7 @@ export async function getAdminBatchesAction() {
         targetAudience: b.program.targetAudience,
         membershipPlanId: b.membershipPlanId || null,
         levelName: getProgramLevelName(b.membershipPlan?.tierType, b.membershipPlan?.name),
+        beltLevel: b.beltLevel || "Yellow Belt",
         coachId: b.coachId,
         coachName: b.coach.fullName,
         coachEmail: b.coach.email,
@@ -158,12 +164,15 @@ export async function getAdminBatchesAction() {
         timeSlot: b.timeSlot,
         clockTiming: b.clockTiming,
         meetingUrl: b.meetingUrl || null,
+        examDate: examDateFormatted,
+        examDateISO,
         maxCapacity: maxCap,
         studentCount,
         availableSeats,
         capacityLabel: `${studentCount} / ${maxCap}`,
         status: computedStatus,
         createdAt: b.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+        createdAtISO: b.createdAt.toISOString(),
         students: assignedStudents,
       };
     });
@@ -281,11 +290,13 @@ export async function createBatchAction(data: {
   name: string;
   programId: string;
   membershipPlanId?: string;
+  beltLevel: string;
   coachId: string;
   dayCombination: string;
   timeSlot: string;
   clockTiming?: string;
   meetingUrl?: string;
+  examDate?: string | null;
   maxCapacity?: number;
 }) {
   try {
@@ -300,6 +311,20 @@ export async function createBatchAction(data: {
 
     const clockTiming = data.clockTiming || TIME_SLOT_MAP[data.timeSlot] || `${data.timeSlot} (GMT)`;
     const maxCap = Math.max(1, Number(data.maxCapacity) || 8);
+
+    let parsedExamDate: Date | null = null;
+    if (data.examDate) {
+      const d = new Date(data.examDate);
+      if (isNaN(d.getTime())) {
+        return { success: false, error: "Invalid examination date format." };
+      }
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (d < today) {
+        return { success: false, error: "Scheduled examination date cannot be in the past. Please select today or a future date." };
+      }
+      parsedExamDate = d;
+    }
 
     // Coach Schedule Conflict Validation
     const conflictingBatch = await db.batch.findFirst({
@@ -333,17 +358,20 @@ export async function createBatchAction(data: {
         name: data.name.trim(),
         programId: data.programId,
         membershipPlanId: data.membershipPlanId || null,
+        beltLevel: data.beltLevel || "Yellow Belt",
         coachId: data.coachId,
         dayCombination: data.dayCombination,
         timeSlot: data.timeSlot,
         clockTiming,
         meetingUrl: data.meetingUrl?.trim() || null,
+        examDate: parsedExamDate,
         maxCapacity: maxCap,
         status: "ACTIVE",
       },
     });
 
     revalidatePath("/admin/batches");
+    revalidatePath("/admin/student-progress");
     revalidatePath("/admin/dashboard");
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/programs");
@@ -363,11 +391,13 @@ export async function updateBatchAction(
     name?: string;
     programId?: string;
     membershipPlanId?: string;
+    beltLevel?: string;
     coachId?: string;
     dayCombination?: string;
     timeSlot?: string;
     clockTiming?: string;
     meetingUrl?: string | null;
+    examDate?: string | null;
     maxCapacity?: number;
     status?: "ACTIVE" | "FULL" | "INACTIVE";
   }
@@ -430,26 +460,66 @@ export async function updateBatchAction(
     }
 
     const meetingUrl = data.meetingUrl !== undefined
-      ? (data.meetingUrl?.trim() || null)
+      ? (data.meetingUrl && data.meetingUrl.trim() !== "" ? data.meetingUrl.trim() : null)
       : existingBatch.meetingUrl;
+
+    let parsedExamDate = existingBatch.examDate;
+    if (data.examDate !== undefined) {
+      if (!data.examDate || typeof data.examDate !== "string" || data.examDate.trim() === "") {
+        parsedExamDate = null;
+      } else {
+        const d = new Date(data.examDate);
+        if (isNaN(d.getTime())) {
+          return { success: false, error: "Invalid examination date format." };
+        }
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (d < today) {
+          return { success: false, error: "Scheduled examination date cannot be in the past. Please select today or a future date." };
+        }
+        parsedExamDate = d;
+      }
+    }
+
+    const targetProgramId = data.programId || existingBatch.programId;
+    const targetCoachId = coachId;
+    const membershipPlanId = data.membershipPlanId !== undefined
+      ? (data.membershipPlanId && data.membershipPlanId.trim() !== "" ? data.membershipPlanId : null)
+      : existingBatch.membershipPlanId;
+
+    const updateData: any = {
+      name: data.name && data.name.trim() !== "" ? data.name.trim() : existingBatch.name,
+      beltLevel: data.beltLevel || existingBatch.beltLevel || "Yellow Belt",
+      dayCombination,
+      timeSlot,
+      clockTiming,
+      meetingUrl,
+      examDate: parsedExamDate,
+      maxCapacity,
+      status: targetStatus,
+    };
+
+    if (targetProgramId) {
+      updateData.program = { connect: { id: targetProgramId } };
+    }
+
+    if (targetCoachId) {
+      updateData.coach = { connect: { id: targetCoachId } };
+    }
+
+    if (membershipPlanId) {
+      updateData.membershipPlan = { connect: { id: membershipPlanId } };
+    } else if (data.membershipPlanId === null || data.membershipPlanId === "") {
+      updateData.membershipPlan = { disconnect: true };
+    }
 
     await db.batch.update({
       where: { id: batchId },
-      data: {
-        name: data.name ? data.name.trim() : existingBatch.name,
-        programId: data.programId || existingBatch.programId,
-        membershipPlanId: data.membershipPlanId !== undefined ? data.membershipPlanId : existingBatch.membershipPlanId,
-        coachId,
-        dayCombination,
-        timeSlot,
-        clockTiming,
-        meetingUrl,
-        maxCapacity,
-        status: targetStatus,
-      },
+      data: updateData,
     });
 
     revalidatePath("/admin/batches");
+    revalidatePath("/admin/student-progress");
     revalidatePath("/admin/dashboard");
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/programs");
@@ -458,7 +528,7 @@ export async function updateBatchAction(
     return { success: true, message: "Batch updated successfully." };
   } catch (err: any) {
     console.error("updateBatchAction error:", err);
-    return { success: false, error: "Failed to update batch." };
+    return { success: false, error: err?.message || "Failed to update batch." };
   }
 }
 

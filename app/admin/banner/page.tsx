@@ -21,6 +21,7 @@ import {
   Star,
   Award,
   Loader2,
+  Flame,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -51,6 +52,20 @@ export default function AdminHomepageManagementPage() {
     headingTitle: "",
     headingSubtitle: "",
     items: [],
+  });
+
+  const [beltSyllabusSection, setBeltSyllabusSection] = useState<any>({
+    headingBadge: "",
+    headingTitle: "",
+    headingSubtitle: "",
+    belts: [],
+  });
+
+  const [fitnessJourneySection, setFitnessJourneySection] = useState<any>({
+    headingBadge: "",
+    headingTitle: "",
+    headingSubtitle: "",
+    points: [],
   });
 
   const [aboutSection, setAboutSection] = useState<any>({
@@ -108,6 +123,8 @@ export default function AdminHomepageManagementPage() {
           if (d.banner?.slides) setBannerSlides(d.banner.slides);
           if (d.stats) setStatsSection(d.stats);
           if (d.programs) setProgramsSection(d.programs);
+          if (d.beltSyllabus) setBeltSyllabusSection(d.beltSyllabus);
+          if (d.fitnessJourney) setFitnessJourneySection(d.fitnessJourney);
           if (d.about) setAboutSection(d.about);
           if (d.whyChoose) setWhyChooseSection(d.whyChoose);
           if (d.howItWorks) setHowItWorksSection(d.howItWorks);
@@ -271,6 +288,8 @@ export default function AdminHomepageManagementPage() {
     { id: 1, label: "1. Homepage Banner", icon: ImageIcon },
     { id: 2, label: "2. Academy Metrics", icon: Award },
     { id: 3, label: "3. Explore Programs", icon: BookOpen },
+    { id: 10, label: "3.5 Belt Syllabus", icon: BookOpen },
+    { id: 11, label: "3.6 Weight Management", icon: Flame },
     { id: 4, label: "4. About SELFFITS", icon: Info },
     { id: 5, label: "5. Why Choose Us", icon: ShieldCheck },
     { id: 6, label: "6. How It Works", icon: Zap },
@@ -900,6 +919,397 @@ export default function AdminHomepageManagementPage() {
                   ))}
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* SECTION 3.5: BELT PROGRESSION SYLLABUS MANAGEMENT */}
+        {/* ========================================================================= */}
+        {activeTab === 10 && (
+          <div className="space-y-6">
+            <div className="p-6 rounded-2xl bg-[#14161D] border border-white/10 space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                <h2 className="text-base font-extrabold text-white">Section 3.5: Belt Progression Syllabus</h2>
+                {renderSaveButton("homepage_belt_syllabus", beltSyllabusSection, "Publish Belt Syllabus Updates")}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase text-gray-300 mb-1">
+                    Section Top Badge
+                  </label>
+                  <input
+                    type="text"
+                    value={beltSyllabusSection.headingBadge || ""}
+                    onChange={(e) => setBeltSyllabusSection({ ...beltSyllabusSection, headingBadge: e.target.value })}
+                    className="w-full h-11 px-4 rounded-xl bg-[#0F1117] border border-white/10 text-white font-bold text-xs"
+                    placeholder="e.g. BELT PROGRESSION SYLLABUS"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase text-gray-300 mb-1">
+                    Main Section Heading
+                  </label>
+                  <input
+                    type="text"
+                    value={beltSyllabusSection.headingTitle || ""}
+                    onChange={(e) => setBeltSyllabusSection({ ...beltSyllabusSection, headingTitle: e.target.value })}
+                    className="w-full h-11 px-4 rounded-xl bg-[#0F1117] border border-white/10 text-white font-extrabold text-sm"
+                    placeholder="e.g. Your Martial Arts Learning Journey"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase text-gray-300 mb-1">
+                  Subheading Description
+                </label>
+                <input
+                  type="text"
+                  value={beltSyllabusSection.headingSubtitle || ""}
+                  onChange={(e) => setBeltSyllabusSection({ ...beltSyllabusSection, headingSubtitle: e.target.value })}
+                  className="w-full h-11 px-4 rounded-xl bg-[#0F1117] border border-white/10 text-white text-xs font-medium"
+                  placeholder="Subheading description..."
+                />
+              </div>
+
+              {/* Belt Levels Manager */}
+              <div className="pt-4 border-t border-white/10 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-extrabold text-white uppercase">Belt Levels ({beltSyllabusSection.belts?.length || 0})</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newBelt = {
+                        id: `belt_${Date.now()}`,
+                        name: "New Belt",
+                        subtitle: "Belt Rank Subtitle",
+                        isEnabled: true,
+                        syllabus: ["Sample syllabus point 1", "Sample syllabus point 2"],
+                      };
+                      setBeltSyllabusSection({
+                        ...beltSyllabusSection,
+                        belts: [...(beltSyllabusSection.belts || []), newBelt],
+                      });
+                    }}
+                    className="px-3.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5 text-[#0080FF]" /> Add Belt Level
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  {beltSyllabusSection.belts?.map((belt: any, bIdx: number) => (
+                    <div key={belt.id || bIdx} className="p-5 rounded-2xl bg-[#0F1117] border border-white/15 space-y-4 shadow-lg">
+                      <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl">🥋</span>
+                          <span className="text-sm font-extrabold text-white">{belt.name || `Belt #${bIdx + 1}`}</span>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = [...beltSyllabusSection.belts];
+                              updated[bIdx].isEnabled = belt.isEnabled === false ? true : false;
+                              setBeltSyllabusSection({ ...beltSyllabusSection, belts: updated });
+                            }}
+                            className={`px-3 py-1 rounded-full text-xs font-extrabold cursor-pointer border ${
+                              belt.isEnabled !== false
+                                ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                                : "bg-white/10 text-gray-400 border-white/10"
+                            }`}
+                          >
+                            {belt.isEnabled !== false ? "Active Belt" : "Disabled"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = beltSyllabusSection.belts.filter((_: any, i: number) => i !== bIdx);
+                              setBeltSyllabusSection({ ...beltSyllabusSection, belts: updated });
+                            }}
+                            className="p-1 rounded text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer"
+                            title="Delete Belt"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-[11px] font-bold text-gray-400 block mb-1">Belt Name</label>
+                          <input
+                            type="text"
+                            value={belt.name || ""}
+                            onChange={(e) => {
+                              const updated = [...beltSyllabusSection.belts];
+                              updated[bIdx].name = e.target.value;
+                              setBeltSyllabusSection({ ...beltSyllabusSection, belts: updated });
+                            }}
+                            className="w-full h-10 px-3 rounded-lg bg-[#14161D] border border-white/10 text-white text-xs font-extrabold"
+                            placeholder="e.g. White Belt"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-bold text-gray-400 block mb-1">Rank Subtitle / Focus</label>
+                          <input
+                            type="text"
+                            value={belt.subtitle || ""}
+                            onChange={(e) => {
+                              const updated = [...beltSyllabusSection.belts];
+                              updated[bIdx].subtitle = e.target.value;
+                              setBeltSyllabusSection({ ...beltSyllabusSection, belts: updated });
+                            }}
+                            className="w-full h-10 px-3 rounded-lg bg-[#14161D] border border-white/10 text-white text-xs"
+                            placeholder="e.g. Foundations & Fundamental Stances"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Syllabus Points Sub-Manager */}
+                      <div className="p-4 rounded-xl bg-[#14161D] border border-white/10 space-y-3">
+                        <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                          <span className="text-xs font-bold text-[#0080FF] uppercase">
+                            Syllabus Points ({belt.syllabus?.length || 0})
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = [...beltSyllabusSection.belts];
+                              const points = [...(updated[bIdx].syllabus || []), "New techniques & skills topic"];
+                              updated[bIdx].syllabus = points;
+                              setBeltSyllabusSection({ ...beltSyllabusSection, belts: updated });
+                            }}
+                            className="px-2.5 py-1 rounded bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold flex items-center gap-1 cursor-pointer"
+                          >
+                            <Plus className="w-3 h-3 text-[#0080FF]" /> Add Point
+                          </button>
+                        </div>
+
+                        <div className="space-y-2">
+                          {belt.syllabus?.map((point: string, pIdx: number) => (
+                            <div key={pIdx} className="flex items-center gap-2">
+                              <span className="w-5 h-5 rounded bg-[#E50914]/15 text-[#E50914] text-[10px] font-black flex items-center justify-center shrink-0">
+                                {pIdx + 1}
+                              </span>
+                              <input
+                                type="text"
+                                value={point}
+                                onChange={(e) => {
+                                  const updated = [...beltSyllabusSection.belts];
+                                  const points = [...updated[bIdx].syllabus];
+                                  points[pIdx] = e.target.value;
+                                  updated[bIdx].syllabus = points;
+                                  setBeltSyllabusSection({ ...beltSyllabusSection, belts: updated });
+                                }}
+                                className="flex-grow h-9 px-3 rounded-lg bg-[#0F1117] border border-white/10 text-white text-xs font-medium"
+                              />
+                              <div className="flex items-center gap-1">
+                                {pIdx > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const updated = [...beltSyllabusSection.belts];
+                                      const points = [...updated[bIdx].syllabus];
+                                      const temp = points[pIdx];
+                                      points[pIdx] = points[pIdx - 1];
+                                      points[pIdx - 1] = temp;
+                                      updated[bIdx].syllabus = points;
+                                      setBeltSyllabusSection({ ...beltSyllabusSection, belts: updated });
+                                    }}
+                                    className="px-1.5 py-1 rounded bg-white/5 hover:bg-white/10 text-gray-300 text-[10px] font-bold cursor-pointer"
+                                    title="Move Up"
+                                  >
+                                    ↑
+                                  </button>
+                                )}
+                                {pIdx < belt.syllabus.length - 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const updated = [...beltSyllabusSection.belts];
+                                      const points = [...updated[bIdx].syllabus];
+                                      const temp = points[pIdx];
+                                      points[pIdx] = points[pIdx + 1];
+                                      points[pIdx + 1] = temp;
+                                      updated[bIdx].syllabus = points;
+                                      setBeltSyllabusSection({ ...beltSyllabusSection, belts: updated });
+                                    }}
+                                    className="px-1.5 py-1 rounded bg-white/5 hover:bg-white/10 text-gray-300 text-[10px] font-bold cursor-pointer"
+                                    title="Move Down"
+                                  >
+                                    ↓
+                                  </button>
+                                )}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const updated = [...beltSyllabusSection.belts];
+                                    const points = updated[bIdx].syllabus.filter((_: any, i: number) => i !== pIdx);
+                                    updated[bIdx].syllabus = points;
+                                    setBeltSyllabusSection({ ...beltSyllabusSection, belts: updated });
+                                  }}
+                                  className="p-1 rounded text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer"
+                                  title="Delete Point"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {renderSaveButton("homepage_belt_syllabus", beltSyllabusSection, "Publish Belt Syllabus Updates", true)}
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* SECTION 3.6: WEIGHT MANAGEMENT JOURNEY SYLLABUS MANAGEMENT */}
+        {/* ========================================================================= */}
+        {activeTab === 11 && (
+          <div className="space-y-6">
+            <div className="p-6 rounded-2xl bg-[#14161D] border border-white/10 space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                <h2 className="text-base font-extrabold text-white">Section 3.6: Weight Management Journey</h2>
+                {renderSaveButton("homepage_fitness_journey", fitnessJourneySection, "Publish Weight Management Updates")}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase text-gray-300 mb-1">
+                    Section Top Badge
+                  </label>
+                  <input
+                    type="text"
+                    value={fitnessJourneySection.headingBadge || ""}
+                    onChange={(e) => setFitnessJourneySection({ ...fitnessJourneySection, headingBadge: e.target.value })}
+                    className="w-full h-11 px-4 rounded-xl bg-[#0F1117] border border-white/10 text-white font-bold text-xs"
+                    placeholder="e.g. WEIGHT MANAGEMENT SYLLABUS"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold uppercase text-gray-300 mb-1">
+                    Main Section Heading
+                  </label>
+                  <input
+                    type="text"
+                    value={fitnessJourneySection.headingTitle || ""}
+                    onChange={(e) => setFitnessJourneySection({ ...fitnessJourneySection, headingTitle: e.target.value })}
+                    className="w-full h-11 px-4 rounded-xl bg-[#0F1117] border border-white/10 text-white font-extrabold text-sm"
+                    placeholder="e.g. Your Weight Management Journey"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase text-gray-300 mb-1">
+                  Subheading Description
+                </label>
+                <input
+                  type="text"
+                  value={fitnessJourneySection.headingSubtitle || ""}
+                  onChange={(e) => setFitnessJourneySection({ ...fitnessJourneySection, headingSubtitle: e.target.value })}
+                  className="w-full h-11 px-4 rounded-xl bg-[#0F1117] border border-white/10 text-white text-xs font-medium"
+                  placeholder="Subheading description..."
+                />
+              </div>
+
+              {/* Weight Management Points Manager */}
+              <div className="pt-4 border-t border-white/10 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-extrabold text-white uppercase">Syllabus / Learning Points ({fitnessJourneySection.points?.length || 0})</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newPoint = "New Weight Management Learning Point";
+                      setFitnessJourneySection({
+                        ...fitnessJourneySection,
+                        points: [...(fitnessJourneySection.points || []), newPoint],
+                      });
+                    }}
+                    className="px-3.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-xs font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5 text-[#0080FF]" /> Add Learning Point
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {fitnessJourneySection.points?.map((pt: string, pIdx: number) => (
+                    <div key={pIdx} className="p-3 rounded-xl bg-[#0F1117] border border-white/10 flex items-center gap-3">
+                      <span className="w-6 h-6 rounded-md bg-[#E50914]/15 text-[#E50914] text-xs font-black flex items-center justify-center shrink-0">
+                        {pIdx + 1}
+                      </span>
+                      <input
+                        type="text"
+                        value={pt || ""}
+                        onChange={(e) => {
+                          const updated = [...fitnessJourneySection.points];
+                          updated[pIdx] = e.target.value;
+                          setFitnessJourneySection({ ...fitnessJourneySection, points: updated });
+                        }}
+                        className="flex-grow h-10 px-3 rounded-lg bg-[#14161D] border border-white/10 text-white text-xs font-medium"
+                        placeholder={`Point #${pIdx + 1}`}
+                      />
+                      <div className="flex items-center gap-1">
+                        {pIdx > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = [...fitnessJourneySection.points];
+                              const temp = updated[pIdx];
+                              updated[pIdx] = updated[pIdx - 1];
+                              updated[pIdx - 1] = temp;
+                              setFitnessJourneySection({ ...fitnessJourneySection, points: updated });
+                            }}
+                            className="px-1.5 py-1 rounded bg-white/5 hover:bg-white/10 text-gray-300 text-[10px] font-bold cursor-pointer"
+                            title="Move Up"
+                          >
+                            ↑
+                          </button>
+                        )}
+                        {pIdx < fitnessJourneySection.points.length - 1 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const updated = [...fitnessJourneySection.points];
+                              const temp = updated[pIdx];
+                              updated[pIdx] = updated[pIdx + 1];
+                              updated[pIdx + 1] = temp;
+                              setFitnessJourneySection({ ...fitnessJourneySection, points: updated });
+                            }}
+                            className="px-1.5 py-1 rounded bg-white/5 hover:bg-white/10 text-gray-300 text-[10px] font-bold cursor-pointer"
+                            title="Move Down"
+                          >
+                            ↓
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const updated = fitnessJourneySection.points.filter((_: any, i: number) => i !== pIdx);
+                            setFitnessJourneySection({ ...fitnessJourneySection, points: updated });
+                          }}
+                          className="p-1 rounded text-red-400 hover:bg-red-500/20 transition-colors cursor-pointer"
+                          title="Delete Point"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {renderSaveButton("homepage_fitness_journey", fitnessJourneySection, "Publish Weight Management Updates", true)}
             </div>
           </div>
         )}

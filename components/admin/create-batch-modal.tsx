@@ -1,25 +1,36 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Layers, UserCheck, Calendar, Clock, AlertTriangle, BookOpen, Award, Video, ExternalLink } from "lucide-react";
+import { X, Layers, UserCheck, Calendar, Clock, AlertTriangle, BookOpen, Award, Video } from "lucide-react";
+
+const BELT_LEVEL_OPTIONS = [
+  "Yellow Belt",
+  "Orange Belt",
+  "Green Belt",
+  "Blue Belt",
+  "Purple Belt",
+  "Brown Belt",
+  "Black Belt",
+];
 
 interface CreateBatchModalProps {
   isOpen: boolean;
   onClose: () => void;
   initialData?: any | null; // If editing
   programs: { id: string; title: string; category: string }[];
-  plans: { id: string; programId: string; name: string; levelName: string }[];
+  plans?: { id: string; programId: string; name: string; levelName: string }[];
   coaches: { id: string; fullName: string; email: string; highestRank: string; disciplines: string }[];
   dayCombinations: string[];
   timeSlots: string[];
   onConfirm: (data: {
     name: string;
     programId: string;
-    membershipPlanId?: string;
+    beltLevel: string;
     coachId: string;
     dayCombination: string;
     timeSlot: string;
     meetingUrl?: string;
+    examDate?: string;
     maxCapacity: number;
   }) => Promise<void>;
 }
@@ -29,7 +40,6 @@ export function CreateBatchModal({
   onClose,
   initialData,
   programs,
-  plans,
   coaches,
   dayCombinations,
   timeSlots,
@@ -37,13 +47,14 @@ export function CreateBatchModal({
 }: CreateBatchModalProps) {
   const [name, setName] = useState("");
   const [programId, setProgramId] = useState("");
-  const [membershipPlanId, setMembershipPlanId] = useState("");
+  const [beltLevel, setBeltLevel] = useState("Yellow Belt");
   const [coachId, setCoachId] = useState("");
   const [selectedDays, setSelectedDays] = useState<string[]>([
     "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"
   ]);
   const [timeSlot, setTimeSlot] = useState(timeSlots[0] || "1st Batch");
   const [meetingUrl, setMeetingUrl] = useState("");
+  const [examDate, setExamDate] = useState("");
   const [maxCapacity, setMaxCapacity] = useState(8);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -98,29 +109,28 @@ export function CreateBatchModal({
     if (initialData) {
       setName(initialData.name || "");
       setProgramId(initialData.programId || "");
-      setMembershipPlanId(initialData.membershipPlanId || "");
+      setBeltLevel(initialData.beltLevel || "Yellow Belt");
       setCoachId(initialData.coachId || "");
       setSelectedDays(parseDayCombinationToDays(initialData.dayCombination));
       setTimeSlot(initialData.timeSlot || timeSlots[0] || "1st Batch");
       setMeetingUrl(initialData.meetingUrl || "");
+      setExamDate(initialData.examDateISO || "");
       setMaxCapacity(initialData.maxCapacity || 8);
     } else {
       setName("");
       setProgramId(programs[0]?.id || "");
-      setMembershipPlanId("");
+      setBeltLevel("Yellow Belt");
       setCoachId(coaches[0]?.id || "");
       setSelectedDays(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]);
       setTimeSlot(timeSlots[0] || "1st Batch");
       setMeetingUrl("");
+      setExamDate("");
       setMaxCapacity(8);
     }
     setErrorMsg("");
   }, [initialData, isOpen, programs, coaches, dayCombinations, timeSlots]);
 
   if (!isOpen) return null;
-
-  // Filter plans available for selected program
-  const availablePlans = plans.filter((p) => p.programId === programId);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -132,13 +142,20 @@ export function CreateBatchModal({
       setErrorMsg("Please select a Program.");
       return;
     }
+    if (!beltLevel) {
+      setErrorMsg("Please select a Belt Level.");
+      return;
+    }
     if (!coachId) {
       setErrorMsg("Please select an Active Coach.");
       return;
     }
-    if (selectedDays.length === 0) {
-      setErrorMsg("Please select at least 1 training day.");
-      return;
+    const todayISO = new Date().toISOString().split("T")[0];
+    if (examDate && examDate.trim() !== "") {
+      if (examDate < todayISO) {
+        setErrorMsg("Scheduled examination date cannot be in the past. Please select today or a future date.");
+        return;
+      }
     }
 
     setLoading(true);
@@ -147,11 +164,12 @@ export function CreateBatchModal({
       await onConfirm({
         name: name.trim(),
         programId,
-        membershipPlanId: membershipPlanId || undefined,
+        beltLevel,
         coachId,
         dayCombination: computedDayCombination,
         timeSlot,
         meetingUrl: meetingUrl.trim() || undefined,
+        examDate: examDate ? examDate : undefined,
         maxCapacity: Number(maxCapacity) || 8,
       });
       onClose();
@@ -182,7 +200,7 @@ export function CreateBatchModal({
               {initialData ? "Edit Batch Details" : "Create New Batch"}
             </h3>
             <p className="text-xs text-gray-400 mt-0.5">
-              Configure program category, assigned coach, day schedule, time slot, and student capacity limit.
+              Configure program category, assigned belt level, coach, schedule, and student capacity.
             </p>
           </div>
         </div>
@@ -202,7 +220,7 @@ export function CreateBatchModal({
             </label>
             <input
               type="text"
-              placeholder="e.g. Kung Fu Beginners Morning Batch"
+              placeholder="e.g. Yellow Belt Beginners Batch"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="w-full h-10 px-3.5 rounded-xl bg-[#0F1117] border border-white/10 text-white placeholder-gray-500 text-xs focus:outline-none focus:border-[#0080FF] transition-all"
@@ -210,7 +228,7 @@ export function CreateBatchModal({
             />
           </div>
 
-          {/* Program Select */}
+          {/* Program & Belt Level Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="block font-bold text-gray-300 uppercase tracking-wider text-[10px]">
@@ -218,10 +236,7 @@ export function CreateBatchModal({
               </label>
               <select
                 value={programId}
-                onChange={(e) => {
-                  setProgramId(e.target.value);
-                  setMembershipPlanId("");
-                }}
+                onChange={(e) => setProgramId(e.target.value)}
                 className="w-full h-10 px-3 rounded-xl bg-[#0F1117] border border-white/10 text-white text-xs font-semibold focus:outline-none focus:border-[#0080FF] cursor-pointer"
                 required
               >
@@ -233,22 +248,20 @@ export function CreateBatchModal({
               </select>
             </div>
 
-            {/* Level / Plan Select */}
+            {/* REQUIRED BELT LEVEL SELECT */}
             <div className="space-y-1">
-              <label className="block font-bold text-gray-300 uppercase tracking-wider text-[10px]">
-                Membership Plan Level (Optional)
+              <label className="block font-bold text-[#0080FF] uppercase tracking-wider text-[10px] flex items-center gap-1">
+                <Award className="w-3.5 h-3.5" /> BELT LEVEL *
               </label>
               <select
-                value={membershipPlanId}
-                onChange={(e) => setMembershipPlanId(e.target.value)}
-                className="w-full h-10 px-3 rounded-xl bg-[#0F1117] border border-white/10 text-white text-xs font-semibold focus:outline-none focus:border-[#0080FF] cursor-pointer"
+                value={beltLevel}
+                onChange={(e) => setBeltLevel(e.target.value)}
+                className="w-full h-10 px-3 rounded-xl bg-[#0F1117] border-2 border-[#0080FF]/60 text-white text-xs font-extrabold focus:outline-none focus:border-[#0080FF] cursor-pointer"
+                required
               >
-                <option value="" className="bg-[#14161D]">
-                  All Plan Levels
-                </option>
-                {availablePlans.map((plan) => (
-                  <option key={plan.id} value={plan.id} className="bg-[#14161D]">
-                    {plan.levelName || plan.name}
+                {BELT_LEVEL_OPTIONS.map((belt) => (
+                  <option key={belt} value={belt} className="bg-[#14161D]">
+                    {belt}
                   </option>
                 ))}
               </select>
@@ -280,7 +293,7 @@ export function CreateBatchModal({
             </select>
           </div>
 
-          {/* Training Schedule & Days Selection (Tickable Days) */}
+          {/* Training Schedule & Days Selection */}
           <div className="space-y-2 p-3.5 rounded-2xl bg-[#0F1117] border border-white/10">
             <div className="flex items-center justify-between">
               <label className="block font-bold text-gray-300 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
@@ -360,7 +373,6 @@ export function CreateBatchModal({
                       if (isSelected) {
                         setSelectedDays(selectedDays.filter((d) => d !== day.full));
                       } else {
-                        // Keep chronological order
                         const weekOrder = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
                         const next = [...selectedDays, day.full].sort(
                           (a, b) => weekOrder.indexOf(a) - weekOrder.indexOf(b)
@@ -451,8 +463,33 @@ export function CreateBatchModal({
               onChange={(e) => setMeetingUrl(e.target.value)}
               className="w-full h-10 px-3.5 rounded-xl bg-[#14161D] border border-white/10 text-white placeholder-gray-500 text-xs focus:outline-none focus:border-[#10B981] font-mono transition-all"
             />
+          </div>
+
+          {/* Batch Examination Date Field */}
+          <div className="space-y-1.5 p-3 rounded-xl bg-[#0F1117] border border-white/10">
+            <div className="flex items-center justify-between">
+              <label className="block font-bold text-purple-400 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5" /> BATCH EXAM DATE (OPTIONAL SCHEDULE)
+              </label>
+              {examDate && (
+                <button
+                  type="button"
+                  onClick={() => setExamDate("")}
+                  className="text-red-400 hover:underline text-[10px] font-bold"
+                >
+                  Remove Exam Date
+                </button>
+              )}
+            </div>
+            <input
+              type="date"
+              min={new Date().toISOString().split("T")[0]}
+              value={examDate}
+              onChange={(e) => setExamDate(e.target.value)}
+              className="w-full h-10 px-3.5 rounded-xl bg-[#14161D] border border-white/10 text-white text-xs font-semibold focus:outline-none focus:border-purple-500 transition-all cursor-pointer"
+            />
             <p className="text-[10px] text-gray-400">
-              When saved, this meeting link is automatically available to all students assigned to this batch.
+              Schedule or announce a specific examination date for this batch.
             </p>
           </div>
 

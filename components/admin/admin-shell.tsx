@@ -22,6 +22,7 @@ import {
   Bell,
   Sparkles,
   Layers,
+  Award,
 } from "lucide-react";
 
 interface AdminShellProps {
@@ -44,6 +45,7 @@ export function AdminShell({ children }: AdminShellProps) {
     { label: "Programs & Pricing", href: "/admin/programs", icon: BookOpen },
     { label: "Registered Students", href: "/admin/students", icon: Users },
     { label: "Batch Management", href: "/admin/batches", icon: Layers },
+    { label: "Student Progress & Certification", href: "/admin/student-progress", icon: Award },
     { label: "Payments & Revenue", href: "/admin/payments", icon: CreditCard },
     { label: "Active Coaches", href: "/admin/coaches", icon: UserCheck },
     { label: "Coach Leads & Resumes", href: "/admin/coach-applications", icon: FileText },
