@@ -191,7 +191,7 @@ export async function getAdminStudentProgressListAction() {
 }
 
 // 2. GET SINGLE STUDENT PROGRESS DETAILS FOR ADMIN VIEW
-export async function getStudentProgressDetailsAction(studentId: string) {
+export async function getStudentProgressDetailsAction(studentId: string, targetBatchId?: string) {
   try {
     const session = await auth();
     if (!session || !session.user) {
@@ -235,12 +235,29 @@ export async function getStudentProgressDetailsAction(studentId: string) {
       : null;
     const activeProgram = activeEnrollment?.membershipPlan?.program;
 
-    // Get primary assigned batch and exam date
+    // Resolve target assigned batch:
+    // If targetBatchId is supplied and valid (not "ALL"), match the specific assigned batch record.
     const validAssignments = Array.isArray(student.batchStudents)
       ? student.batchStudents.filter((bs) => bs && bs.batch)
       : [];
-    const primaryBatchAssignment = validAssignments[0];
-    const assignedBatch = primaryBatchAssignment?.batch || null;
+
+    let targetAssignment = null;
+    if (targetBatchId && targetBatchId !== "ALL") {
+      targetAssignment = validAssignments.find((bs) => bs.batchId === targetBatchId || bs.batch?.id === targetBatchId) || null;
+    }
+
+    let assignedBatch = targetAssignment?.batch || null;
+    if (!assignedBatch && targetBatchId && targetBatchId !== "ALL") {
+      assignedBatch = await db.batch.findUnique({
+        where: { id: targetBatchId },
+        include: { program: true },
+      });
+    }
+
+    // Fallback to first valid assignment if no specific batch ID provided
+    if (!assignedBatch && validAssignments.length > 0) {
+      assignedBatch = validAssignments[0].batch;
+    }
 
     let batchExamDateFormatted: string | null = null;
     let batchExamDateISO: string | null = null;
@@ -248,17 +265,15 @@ export async function getStudentProgressDetailsAction(studentId: string) {
     let examStatusLabel = "NO_EXAM_DATE";
 
     if (assignedBatch?.examDate) {
-      const examDateObj = new Date(assignedBatch.examDate);
-      if (!isNaN(examDateObj.getTime())) {
+      const dateISO = safeISOString(assignedBatch.examDate);
+      if (dateISO) {
         batchExamDateFormatted = safeFormatDate(assignedBatch.examDate);
-        batchExamDateISO = safeISOString(assignedBatch.examDate) ? safeISOString(assignedBatch.examDate)!.split("T")[0] : null;
+        batchExamDateISO = dateISO.split("T")[0];
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const examDay = new Date(examDateObj);
-        examDay.setHours(0, 0, 0, 0);
+        // Timezone-safe calendar date comparison (YYYY-MM-DD)
+        const todayISO = safeISOString(new Date())?.split("T")[0] || new Date().toISOString().split("T")[0];
 
-        if (today >= examDay) {
+        if (todayISO >= batchExamDateISO) {
           isExamDatePassed = true;
           examStatusLabel = "EXAM_DATE_PASSED";
         } else {

@@ -98,9 +98,10 @@ export function AdminStudentProgressView({
   // Selected Batch Metadata Object
   const activeBatch = batches.find((b) => b.id === selectedBatchId);
 
-  const refreshStudentDetails = async (stdId: string) => {
+  const refreshStudentDetails = async (stdId: string, batchIdOverride?: string) => {
     setLoadingDetails(true);
-    const res = await getStudentProgressDetailsAction(stdId);
+    const targetBatch = batchIdOverride !== undefined ? batchIdOverride : selectedBatchId;
+    const res = await getStudentProgressDetailsAction(stdId, targetBatch);
     if (res.success && res.student) {
       setStudentDetails(res.student);
     }
@@ -109,7 +110,7 @@ export function AdminStudentProgressView({
 
   const handleSelectStudent = (stdId: string) => {
     setSelectedStudentId(stdId);
-    refreshStudentDetails(stdId);
+    refreshStudentDetails(stdId, selectedBatchId);
   };
 
   const handleRefreshDirectory = async () => {
