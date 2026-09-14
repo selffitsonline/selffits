@@ -235,7 +235,7 @@ export default function BecomeCoachPage() {
       }
     } catch (err: any) {
       console.error("Submission error:", err);
-      setErrorMsg("An unexpected error occurred during submission. Please try again.");
+      setErrorMsg(err?.message || "An unexpected error occurred during submission. Please try again.");
       setIsSubmitting(false);
     }
   };

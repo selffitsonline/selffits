@@ -15,18 +15,34 @@ export class LocalStorageProvider implements StorageProvider {
   }
 
   async uploadFile(fileBuffer: Buffer, fileName: string, subDir: string = "certificates"): Promise<{ fileKey: string; publicUrl: string }> {
-    const targetDir = path.join(this.baseDir, subDir);
-    await fs.mkdir(targetDir, { recursive: true });
-
     const safeFileName = `${Date.now()}-${fileName.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
-    const filePath = path.join(targetDir, safeFileName);
-
-    await fs.writeFile(filePath, fileBuffer);
-
     const fileKey = `${subDir}/${safeFileName}`;
-    const publicUrl = `/uploads/${fileKey}`;
 
-    return { fileKey, publicUrl };
+    try {
+      const targetDir = path.join(this.baseDir, subDir);
+      await fs.mkdir(targetDir, { recursive: true });
+      const filePath = path.join(targetDir, safeFileName);
+      await fs.writeFile(filePath, fileBuffer);
+      return { fileKey, publicUrl: `/uploads/${fileKey}` };
+    } catch (err) {
+      // Fallback for Vercel Serverless environment where /public is read-only
+      try {
+        const tmpDir = path.join("/tmp", subDir);
+        await fs.mkdir(tmpDir, { recursive: true });
+        await fs.writeFile(path.join(tmpDir, safeFileName), fileBuffer);
+      } catch {}
+
+      const ext = fileName.slice(fileName.lastIndexOf(".")).toLowerCase();
+      let mimeType = "application/octet-stream";
+      if (ext === ".pdf") mimeType = "application/pdf";
+      else if (ext === ".doc") mimeType = "application/msword";
+      else if (ext === ".docx") mimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+      else if ([".png", ".jpg", ".jpeg"].includes(ext)) mimeType = `image/${ext.replace(".", "")}`;
+
+      const base64Str = fileBuffer.toString("base64");
+      const dataUrl = `data:${mimeType};name=${encodeURIComponent(fileName)};base64,${base64Str}`;
+      return { fileKey, publicUrl: dataUrl };
+    }
   }
 
   async deleteFile(fileKey: string): Promise<boolean> {
