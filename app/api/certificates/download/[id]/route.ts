@@ -69,28 +69,46 @@ export async function GET(
     let mimeType = "application/pdf";
 
     if (cert.fileKey) {
-      const candidatePaths = [
-        path.join(process.cwd(), "public", "uploads", cert.fileKey),
-        path.join(process.cwd(), "public", cert.fileKey),
-        path.join(process.cwd(), "public", "uploads", "certificates", path.basename(cert.fileKey)),
-      ];
-
-      for (const p of candidatePaths) {
+      if (cert.fileKey.startsWith("data:")) {
         try {
-          const stats = await fs.stat(p);
-          if (stats.isFile()) {
-            fileBuffer = await fs.readFile(p);
-            const fileExt = path.extname(p).toLowerCase();
-            if (fileExt === ".png") mimeType = "image/png";
-            else if (fileExt === ".jpg" || fileExt === ".jpeg") mimeType = "image/jpeg";
-            else if (fileExt === ".webp") mimeType = "image/webp";
-            else if (fileExt === ".svg") mimeType = "image/svg+xml";
-            else if (fileExt === ".pdf") mimeType = "application/pdf";
-            else mimeType = "application/octet-stream";
-            break;
+          const matches = cert.fileKey.match(/^data:([^;]+);base64,(.*)$/);
+          if (matches) {
+            mimeType = matches[1];
+            fileBuffer = Buffer.from(matches[2], "base64");
+            if (mimeType.includes("png")) ext = ".png";
+            else if (mimeType.includes("jpeg") || mimeType.includes("jpg")) ext = ".jpg";
+            else if (mimeType.includes("webp")) ext = ".webp";
+            else if (mimeType.includes("pdf")) ext = ".pdf";
           }
-        } catch {
-          // try next path
+        } catch (err) {
+          console.error("Failed to parse data URL from cert.fileKey:", err);
+        }
+      } else {
+        const candidatePaths = [
+          path.join(process.cwd(), "public", "uploads", cert.fileKey),
+          path.join(process.cwd(), "public", cert.fileKey),
+          path.join(process.cwd(), "public", "uploads", "certificates", path.basename(cert.fileKey)),
+          path.join("/tmp", cert.fileKey),
+          path.join("/tmp", "certificates", path.basename(cert.fileKey)),
+        ];
+
+        for (const p of candidatePaths) {
+          try {
+            const stats = await fs.stat(p);
+            if (stats.isFile()) {
+              fileBuffer = await fs.readFile(p);
+              const fileExt = path.extname(p).toLowerCase();
+              if (fileExt === ".png") mimeType = "image/png";
+              else if (fileExt === ".jpg" || fileExt === ".jpeg") mimeType = "image/jpeg";
+              else if (fileExt === ".webp") mimeType = "image/webp";
+              else if (fileExt === ".svg") mimeType = "image/svg+xml";
+              else if (fileExt === ".pdf") mimeType = "application/pdf";
+              else mimeType = "application/octet-stream";
+              break;
+            }
+          } catch {
+            // try next path
+          }
         }
       }
     }

@@ -37,11 +37,13 @@ export class LocalStorageProvider implements StorageProvider {
       if (ext === ".pdf") mimeType = "application/pdf";
       else if (ext === ".doc") mimeType = "application/msword";
       else if (ext === ".docx") mimeType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-      else if ([".png", ".jpg", ".jpeg"].includes(ext)) mimeType = `image/${ext.replace(".", "")}`;
+      else if (ext === ".png") mimeType = "image/png";
+      else if (ext === ".jpg" || ext === ".jpeg") mimeType = "image/jpeg";
+      else if (ext === ".webp") mimeType = "image/webp";
 
       const base64Str = fileBuffer.toString("base64");
-      const dataUrl = `data:${mimeType};name=${encodeURIComponent(fileName)};base64,${base64Str}`;
-      return { fileKey, publicUrl: dataUrl };
+      const dataUrl = `data:${mimeType};base64,${base64Str}`;
+      return { fileKey: dataUrl, publicUrl: dataUrl };
     }
   }
 
