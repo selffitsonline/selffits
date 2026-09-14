@@ -215,6 +215,8 @@ model Certificate {
   title             String
   certificateNumber String   @unique
   fileKey           String
+  fileData          String?  @db.Text
+  fileMimeType      String?
   issuedDate        DateTime @default(now())
   issuedByUserId    String
   issuedByUser      User     @relation("AdminIssuedCertificates", fields: [issuedByUserId], references: [id])

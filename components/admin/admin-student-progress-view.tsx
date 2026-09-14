@@ -84,6 +84,11 @@ export function AdminStudentProgressView({
   const [submitting, setSubmitting] = useState(false);
   const [deletingCertId, setDeletingCertId] = useState<string | null>(null);
 
+  // Modal specific feedback states for Upload Certificate
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [uploadSuccessMsg, setUploadSuccessMsg] = useState("");
+  const [uploadErrorMsg, setUploadErrorMsg] = useState("");
+
   // Toast notification
   const [notification, setNotification] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
@@ -177,17 +182,21 @@ export function AdminStudentProgressView({
     setUploadBeltName(initialBelt);
     setUploadCertTitle(`${initialBelt} Graduation Certificate`);
     setUploadFile(null);
+    setUploadSuccess(false);
+    setUploadSuccessMsg("");
+    setUploadErrorMsg("");
     setShowUploadCertModal(true);
   };
 
   const handleConfirmUploadCertificate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedStudentId || !uploadFile) {
-      setNotification({ message: "Please select a certificate file to upload.", type: "error" });
-      setTimeout(() => setNotification(null), 4000);
+      setUploadErrorMsg("Please select a certificate file to upload.");
       return;
     }
     setSubmitting(true);
+    setUploadErrorMsg("");
+    setUploadSuccess(false);
 
     const formData = new FormData();
     formData.append("file", uploadFile);
@@ -203,21 +212,32 @@ export function AdminStudentProgressView({
         method: "POST",
         body: formData,
       });
-      const data = await res.json();
+
+      let data: any = {};
+      try {
+        data = await res.json();
+      } catch (parseErr) {
+        data = { success: false, error: `Server response error HTTP ${res.status}: ${res.statusText || "Upload failed"}` };
+      }
       setSubmitting(false);
 
-      if (data.success) {
+      if (res.ok && data.success) {
+        setUploadSuccess(true);
+        setUploadSuccessMsg(data.message || "Certificate uploaded successfully!");
         setNotification({ message: data.message || "Certificate uploaded successfully!", type: "success" });
-        setShowUploadCertModal(false);
         setUploadFile(null);
         await refreshStudentDetails(selectedStudentId);
         await handleRefreshDirectory();
       } else {
-        setNotification({ message: data.error || "Failed to upload certificate.", type: "error" });
+        const errorText = data.error || data.message || `Upload failed with status HTTP ${res.status}`;
+        setUploadErrorMsg(errorText);
+        setNotification({ message: errorText, type: "error" });
       }
     } catch (err: any) {
       setSubmitting(false);
-      setNotification({ message: "An error occurred while uploading file.", type: "error" });
+      const errMsg = err?.message || "An error occurred while uploading file.";
+      setUploadErrorMsg(errMsg);
+      setNotification({ message: errMsg, type: "error" });
     }
     setTimeout(() => setNotification(null), 4000);
   };
@@ -768,71 +788,114 @@ export function AdminStudentProgressView({
                 </button>
               </div>
 
-              <form onSubmit={handleConfirmUploadCertificate} className="space-y-4 text-xs">
-                <div>
-                  <label className="block text-gray-300 font-semibold mb-1">Belt Level *</label>
-                  <select
-                    value={uploadBeltName}
-                    onChange={(e) => {
-                      setUploadBeltName(e.target.value);
-                      setUploadCertTitle(`${e.target.value} Graduation Certificate`);
-                    }}
-                    className="w-full p-2.5 rounded-xl bg-[#0F1117] border border-white/10 text-white font-bold focus:outline-none focus:border-[#0080FF]"
-                  >
-                    {BELT_OPTIONS.map((b) => (
-                      <option key={b} value={b} className="bg-[#14161D]">{b}</option>
-                    ))}
-                  </select>
+              {/* GREEN SUCCESS NOTIFICATION STATE INSIDE MODAL */}
+              {uploadSuccess && (
+                <div className="p-4 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-extrabold flex items-center gap-3 animate-in fade-in">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                  <div>
+                    <p className="text-sm font-extrabold">{uploadSuccessMsg || "Certificate uploaded successfully!"}</p>
+                    <p className="text-[11px] text-emerald-300/80 font-normal mt-0.5">
+                      The document has been persisted to the database. Close this window to view it under Issued Certificates.
+                    </p>
+                  </div>
                 </div>
+              )}
 
-                <div>
-                  <label className="block text-gray-300 font-semibold mb-1">Certificate Title *</label>
-                  <input
-                    type="text"
-                    value={uploadCertTitle}
-                    onChange={(e) => setUploadCertTitle(e.target.value)}
-                    placeholder="e.g. Yellow Belt Graduation Certificate"
-                    className="w-full p-2.5 rounded-xl bg-[#0F1117] border border-white/10 text-white font-bold focus:outline-none focus:border-[#0080FF]"
-                  />
+              {/* ERROR NOTIFICATION STATE INSIDE MODAL */}
+              {uploadErrorMsg && (
+                <div className="p-3.5 rounded-xl bg-red-500/20 border border-red-500/40 text-red-400 text-xs font-bold flex items-center gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                  <span>{uploadErrorMsg}</span>
                 </div>
+              )}
 
-                <div>
-                  <label className="block text-gray-300 font-semibold mb-1">Certificate Document File (PDF / Image) *</label>
-                  <input
-                    type="file"
-                    accept=".pdf,image/png,image/jpeg,image/webp"
-                    onChange={(e) => {
-                      if (e.target.files && e.target.files[0]) {
-                        setUploadFile(e.target.files[0]);
-                      }
-                    }}
-                    className="w-full p-2 rounded-xl bg-[#0F1117] border border-white/10 text-gray-300 font-semibold file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-[#0080FF] file:text-white hover:file:bg-[#0066CC] cursor-pointer"
-                  />
-                </div>
+              {!uploadSuccess ? (
+                <form onSubmit={handleConfirmUploadCertificate} className="space-y-4 text-xs">
+                  <div>
+                    <label className="block text-gray-300 font-semibold mb-1">Belt Level *</label>
+                    <select
+                      value={uploadBeltName}
+                      onChange={(e) => {
+                        setUploadBeltName(e.target.value);
+                        setUploadCertTitle(`${e.target.value} Graduation Certificate`);
+                      }}
+                      className="w-full p-2.5 rounded-xl bg-[#0F1117] border border-white/10 text-white font-bold focus:outline-none focus:border-[#0080FF]"
+                    >
+                      {BELT_OPTIONS.map((b) => (
+                        <option key={b} value={b} className="bg-[#14161D]">{b}</option>
+                      ))}
+                    </select>
+                  </div>
 
-                <div className="p-3 rounded-xl bg-[#0F1117] border border-white/5 space-y-1 text-[11px] text-gray-400">
-                  <p>Student: <span className="text-white font-bold">{studentDetails?.name}</span></p>
-                  <p>Batch: <span className="text-white font-bold">{studentDetails?.batchInfo?.name || "Assigned Batch"}</span></p>
-                  <p>Exam Date: <span className="text-amber-400 font-bold">{studentDetails?.batchInfo?.examDate || "N/A"}</span></p>
-                </div>
+                  <div>
+                    <label className="block text-gray-300 font-semibold mb-1">Certificate Title *</label>
+                    <input
+                      type="text"
+                      value={uploadCertTitle}
+                      onChange={(e) => setUploadCertTitle(e.target.value)}
+                      placeholder="e.g. Yellow Belt Graduation Certificate"
+                      className="w-full p-2.5 rounded-xl bg-[#0F1117] border border-white/10 text-white font-bold focus:outline-none focus:border-[#0080FF]"
+                    />
+                  </div>
 
-                <div className="flex items-center justify-end gap-3 pt-2">
+                  <div>
+                    <label className="block text-gray-300 font-semibold mb-1">Certificate Document File (PDF / Image) *</label>
+                    <input
+                      type="file"
+                      accept=".pdf,image/png,image/jpeg,image/webp"
+                      onChange={(e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          setUploadFile(e.target.files[0]);
+                        }
+                      }}
+                      className="w-full p-2 rounded-xl bg-[#0F1117] border border-white/10 text-gray-300 font-semibold file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-[#0080FF] file:text-white hover:file:bg-[#0066CC] cursor-pointer"
+                    />
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-[#0F1117] border border-white/5 space-y-1 text-[11px] text-gray-400">
+                    <p>Student: <span className="text-white font-bold">{studentDetails?.name}</span></p>
+                    <p>Batch: <span className="text-white font-bold">{studentDetails?.batchInfo?.name || "Assigned Batch"}</span></p>
+                    <p>Exam Date: <span className="text-amber-400 font-bold">{studentDetails?.batchInfo?.examDate || "N/A"}</span></p>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowUploadCertModal(false)}
+                      className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 font-bold"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={submitting || !uploadFile}
+                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#0080FF] to-[#0055B3] text-white font-bold shadow-md shadow-[#0080FF]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    >
+                      {submitting ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Uploading...
+                        </>
+                      ) : (
+                        "Upload Certificate"
+                      )}
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="pt-2">
                   <button
                     type="button"
-                    onClick={() => setShowUploadCertModal(false)}
-                    className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 font-bold"
+                    onClick={() => {
+                      setShowUploadCertModal(false);
+                      setUploadSuccess(false);
+                      setUploadSuccessMsg("");
+                    }}
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:opacity-90 text-white font-black text-xs shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 cursor-pointer transition-all"
                   >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submitting || !uploadFile}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#0080FF] to-[#0055B3] text-white font-bold shadow-md shadow-[#0080FF]/20 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {submitting ? "Uploading..." : "Upload Certificate"}
+                    <CheckCircle2 className="w-4 h-4" /> Close Modal & View Certificate
                   </button>
                 </div>
-              </form>
+              )}
             </div>
           </div>
         )}

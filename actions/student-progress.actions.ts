@@ -663,15 +663,23 @@ export async function deleteStudentCertificateAction(payload: { certificateId: s
       return { success: false, error: "Certificate record not found." };
     }
 
-    // Attempt physical file removal
-    if (cert.fileKey && cert.fileKey.startsWith("certificates/")) {
-      try {
-        const fullPath = path.join(process.cwd(), "public", "uploads", cert.fileKey);
-        if (fs.existsSync(fullPath)) {
-          fs.unlinkSync(fullPath);
+    // Attempt physical file removal across all possible candidate locations
+    if (cert.fileKey) {
+      const candidatePaths = [
+        path.join(process.cwd(), "public", "uploads", cert.fileKey),
+        path.join(process.cwd(), "public", cert.fileKey),
+        path.join(process.cwd(), "public", "uploads", "certificates", path.basename(cert.fileKey)),
+        path.join("/tmp", "uploads", cert.fileKey),
+        path.join("/tmp", "uploads", "certificates", path.basename(cert.fileKey)),
+      ];
+      for (const p of candidatePaths) {
+        try {
+          if (fs.existsSync(p)) {
+            fs.unlinkSync(p);
+          }
+        } catch (err) {
+          console.warn("Failed to delete physical file at:", p, err);
         }
-      } catch (err) {
-        console.warn("Failed to delete physical file:", err);
       }
     }
 

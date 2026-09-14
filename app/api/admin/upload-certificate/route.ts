@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { storageProvider } from "@/lib/storage";
 import { revalidatePath } from "next/cache";
-import fs from "fs";
-import path from "path";
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,11 +17,17 @@ export async function POST(req: NextRequest) {
     const beltName = (formData.get("beltName") as string | null) || "Yellow Belt";
     const titleInput = (formData.get("title") as string | null) || `${beltName} Graduation Certificate`;
 
-    if (!file || !userId) {
-      return NextResponse.json({ success: false, error: "Missing required file or student ID." }, { status: 400 });
+    if (!file || typeof file === "string" || !userId) {
+      return NextResponse.json({ success: false, error: "Missing or invalid certificate file or student ID." }, { status: 400 });
     }
 
-    // Verify student exists
+    const fileExt = file.name ? file.name.slice(file.name.lastIndexOf(".")).toLowerCase() : ".pdf";
+    const allowedExtensions = [".pdf", ".png", ".jpg", ".jpeg", ".webp"];
+    if (!allowedExtensions.includes(fileExt)) {
+      return NextResponse.json({ success: false, error: "Invalid file format. Allowed documents: PDF, PNG, JPG, WEBP." }, { status: 400 });
+    }
+
+    // Verify student exists in PostgreSQL
     const student = await db.user.findUnique({
       where: { id: userId },
       include: {
@@ -34,12 +39,12 @@ export async function POST(req: NextRequest) {
     });
 
     if (!student) {
-      return NextResponse.json({ success: false, error: "Target student record not found." }, { status: 404 });
+      return NextResponse.json({ success: false, error: "Target student record not found in database." }, { status: 404 });
     }
 
-    // Resolve Program ID
+    // Resolve Program ID to ensure valid relation
     let programId = student.enrollments[0]?.membershipPlan?.programId;
-    if (!programId) {
+    if (!programId || !(await db.program.findUnique({ where: { id: programId } }))) {
       let firstProg = await db.program.findFirst();
       if (!firstProg) {
         firstProg = await db.program.create({
@@ -55,25 +60,37 @@ export async function POST(req: NextRequest) {
       programId = firstProg.id;
     }
 
-    // Save physical file to public/uploads/certificates/
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "certificates");
-    if (!fs.existsSync(uploadDir)) {
-      fs.mkdirSync(uploadDir, { recursive: true });
+    // Resolve valid Admin Issuer User ID in PostgreSQL (prevents P2003 foreign key constraint error when using demo/fallback admin sessions)
+    let issuerUserId = session.user.id;
+    const validIssuer = await db.user.findUnique({ where: { id: issuerUserId } });
+    if (!validIssuer) {
+      const dbAdmin = await db.user.findFirst({
+        where: { role: { in: ["ADMIN", "SUPER_ADMIN"] } },
+      });
+      if (dbAdmin) {
+        issuerUserId = dbAdmin.id;
+      } else {
+        issuerUserId = userId; // fallback to target student ID if no admin user record exists in DB
+      }
     }
 
-    const sanitizedOriginalName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
-    const uniqueFileName = `${Date.now()}_${sanitizedOriginalName}`;
-    const filePath = path.join(uploadDir, uniqueFileName);
-
+    // Save physical file via StorageProvider
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
-    fs.writeFileSync(filePath, buffer);
+    const uploaded = await storageProvider.uploadFile(buffer, file.name, "certificates");
+    const fileKey = uploaded.fileKey;
 
-    const fileKey = `certificates/${uniqueFileName}`;
+    // Permanent file content encoding for serverless PostgreSQL persistence
+    const fileBase64 = buffer.toString("base64");
+    let fileMimeType = "application/pdf";
+    if (fileExt === ".png") fileMimeType = "image/png";
+    else if (fileExt === ".jpg" || fileExt === ".jpeg") fileMimeType = "image/jpeg";
+    else if (fileExt === ".webp") fileMimeType = "image/webp";
+
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const certificateNumber = `SELFFITS-${beltName.replace(/\s+/g, "").toUpperCase()}-${Date.now().toString().slice(-4)}-${randomSuffix}`;
 
-    // Create Certificate record in PostgreSQL
+    // Create Certificate record in PostgreSQL with permanent fileData & fileMimeType
     const cert = await db.certificate.create({
       data: {
         userId,
@@ -81,8 +98,24 @@ export async function POST(req: NextRequest) {
         title: titleInput,
         certificateNumber,
         fileKey,
+        fileData: fileBase64,
+        fileMimeType,
         beltName,
-        issuedByUserId: session.user.id,
+        issuedByUserId: issuerUserId,
+      },
+    });
+
+    // Synchronize Student Profile Current Belt & Award Date
+    await db.studentProfile.upsert({
+      where: { userId },
+      update: {
+        currentBelt: beltName,
+        beltAwardedAt: new Date(),
+      },
+      create: {
+        userId,
+        currentBelt: beltName,
+        beltAwardedAt: new Date(),
       },
     });
 
