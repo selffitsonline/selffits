@@ -262,10 +262,15 @@ export async function getStudentProgressDetailsAction(studentId: string, targetB
 
     let assignedBatch = targetAssignment?.batch || null;
     if (!assignedBatch && targetBatchId && targetBatchId !== "ALL") {
-      assignedBatch = await db.batch.findUnique({
-        where: { id: targetBatchId },
+      assignedBatch = await db.batch.findFirst({
+        where: {
+          OR: [
+            { id: targetBatchId },
+            { batchId: targetBatchId },
+          ],
+        },
         include: { program: true },
-      });
+      }).catch(() => null);
     }
 
     // Fallback to first valid assignment if no specific batch ID provided
