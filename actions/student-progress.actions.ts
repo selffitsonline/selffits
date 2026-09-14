@@ -7,6 +7,20 @@ import { ExaminationStatus } from "@prisma/client";
 import fs from "fs";
 import path from "path";
 
+function safeFormatDate(d?: Date | string | null): string | null {
+  if (!d) return null;
+  const dateObj = new Date(d);
+  if (isNaN(dateObj.getTime())) return null;
+  return dateObj.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function safeISOString(d?: Date | string | null): string | null {
+  if (!d) return null;
+  const dateObj = new Date(d);
+  if (isNaN(dateObj.getTime())) return null;
+  return dateObj.toISOString();
+}
+
 // 1. GET ADMIN STUDENT PROGRESS LIST (Central directory of students with belt & exam status)
 export async function getAdminStudentProgressListAction() {
   try {
@@ -25,30 +39,59 @@ export async function getAdminStudentProgressListAction() {
       },
     });
 
-    const formattedBatches = batches.map((b) => ({
-      id: b.id,
-      batchId: b.batchId,
-      name: b.name || "Unnamed Batch",
-      programTitle: b.program?.title || "Martial Arts Program",
-      programCategory: b.program?.category || "MARTIAL_ARTS",
-      beltLevel: b.beltLevel || "Yellow Belt",
-      coachName: b.coach?.fullName || "Unassigned Coach",
-      coachRank: b.coach?.highestRank || "Certified Coach",
-      dayCombination: b.dayCombination || "Flexible Schedule",
-      timeSlot: b.timeSlot || "Flexible Slot",
-      clockTiming: b.clockTiming || "Flexible Timing",
-      examDate: b.examDate
-        ? b.examDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-        : null,
-      examDateISO: b.examDate ? b.examDate.toISOString().split("T")[0] : null,
-      maxCapacity: b.maxCapacity || 8,
-      studentCount: Array.isArray(b.students) ? b.students.length : 0,
-      capacityLabel: `${Array.isArray(b.students) ? b.students.length : 0} / ${b.maxCapacity || 8}`,
-      status: b.status || "ACTIVE",
-    }));
+    const formattedBatches = batches.map((b) => {
+      try {
+        return {
+          id: b.id,
+          batchId: b.batchId,
+          name: b.name || "Unnamed Batch",
+          programTitle: b.program?.title || "Martial Arts Program",
+          programCategory: b.program?.category || "MARTIAL_ARTS",
+          beltLevel: b.beltLevel || "Yellow Belt",
+          coachName: b.coach?.fullName || "Unassigned Coach",
+          coachRank: b.coach?.highestRank || "Certified Coach",
+          dayCombination: b.dayCombination || "Flexible Schedule",
+          timeSlot: b.timeSlot || "Flexible Slot",
+          clockTiming: b.clockTiming || "Flexible Timing",
+          examDate: safeFormatDate(b.examDate),
+          examDateISO: safeISOString(b.examDate) ? safeISOString(b.examDate)!.split("T")[0] : null,
+          maxCapacity: b.maxCapacity || 8,
+          studentCount: Array.isArray(b.students) ? b.students.length : 0,
+          capacityLabel: `${Array.isArray(b.students) ? b.students.length : 0} / ${b.maxCapacity || 8}`,
+          status: b.status || "ACTIVE",
+        };
+      } catch (err) {
+        console.error("Error formatting batch record:", b.id, err);
+        return {
+          id: b.id,
+          batchId: b.batchId || "BATCH",
+          name: b.name || "Batch",
+          programTitle: "Martial Arts Program",
+          programCategory: "MARTIAL_ARTS",
+          beltLevel: "Yellow Belt",
+          coachName: "Coach",
+          coachRank: "Certified Coach",
+          dayCombination: "Flexible",
+          timeSlot: "Flexible",
+          clockTiming: "Flexible",
+          examDate: null,
+          examDateISO: null,
+          maxCapacity: 8,
+          studentCount: 0,
+          capacityLabel: "0 / 8",
+          status: "ACTIVE",
+        };
+      }
+    });
 
+    // Query users with role STUDENT OR users who are assigned to any batch
     const students = await db.user.findMany({
-      where: { role: "STUDENT" },
+      where: {
+        OR: [
+          { role: "STUDENT" },
+          { batchStudents: { some: {} } },
+        ],
+      },
       orderBy: { createdAt: "desc" },
       include: {
         studentProfile: true,
@@ -79,66 +122,71 @@ export async function getAdminStudentProgressListAction() {
     });
 
     const formattedStudents = students.map((std) => {
-      const activeEnrollment = Array.isArray(std.enrollments) ? std.enrollments[0] : null;
-      const activeProgramTitle =
-        activeEnrollment?.membershipPlan?.program?.title ||
-        activeEnrollment?.membershipPlan?.name ||
-        "General Martial Arts";
+      try {
+        const activeEnrollment = Array.isArray(std.enrollments) ? std.enrollments[0] : null;
+        const activeProgramTitle =
+          activeEnrollment?.membershipPlan?.program?.title ||
+          activeEnrollment?.membershipPlan?.name ||
+          "General Martial Arts";
 
-      const latestExam = Array.isArray(std.examinations) ? std.examinations[0] : null;
-      const currentBelt = std.studentProfile?.currentBelt || "White Belt";
+        const latestExam = Array.isArray(std.examinations) ? std.examinations[0] : null;
+        const currentBelt = std.studentProfile?.currentBelt || "White Belt";
 
-      const awardDateFormatted = std.studentProfile?.beltAwardedAt
-        ? std.studentProfile.beltAwardedAt.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          })
-        : "Initial Assignment";
+        const awardDateFormatted = safeFormatDate(std.studentProfile?.beltAwardedAt) || "Initial Assignment";
 
-      const validBatchStudents = Array.isArray(std.batchStudents)
-        ? std.batchStudents.filter((bs) => bs && bs.batchId)
-        : [];
-      const batchIds = validBatchStudents.map((bs) => bs.batchId);
-      const batchNames = validBatchStudents.map((bs) => bs.batch?.name || "Assigned Batch");
+        const validBatchStudents = Array.isArray(std.batchStudents)
+          ? std.batchStudents.filter((bs) => bs && bs.batchId)
+          : [];
+        const batchIds = validBatchStudents.map((bs) => bs.batchId);
+        const batchNames = validBatchStudents.map((bs) => bs.batch?.name || "Assigned Batch");
 
-      return {
-        id: std.id,
-        name: std.name || "Student",
-        email: std.email || "No email",
-        phone: std.studentProfile?.phone || "Not provided",
-        joinedDate: std.createdAt
-          ? std.createdAt.toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })
-          : "Recently",
-        createdAtISO: std.createdAt ? std.createdAt.toISOString() : new Date().toISOString(),
-        currentBelt,
-        beltAwardedAt: awardDateFormatted,
-        activeProgram: activeProgramTitle,
-        batchIds,
-        batchNames,
-        totalExams: Array.isArray(std.examinations) ? std.examinations.length : 0,
-        latestExamStatus: latestExam ? latestExam.status : "NO_EXAM",
-        latestExamDate: latestExam && latestExam.examDate
-          ? latestExam.examDate.toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })
-          : null,
-        latestExamDateISO: latestExam && latestExam.examDate ? latestExam.examDate.toISOString() : null,
-        totalProgressions: Array.isArray(std.beltProgressions) ? std.beltProgressions.length : 0,
-        totalCertificates: Array.isArray(std.certificates) ? std.certificates.length : 0,
-      };
+        return {
+          id: std.id,
+          name: std.name || "Student",
+          email: std.email || "No email",
+          phone: std.studentProfile?.phone || "Not provided",
+          joinedDate: safeFormatDate(std.createdAt) || "Recently",
+          createdAtISO: safeISOString(std.createdAt) || new Date().toISOString(),
+          currentBelt,
+          beltAwardedAt: awardDateFormatted,
+          activeProgram: activeProgramTitle,
+          batchIds,
+          batchNames,
+          totalExams: Array.isArray(std.examinations) ? std.examinations.length : 0,
+          latestExamStatus: latestExam ? latestExam.status : "NO_EXAM",
+          latestExamDate: latestExam ? safeFormatDate(latestExam.examDate) : null,
+          latestExamDateISO: latestExam ? safeISOString(latestExam.examDate) : null,
+          totalProgressions: Array.isArray(std.beltProgressions) ? std.beltProgressions.length : 0,
+          totalCertificates: Array.isArray(std.certificates) ? std.certificates.length : 0,
+        };
+      } catch (err) {
+        console.error("Error formatting student record:", std.id, err);
+        return {
+          id: std.id,
+          name: std.name || "Student",
+          email: std.email || "",
+          phone: "Not provided",
+          joinedDate: "Recently",
+          createdAtISO: new Date().toISOString(),
+          currentBelt: "White Belt",
+          beltAwardedAt: "Initial Assignment",
+          activeProgram: "General Martial Arts",
+          batchIds: [],
+          batchNames: [],
+          totalExams: 0,
+          latestExamStatus: "NO_EXAM",
+          latestExamDate: null,
+          latestExamDateISO: null,
+          totalProgressions: 0,
+          totalCertificates: 0,
+        };
+      }
     });
 
     return { success: true, batches: formattedBatches, students: formattedStudents };
   } catch (err: any) {
     console.error("getAdminStudentProgressListAction error:", err);
-    return { success: false, error: "Failed to fetch student progress list." };
+    return { success: false, error: err?.message || "Failed to fetch student progress list." };
   }
 }
 
@@ -182,11 +230,16 @@ export async function getStudentProgressDetailsAction(studentId: string) {
     }
 
     const currentBelt = student.studentProfile?.currentBelt || "White Belt";
-    const activeEnrollment = student.enrollments.find((e) => e.status === "ACTIVE");
+    const activeEnrollment = Array.isArray(student.enrollments)
+      ? student.enrollments.find((e) => e.status === "ACTIVE")
+      : null;
     const activeProgram = activeEnrollment?.membershipPlan?.program;
 
     // Get primary assigned batch and exam date
-    const primaryBatchAssignment = student.batchStudents[0];
+    const validAssignments = Array.isArray(student.batchStudents)
+      ? student.batchStudents.filter((bs) => bs && bs.batch)
+      : [];
+    const primaryBatchAssignment = validAssignments[0];
     const assignedBatch = primaryBatchAssignment?.batch || null;
 
     let batchExamDateFormatted: string | null = null;
@@ -196,65 +249,54 @@ export async function getStudentProgressDetailsAction(studentId: string) {
 
     if (assignedBatch?.examDate) {
       const examDateObj = new Date(assignedBatch.examDate);
-      batchExamDateFormatted = examDateObj.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      });
-      batchExamDateISO = examDateObj.toISOString().split("T")[0];
+      if (!isNaN(examDateObj.getTime())) {
+        batchExamDateFormatted = safeFormatDate(assignedBatch.examDate);
+        batchExamDateISO = safeISOString(assignedBatch.examDate) ? safeISOString(assignedBatch.examDate)!.split("T")[0] : null;
 
-      // Exam Date Status comparison (Compare year/month/day at midnight)
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const examDay = new Date(examDateObj);
-      examDay.setHours(0, 0, 0, 0);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const examDay = new Date(examDateObj);
+        examDay.setHours(0, 0, 0, 0);
 
-      if (today >= examDay) {
-        isExamDatePassed = true;
-        examStatusLabel = "EXAM_DATE_PASSED";
-      } else {
-        isExamDatePassed = false;
-        examStatusLabel = "UPCOMING_EXAM";
+        if (today >= examDay) {
+          isExamDatePassed = true;
+          examStatusLabel = "EXAM_DATE_PASSED";
+        } else {
+          isExamDatePassed = false;
+          examStatusLabel = "UPCOMING_EXAM";
+        }
       }
     }
 
-    const formattedCertificates = student.certificates.map((cert) => ({
-      id: cert.id,
-      title: cert.title,
-      certificateNumber: cert.certificateNumber,
-      beltName: cert.beltName || "Belt Award",
-      programTitle: cert.program?.title || "Martial Arts Academy",
-      issuedDate: cert.issuedDate.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      }),
-      fileKey: cert.fileKey,
-      fileUrl: `/api/certificates/download/${cert.id}`,
-    }));
+    const formattedCertificates = Array.isArray(student.certificates)
+      ? student.certificates.map((cert) => ({
+          id: cert.id,
+          title: cert.title || "Graduation Certificate",
+          certificateNumber: cert.certificateNumber,
+          beltName: cert.beltName || "Belt Award",
+          programTitle: cert.program?.title || "Martial Arts Academy",
+          issuedDate: safeFormatDate(cert.issuedDate) || "Recently",
+          fileKey: cert.fileKey,
+          fileUrl: `/api/certificates/download/${cert.id}`,
+        }))
+      : [];
 
     return {
       success: true,
       student: {
         id: student.id,
-        name: student.name,
-        email: student.email,
+        name: student.name || "Student",
+        email: student.email || "No email",
         phone: student.studentProfile?.phone || "Not provided",
         currentBelt,
-        beltAwardedAt: student.studentProfile?.beltAwardedAt
-          ? student.studentProfile.beltAwardedAt.toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })
-          : "Initial Assignment",
+        beltAwardedAt: safeFormatDate(student.studentProfile?.beltAwardedAt) || "Initial Assignment",
         activeProgramTitle: activeProgram?.title || assignedBatch?.program?.title || "Martial Arts Program",
         activeProgramId: activeProgram?.id || assignedBatch?.programId || null,
         batchInfo: assignedBatch
           ? {
               id: assignedBatch.id,
               batchId: assignedBatch.batchId,
-              name: assignedBatch.name,
+              name: assignedBatch.name || "Assigned Batch",
               beltLevel: assignedBatch.beltLevel || "Yellow Belt",
               examDate: batchExamDateFormatted,
               examDateISO: batchExamDateISO,

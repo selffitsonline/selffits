@@ -63,10 +63,8 @@ export function AdminStudentProgressView({
   const [batches, setBatches] = useState<any[]>(initialBatches || []);
   const [students, setStudents] = useState<any[]>(initialStudents || []);
 
-  // Primary Batch Selector State (Defaults to first active batch or "ALL")
-  const [selectedBatchId, setSelectedBatchId] = useState<string>(
-    initialBatches.length > 0 ? initialBatches[0].id : "ALL"
-  );
+  // Primary Batch Selector State (Defaults to "ALL" so all students are visible)
+  const [selectedBatchId, setSelectedBatchId] = useState<string>("ALL");
 
   // Additional Filter States
   const [searchQuery, setSearchQuery] = useState("");
