@@ -240,7 +240,15 @@ export async function getStudentProgressDetailsAction(studentId: string, targetB
         },
         certificates: {
           orderBy: { issuedDate: "desc" },
-          include: { program: true },
+          select: {
+            id: true,
+            title: true,
+            certificateNumber: true,
+            beltName: true,
+            fileKey: true,
+            issuedDate: true,
+            program: { select: { id: true, title: true } },
+          },
         },
         enrollments: {
           orderBy: { createdAt: "desc" },
