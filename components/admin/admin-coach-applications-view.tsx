@@ -12,7 +12,6 @@ import {
   Calendar,
   AlertCircle,
   Search,
-  Filter,
   RefreshCw,
   ChevronLeft,
   ChevronRight,
@@ -21,13 +20,12 @@ import {
   Clock,
   Eye,
   X,
-  ExternalLink,
   ShieldCheck,
-  Globe,
   MapPin,
-  FileCheck,
   User,
   Upload,
+  Briefcase,
+  Globe,
 } from "lucide-react";
 import { updateCoachApplicationStatusAction } from "@/actions/admin.actions";
 import { clearAdminCacheKey } from "@/lib/admin-cache";
@@ -35,18 +33,6 @@ import { clearAdminCacheKey } from "@/lib/admin-cache";
 interface AdminCoachApplicationsViewProps {
   initialApplications: any[];
 }
-
-const DISCIPLINE_CATEGORIES = [
-  "Karate",
-  "Kung Fu",
-  "Taekwondo",
-  "Kickboxing",
-  "Yoga",
-  "Fitness / Functional Training",
-];
-
-const DAYS_LIST = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
-const TIME_SLOTS = ["Morning", "Afternoon", "Evening"];
 
 export function AdminCoachApplicationsView({ initialApplications }: AdminCoachApplicationsViewProps) {
   const [applications, setApplications] = useState<any[]>(initialApplications || []);
@@ -57,7 +43,6 @@ export function AdminCoachApplicationsView({ initialApplications }: AdminCoachAp
 
   // Filter States
   const [activeTab, setActiveTab] = useState<"ALL" | "PENDING" | "REJECTED">("ALL");
-  const [selectedDiscipline, setSelectedDiscipline] = useState<string>("ALL");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Pagination / Page Indexing States
@@ -67,11 +52,6 @@ export function AdminCoachApplicationsView({ initialApplications }: AdminCoachAp
   // Handlers for state updates that reset current page to 1
   const handleTabChange = (tab: "ALL" | "PENDING" | "REJECTED") => {
     setActiveTab(tab);
-    setCurrentPage(1);
-  };
-
-  const handleDisciplineChange = (disc: string) => {
-    setSelectedDiscipline(disc);
     setCurrentPage(1);
   };
 
@@ -132,27 +112,27 @@ export function AdminCoachApplicationsView({ initialApplications }: AdminCoachAp
     if (activeTab === "PENDING" && app.status !== "PENDING") return false;
     if (activeTab === "REJECTED" && app.status !== "REJECTED") return false;
 
-    // Discipline Category Filter
-    if (selectedDiscipline !== "ALL") {
-      const rawDisc: string[] = app.rawDisciplines || [];
-      const discString: string = app.disciplines || "";
-      const matchesRaw = rawDisc.some(
-        (d) => d.toLowerCase().includes(selectedDiscipline.toLowerCase())
-      );
-      const matchesString = discString.toLowerCase().includes(selectedDiscipline.toLowerCase());
-      if (!matchesRaw && !matchesString) return false;
-    }
-
-    // Search Query Filter (Name, Email, Phone, Rank, Discipline)
+    // Search Query Filter
     if (searchQuery.trim() !== "") {
       const q = searchQuery.toLowerCase().trim();
       const matchName = app.fullName?.toLowerCase().includes(q);
       const matchEmail = app.email?.toLowerCase().includes(q);
       const matchPhone = app.phone?.toLowerCase().includes(q);
-      const matchRank = app.highestRank?.toLowerCase().includes(q);
-      const matchDisc = app.disciplines?.toLowerCase().includes(q);
+      const matchBelt = (app.beltLevel || app.highestRank)?.toLowerCase().includes(q);
+      const matchExp = (app.yearsOfExperience || app.totalExperience)?.toLowerCase().includes(q);
+      const matchLocation = app.location?.toLowerCase().includes(q);
+      const matchNationality = app.nationality?.toLowerCase().includes(q);
 
-      if (!matchName && !matchEmail && !matchPhone && !matchRank && !matchDisc) return false;
+      if (
+        !matchName &&
+        !matchEmail &&
+        !matchPhone &&
+        !matchBelt &&
+        !matchExp &&
+        !matchLocation &&
+        !matchNationality
+      )
+        return false;
     }
 
     return true;
@@ -173,10 +153,10 @@ export function AdminCoachApplicationsView({ initialApplications }: AdminCoachAp
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-extrabold text-white font-[family-name:var(--font-outfit)]">
-              Coach Applications & Registration Leads
+              Coach Leads & Resumes
             </h1>
             <p className="text-xs text-gray-400 mt-1">
-              Review submitted coach applications, inspect full candidate details, download resumes, and manage approvals.
+              Review submitted coach applications, inspect candidate details, download resumes, and manage approvals.
             </p>
           </div>
         </div>
@@ -216,7 +196,7 @@ export function AdminCoachApplicationsView({ initialApplications }: AdminCoachAp
           >
             <div className="flex items-center gap-2.5">
               <Users className={`w-4 h-4 ${activeTab === "ALL" ? "text-[#0080FF]" : "text-gray-500"}`} />
-              <span className="text-xs font-bold">All Active Applications</span>
+              <span className="text-xs font-bold">All Submissions</span>
             </div>
             <span className="px-2.5 py-0.5 rounded-full bg-white/10 text-xs font-black">{counts.ALL}</span>
           </button>
@@ -262,7 +242,7 @@ export function AdminCoachApplicationsView({ initialApplications }: AdminCoachAp
           <div className="relative flex-1">
             <input
               type="text"
-              placeholder="Search candidate by name, email, phone, rank, or discipline..."
+              placeholder="Search candidate by name, email, phone, belt level, location, or nationality..."
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
               className="w-full h-10 pl-9 pr-4 rounded-xl bg-[#0F1117] border border-white/10 text-white placeholder-gray-500 text-xs focus:outline-none focus:border-[#0080FF] transition-all"
@@ -270,51 +250,28 @@ export function AdminCoachApplicationsView({ initialApplications }: AdminCoachAp
             <Search className="w-4 h-4 text-gray-500 absolute left-3 top-3" />
           </div>
 
-          {/* Discipline Category Dropdown Filter */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2 bg-[#0F1117] border border-white/10 rounded-xl px-3 py-1.5">
-              <Filter className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-              <select
-                value={selectedDiscipline}
-                onChange={(e) => handleDisciplineChange(e.target.value)}
-                className="bg-transparent text-white text-xs font-semibold focus:outline-none cursor-pointer"
-              >
-                <option value="ALL" className="bg-[#14161D]">
-                  All Disciplines
-                </option>
-                {DISCIPLINE_CATEGORIES.map((disc) => (
-                  <option key={disc} value={disc} className="bg-[#14161D]">
-                    {disc}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Clear Filters Button */}
-            {(selectedDiscipline !== "ALL" || searchQuery !== "") && (
-              <button
-                onClick={() => {
-                  setSelectedDiscipline("ALL");
-                  setSearchQuery("");
-                  setCurrentPage(1);
-                }}
-                className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5"
-              >
-                <RefreshCw className="w-3.5 h-3.5" /> Clear Filters
-              </button>
-            )}
-          </div>
+          {searchQuery !== "" && (
+            <button
+              onClick={() => {
+                setSearchQuery("");
+                setCurrentPage(1);
+              }}
+              className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 self-start md:self-auto"
+            >
+              <RefreshCw className="w-3.5 h-3.5" /> Clear Search
+            </button>
+          )}
         </div>
 
-        {/* Coach Application Cards List */}
+        {/* Coach Lead Cards List */}
         {paginatedApplications.length === 0 ? (
           <div className="rounded-3xl p-12 bg-[#14161D] border border-white/10 text-center space-y-3 max-w-md mx-auto shadow-xl">
             <FileText className="w-10 h-10 text-gray-600 mx-auto opacity-60" />
-            <h3 className="text-base font-bold text-white">No Matching Applications Found</h3>
+            <h3 className="text-base font-bold text-white">No Coach Applications Found</h3>
             <p className="text-xs text-gray-400">
               {applications.length === 0
-                ? "All coach applications have been processed or approved into the Active Coaches directory."
-                : "No application matches your current search or discipline filter criteria."}
+                ? "No applications have been submitted yet."
+                : "No application matches your current search criteria."}
             </p>
           </div>
         ) : (
@@ -324,21 +281,13 @@ export function AdminCoachApplicationsView({ initialApplications }: AdminCoachAp
                 key={app.id}
                 className="bg-[#14161D] border border-white/10 rounded-2xl p-6 space-y-4 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6 hover:border-white/20 transition-all"
               >
-                <div className="space-y-2 flex-grow">
+                <div className="space-y-3 flex-grow">
                   <div className="flex items-center gap-3">
-                    {app.profilePhotoUrl ? (
-                      <img
-                        src={app.profilePhotoUrl}
-                        alt={app.fullName}
-                        className="w-10 h-10 rounded-xl object-cover border border-white/15 shrink-0"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-xl bg-[#0080FF]/20 border border-[#0080FF]/30 flex items-center justify-center text-[#0080FF] font-black text-sm shrink-0">
-                        {app.fullName?.charAt(0) || "C"}
-                      </div>
-                    )}
+                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#E50914] to-[#B30006] flex items-center justify-center text-white font-black text-base shadow-md shrink-0">
+                      {app.fullName?.charAt(0) || "C"}
+                    </div>
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2.5 flex-wrap">
                         <h3 className="text-lg font-extrabold text-white font-[family-name:var(--font-outfit)]">
                           {app.fullName}
                         </h3>
@@ -354,34 +303,38 @@ export function AdminCoachApplicationsView({ initialApplications }: AdminCoachAp
                           {app.status}
                         </span>
                       </div>
-                      {app.location && (
-                        <p className="text-[11px] text-gray-400 flex items-center gap-1">
-                          <MapPin className="w-3 h-3 text-emerald-400" /> {app.location} {app.nationality ? `(${app.nationality})` : ""}
-                        </p>
-                      )}
+                      <p className="text-[11px] text-gray-400 flex items-center gap-3 flex-wrap mt-0.5">
+                        <span className="flex items-center gap-1 text-emerald-400 font-medium">
+                          <MapPin className="w-3 h-3" /> Location: {app.location || "N/A"}
+                        </span>
+                        <span>• Nationality: <strong className="text-gray-200">{app.nationality || "N/A"}</strong></span>
+                      </p>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-gray-300">
-                    <p className="flex items-center gap-1.5">
-                      <Mail className="w-3.5 h-3.5 text-[#0080FF]" /> {app.email}
+                    <p className="flex items-center gap-1.5 truncate">
+                      <Mail className="w-3.5 h-3.5 text-[#0080FF] shrink-0" /> <span className="truncate">{app.email}</span>
                     </p>
-                    <p className="flex items-center gap-1.5">
-                      <Phone className="w-3.5 h-3.5 text-[#10B981]" /> Phone/WhatsApp: {app.phone}
+                    <p className="flex items-center gap-1.5 truncate">
+                      <Phone className="w-3.5 h-3.5 text-[#10B981] shrink-0" /> <span className="truncate">Phone: {app.phone}</span>
                     </p>
-                    <p className="flex items-center gap-1.5">
-                      <Calendar className="w-3.5 h-3.5 text-gray-400" /> Applied: {app.appliedDate}
+                    <p className="flex items-center gap-1.5 text-gray-400">
+                      <Calendar className="w-3.5 h-3.5 shrink-0" /> Applied: {app.appliedDate}
                     </p>
                   </div>
 
-                  <div className="text-xs text-gray-400 space-y-1">
-                    <p className="flex items-center gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
+                    <p className="flex items-center gap-2 bg-[#0F1117] px-3 py-1.5 rounded-xl border border-white/5">
                       <Award className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                      <span className="font-bold text-gray-200">Disciplines:</span>{" "}
-                      <span className="text-[#0080FF] font-semibold">{app.disciplines}</span>
+                      <span className="text-gray-400 font-semibold">Belt Level:</span>
+                      <span className="text-white font-extrabold">{app.beltLevel || app.highestRank}</span>
                     </p>
-                    <p className="pl-5 text-gray-400">
-                      <span className="font-semibold text-gray-300">Rank & Experience:</span> {app.highestRank} ({app.totalExperience} Exp)
+
+                    <p className="flex items-center gap-2 bg-[#0F1117] px-3 py-1.5 rounded-xl border border-white/5">
+                      <Briefcase className="w-3.5 h-3.5 text-[#0080FF] shrink-0" />
+                      <span className="text-gray-400 font-semibold">Experience:</span>
+                      <span className="text-white font-extrabold">{app.yearsOfExperience || app.totalExperience}</span>
                     </p>
                   </div>
                 </div>
@@ -400,16 +353,16 @@ export function AdminCoachApplicationsView({ initialApplications }: AdminCoachAp
                       href={app.resumeUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-bold transition-all flex items-center gap-1.5"
+                      className="px-3.5 py-2 rounded-xl bg-[#10B981]/20 hover:bg-[#10B981]/35 text-[#10B981] border border-[#10B981]/30 text-xs font-bold transition-all flex items-center gap-1.5"
                     >
-                      <Download className="w-3.5 h-3.5 text-[#0080FF]" /> Resume
+                      <Download className="w-3.5 h-3.5 text-[#10B981]" /> Resume
                     </a>
                   ) : null}
 
                   <button
                     type="button"
                     onClick={() => handleStatusUpdate(app.id, "APPROVED")}
-                    className="px-3.5 py-2 rounded-xl bg-[#10B981]/20 hover:bg-[#10B981]/40 text-[#10B981] border border-[#10B981]/30 text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-lg shadow-[#10B981]/10"
+                    className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-lg shadow-emerald-500/20"
                     title="Approve and move to Active Coaches"
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" /> Approve
@@ -515,22 +468,14 @@ export function AdminCoachApplicationsView({ initialApplications }: AdminCoachAp
         {/* FULL CANDIDATE APPLICATION DETAILS MODAL */}
         {selectedApp && (
           <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto animate-in fade-in">
-            <div className="bg-[#14161D] border border-white/15 rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden my-auto">
+            <div className="bg-[#14161D] border border-white/15 rounded-3xl w-full max-w-3xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden my-auto">
               
               {/* Modal Header */}
               <div className="p-6 border-b border-white/10 bg-[#0F1117] flex items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  {selectedApp.profilePhotoUrl ? (
-                    <img
-                      src={selectedApp.profilePhotoUrl}
-                      alt={selectedApp.fullName}
-                      className="w-14 h-14 rounded-2xl object-cover border-2 border-[#0080FF]/40 shadow-md shrink-0"
-                    />
-                  ) : (
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#0080FF] to-[#0055B3] flex items-center justify-center text-white font-black text-xl shadow-md shrink-0">
-                      {selectedApp.fullName?.charAt(0) || "C"}
-                    </div>
-                  )}
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#E50914] to-[#B30006] flex items-center justify-center text-white font-black text-xl shadow-md shrink-0">
+                    {selectedApp.fullName?.charAt(0) || "C"}
+                  </div>
 
                   <div>
                     <div className="flex items-center gap-3 flex-wrap">
@@ -553,7 +498,7 @@ export function AdminCoachApplicationsView({ initialApplications }: AdminCoachAp
                       <span>Applied: <strong className="text-white">{selectedApp.appliedDate}</strong></span>
                       {selectedApp.location && (
                         <span className="flex items-center gap-1 text-emerald-400 font-semibold">
-                          <MapPin className="w-3.5 h-3.5" /> {selectedApp.location}
+                          <MapPin className="w-3.5 h-3.5" /> Location: {selectedApp.location}
                         </span>
                       )}
                     </p>
@@ -562,20 +507,20 @@ export function AdminCoachApplicationsView({ initialApplications }: AdminCoachAp
 
                 <button
                   onClick={() => setSelectedApp(null)}
-                  className="p-2 rounded-xl bg-white/5 hover:bg-white/15 text-gray-400 hover:text-white transition-all"
-                  title="Close Details Modal"
+                  className="p-2 rounded-xl bg-white/5 hover:bg-white/15 text-gray-400 hover:text-white transition-all cursor-pointer"
+                  title="Close Modal"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Modal Body */}
+              {/* Modal Body: ALL 14 FIELDS */}
               <div className="p-6 overflow-y-auto space-y-6 flex-1 text-xs text-gray-300">
                 
-                {/* 1. Personal Details */}
+                {/* 1. Personal Identification */}
                 <div className="p-5 rounded-2xl bg-[#0F1117] border border-white/10 space-y-4">
                   <div className="flex items-center gap-2 font-bold text-white uppercase tracking-wider text-xs border-b border-white/10 pb-2">
-                    <User className="w-4 h-4 text-[#0080FF]" /> 1. Personal Details
+                    <User className="w-4 h-4 text-[#0080FF]" /> 1. Personal Identification
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                     <div>
@@ -583,283 +528,108 @@ export function AdminCoachApplicationsView({ initialApplications }: AdminCoachAp
                       <span className="text-white font-extrabold text-sm">{selectedApp.fullName}</span>
                     </div>
                     <div>
-                      <span className="text-gray-500 font-bold uppercase text-[10px] block mb-0.5">Email Address</span>
-                      <a href={`mailto:${selectedApp.email}`} className="text-[#0080FF] font-bold hover:underline flex items-center gap-1 truncate">
-                        <Mail className="w-3.5 h-3.5 shrink-0" /> {selectedApp.email}
-                      </a>
+                      <span className="text-gray-500 font-bold uppercase text-[10px] block mb-0.5">Date of Birth</span>
+                      <span className="text-white font-bold">{selectedApp.dateOfBirth}</span>
                     </div>
                     <div>
-                      <span className="text-gray-500 font-bold uppercase text-[10px] block mb-0.5">Phone / WhatsApp</span>
-                      <a href={`tel:${selectedApp.phone}`} className="text-emerald-400 font-bold hover:underline flex items-center gap-1 truncate">
-                        <Phone className="w-3.5 h-3.5 shrink-0" /> {selectedApp.phone}
-                      </a>
-                    </div>
-                    <div>
-                      <span className="text-gray-500 font-bold uppercase text-[10px] block mb-0.5">Location / Country</span>
-                      <span className="text-white font-semibold">{selectedApp.location || "Not specified"}</span>
+                      <span className="text-gray-500 font-bold uppercase text-[10px] block mb-0.5">Gender</span>
+                      <span className="text-white font-bold">{selectedApp.gender}</span>
                     </div>
                     <div>
                       <span className="text-gray-500 font-bold uppercase text-[10px] block mb-0.5">Nationality</span>
-                      <span className="text-white font-semibold">{selectedApp.nationality || "Not specified"}</span>
+                      <span className="text-white font-bold">{selectedApp.nationality}</span>
                     </div>
                     <div>
-                      <span className="text-gray-500 font-bold uppercase text-[10px] block mb-0.5">Profile Photo</span>
-                      {selectedApp.profilePhotoUrl ? (
-                        <a href={selectedApp.profilePhotoUrl} target="_blank" rel="noopener noreferrer" className="text-emerald-400 font-bold hover:underline flex items-center gap-1">
-                          <ExternalLink className="w-3.5 h-3.5" /> View Photo Link
-                        </a>
-                      ) : (
-                        <span className="text-gray-500">None uploaded</span>
-                      )}
+                      <span className="text-gray-500 font-bold uppercase text-[10px] block mb-0.5">Current Location / Country</span>
+                      <span className="text-emerald-400 font-bold">{selectedApp.location}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 font-bold uppercase text-[10px] block mb-0.5">Application Date</span>
+                      <span className="text-gray-300 font-semibold">{selectedApp.appliedDate}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* 2. Coaching Disciplines */}
-                <div className="p-5 rounded-2xl bg-[#0F1117] border border-white/10 space-y-3">
-                  <div className="flex items-center gap-2 font-bold text-white uppercase tracking-wider text-xs border-b border-white/10 pb-2">
-                    <Award className="w-4 h-4 text-[#0080FF]" /> 2. Qualified Disciplines
-                  </div>
-                  <div className="flex flex-wrap gap-2 pt-1">
-                    {selectedApp.rawDisciplines && selectedApp.rawDisciplines.length > 0 ? (
-                      selectedApp.rawDisciplines.map((disc: string) => (
-                        <span
-                          key={disc}
-                          className="px-3 py-1 rounded-xl bg-[#0080FF]/15 border border-[#0080FF]/30 text-[#0080FF] font-extrabold text-xs"
-                        >
-                          ✓ {disc}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-white font-semibold">{selectedApp.disciplines}</span>
-                    )}
-                  </div>
-                </div>
-
-                {/* 3. Qualifications & Experience */}
+                {/* 2. Contact Details */}
                 <div className="p-5 rounded-2xl bg-[#0F1117] border border-white/10 space-y-4">
                   <div className="flex items-center gap-2 font-bold text-white uppercase tracking-wider text-xs border-b border-white/10 pb-2">
-                    <ShieldCheck className="w-4 h-4 text-emerald-400" /> 3. Qualifications & Experience
+                    <Phone className="w-4 h-4 text-[#10B981]" /> 2. Contact Communication
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <span className="text-gray-500 font-bold uppercase text-[10px] block mb-0.5">Highest Rank / Qualification</span>
-                      <span className="text-white font-bold text-sm">{selectedApp.highestRank}</span>
+                      <span className="text-gray-500 font-bold uppercase text-[10px] block mb-0.5">Email Address</span>
+                      <a href={`mailto:${selectedApp.email}`} className="text-[#0080FF] font-bold hover:underline flex items-center gap-1.5 truncate text-sm">
+                        <Mail className="w-4 h-4 shrink-0" /> {selectedApp.email}
+                      </a>
                     </div>
                     <div>
-                      <span className="text-gray-500 font-bold uppercase text-[10px] block mb-0.5">Total Coaching Experience</span>
-                      <span className="text-amber-400 font-extrabold text-sm">{selectedApp.totalExperience}</span>
+                      <span className="text-gray-500 font-bold uppercase text-[10px] block mb-0.5">Phone / WhatsApp & Calling Code</span>
+                      <a href={`tel:${selectedApp.phone}`} className="text-emerald-400 font-bold hover:underline flex items-center gap-1.5 truncate text-sm">
+                        <Phone className="w-4 h-4 shrink-0" /> {selectedApp.phone} {selectedApp.countryCallingCode ? `(${selectedApp.countryCallingCode})` : ""}
+                      </a>
                     </div>
                   </div>
-
-                  {selectedApp.targetAgeGroups && selectedApp.targetAgeGroups.length > 0 && (
-                    <div className="pt-2">
-                      <span className="text-gray-500 font-bold uppercase text-[10px] block mb-1.5">Age Groups Can Coach</span>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedApp.targetAgeGroups.map((age: string) => (
-                          <span
-                            key={age}
-                            className="px-3 py-1 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 font-bold text-xs"
-                          >
-                            • {age}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
 
-                {/* 4. Weekly Availability Schedule */}
+                {/* 3. Belt Level & Experience */}
+                <div className="p-5 rounded-2xl bg-[#0F1117] border border-white/10 space-y-4">
+                  <div className="flex items-center gap-2 font-bold text-white uppercase tracking-wider text-xs border-b border-white/10 pb-2">
+                    <Award className="w-4 h-4 text-amber-400" /> 3. Coach Credentials
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="p-3.5 rounded-xl bg-[#14161D] border border-white/5 space-y-1">
+                      <span className="text-gray-400 font-bold uppercase text-[10px] block">Belt Level</span>
+                      <span className="text-amber-400 font-black text-base block">{selectedApp.beltLevel || selectedApp.highestRank}</span>
+                    </div>
+                    <div className="p-3.5 rounded-xl bg-[#14161D] border border-white/5 space-y-1">
+                      <span className="text-gray-400 font-bold uppercase text-[10px] block">Years of Experience</span>
+                      <span className="text-[#0080FF] font-black text-base block">{selectedApp.yearsOfExperience || selectedApp.totalExperience}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Instagram Link */}
                 <div className="p-5 rounded-2xl bg-[#0F1117] border border-white/10 space-y-3">
                   <div className="flex items-center gap-2 font-bold text-white uppercase tracking-wider text-xs border-b border-white/10 pb-2">
-                    <Calendar className="w-4 h-4 text-amber-400" /> 4. Weekly Availability Schedule
+                    <Globe className="w-4 h-4 text-pink-500" /> 4. Instagram Link
                   </div>
-                  
-                  {selectedApp.availability && Object.keys(selectedApp.availability).length > 0 ? (
-                    <div className="overflow-x-auto pt-1">
-                      <table className="w-full text-xs text-center border-collapse min-w-[450px]">
-                        <thead>
-                          <tr className="border-b border-white/10 text-gray-400 font-bold uppercase text-[10px]">
-                            <th className="py-2 px-2 text-left">Day</th>
-                            {TIME_SLOTS.map((slot) => (
-                              <th key={slot} className="py-2 px-2">{slot}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {DAYS_LIST.map((day) => {
-                            const daySlots: string[] = selectedApp.availability[day] || [];
-                            return (
-                              <tr key={day} className="border-b border-white/5 hover:bg-white/[0.02]">
-                                <td className="py-2 px-2 font-bold text-white text-left">{day}</td>
-                                {TIME_SLOTS.map((slot) => {
-                                  const isAvailable = daySlots.includes(slot);
-                                  return (
-                                    <td key={slot} className="py-2 px-2">
-                                      <span
-                                        className={`inline-block px-2.5 py-1 rounded-lg text-[10px] font-extrabold ${
-                                          isAvailable
-                                            ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                                            : "bg-white/5 text-gray-600"
-                                        }`}
-                                      >
-                                        {isAvailable ? "✓ Available" : "—"}
-                                      </span>
-                                    </td>
-                                  );
-                                })}
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
-                    </div>
+                  {selectedApp.instagramUrl ? (
+                    <a
+                      href={selectedApp.instagramUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-3 rounded-xl bg-pink-500/10 border border-pink-500/30 text-pink-400 font-bold hover:bg-pink-500/20 transition-all flex items-center gap-2.5 w-max truncate"
+                    >
+                      <Globe className="w-4 h-4 shrink-0" /> <span className="truncate">{selectedApp.instagramUrl}</span>
+                    </a>
                   ) : (
-                    <p className="text-gray-500 italic">No custom availability slots submitted.</p>
+                    <p className="text-gray-500 italic">No Instagram link provided.</p>
                   )}
                 </div>
 
-                {/* 5. Portfolio & Social Profiles */}
+                {/* 5. Resume Attachment */}
                 <div className="p-5 rounded-2xl bg-[#0F1117] border border-white/10 space-y-3">
                   <div className="flex items-center gap-2 font-bold text-white uppercase tracking-wider text-xs border-b border-white/10 pb-2">
-                    <Globe className="w-4 h-4 text-[#0080FF]" /> 5. Social & Online Links
+                    <Upload className="w-4 h-4 text-emerald-400" /> 5. Mandatory Resume Document
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-                    {selectedApp.instagramUrl ? (
-                      <a
-                        href={selectedApp.instagramUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-3 rounded-xl bg-pink-500/10 border border-pink-500/30 text-pink-400 font-bold hover:bg-pink-500/20 transition-all flex items-center gap-2 truncate"
-                      >
-                        <Globe className="w-4 h-4 shrink-0" /> <span className="truncate">Instagram Profile</span>
-                      </a>
-                    ) : null}
-
-                    {selectedApp.facebookUrl ? (
-                      <a
-                        href={selectedApp.facebookUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-400 font-bold hover:bg-blue-500/20 transition-all flex items-center gap-2 truncate"
-                      >
-                        <Globe className="w-4 h-4 shrink-0" /> <span className="truncate">Facebook Profile</span>
-                      </a>
-                    ) : null}
-
-                    {selectedApp.youtubeUrl ? (
-                      <a
-                        href={selectedApp.youtubeUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 font-bold hover:bg-red-500/20 transition-all flex items-center gap-2 truncate"
-                      >
-                        <ExternalLink className="w-4 h-4 shrink-0" /> <span className="truncate">YouTube Channel</span>
-                      </a>
-                    ) : null}
-
-                    {!selectedApp.instagramUrl && !selectedApp.facebookUrl && !selectedApp.youtubeUrl && (
-                      <p className="text-gray-500 italic col-span-3">No social profile links submitted.</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* 6. Uploaded Documents & Certificates */}
-                <div className="p-5 rounded-2xl bg-[#0F1117] border border-white/10 space-y-4">
-                  <div className="flex items-center gap-2 font-bold text-white uppercase tracking-wider text-xs border-b border-white/10 pb-2">
-                    <Upload className="w-4 h-4 text-emerald-400" /> 6. Candidate Documents & Attachments
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* CV / Resume */}
-                    <div className="p-4 rounded-xl bg-[#14161D] border border-white/10 space-y-2 flex items-center justify-between gap-3">
-                      <div>
-                        <span className="text-white font-bold text-xs block">CV / Resume File</span>
-                        <span className="text-gray-500 text-[10px]">Candidate professional resume</span>
-                      </div>
-                      {selectedApp.resumeUrl ? (
-                        <a
-                          href={selectedApp.resumeUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-3 py-2 rounded-xl bg-[#0080FF] hover:bg-[#0066CC] text-white font-bold text-xs transition-all flex items-center gap-1.5 shrink-0 shadow-md shadow-[#0080FF]/20"
-                        >
-                          <Download className="w-3.5 h-3.5" /> Download
-                        </a>
-                      ) : (
-                        <span className="text-gray-500 font-semibold text-xs">Not Provided</span>
-                      )}
+                  <div className="p-4 rounded-xl bg-[#14161D] border border-white/10 flex items-center justify-between gap-4">
+                    <div>
+                      <span className="text-white font-bold text-xs block">Resume File Attachment</span>
+                      <span className="text-gray-400 text-[10px]">Persisted database file reference</span>
                     </div>
-
-                    {/* Qualification Certificates */}
-                    <div className="p-4 rounded-xl bg-[#14161D] border border-white/10 space-y-2 flex items-center justify-between gap-3">
-                      <div>
-                        <span className="text-white font-bold text-xs block">Certificates Folder / File</span>
-                        <span className="text-gray-500 text-[10px]">Martial arts & fitness certificates</span>
-                      </div>
-                      {selectedApp.qualificationCertsUrl ? (
-                        <a
-                          href={selectedApp.qualificationCertsUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-3 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs transition-all flex items-center gap-1.5 shrink-0 shadow-md shadow-emerald-500/20"
-                        >
-                          <Download className="w-3.5 h-3.5" /> Certificates
-                        </a>
-                      ) : (
-                        <span className="text-gray-500 font-semibold text-xs">Not Provided</span>
-                      )}
-                    </div>
-
-                    {/* Instructor License (if uploaded in past) */}
-                    {selectedApp.licenseUrl && (
-                      <div className="p-4 rounded-xl bg-[#14161D] border border-white/10 space-y-2 flex items-center justify-between gap-3">
-                        <div>
-                          <span className="text-white font-bold text-xs block">Instructor License</span>
-                          <span className="text-gray-500 text-[10px]">Teaching accreditation license</span>
-                        </div>
-                        <a
-                          href={selectedApp.licenseUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-3 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs transition-all flex items-center gap-1.5 shrink-0 shadow-md shadow-amber-500/20"
-                        >
-                          <Download className="w-3.5 h-3.5" /> View License
-                        </a>
-                      </div>
-                    )}
-
-                    {/* ID / Passport (if uploaded in past) */}
-                    {selectedApp.idPassportUrl && (
-                      <div className="p-4 rounded-xl bg-[#14161D] border border-white/10 space-y-2 flex items-center justify-between gap-3">
-                        <div>
-                          <span className="text-white font-bold text-xs block">ID / Passport Document</span>
-                          <span className="text-gray-500 text-[10px]">Identity verification file</span>
-                        </div>
-                        <a
-                          href={selectedApp.idPassportUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="px-3 py-2 rounded-xl bg-purple-500 hover:bg-purple-600 text-white font-bold text-xs transition-all flex items-center gap-1.5 shrink-0 shadow-md shadow-purple-500/20"
-                        >
-                          <Download className="w-3.5 h-3.5" /> View Identity
-                        </a>
-                      </div>
+                    {selectedApp.resumeUrl ? (
+                      <a
+                        href={selectedApp.resumeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2.5 rounded-xl bg-[#10B981] hover:bg-[#0D9668] text-white font-black text-xs transition-all flex items-center gap-1.5 shrink-0 shadow-md shadow-emerald-500/20"
+                      >
+                        <Download className="w-4 h-4" /> Download Resume
+                      </a>
+                    ) : (
+                      <span className="text-red-400 font-bold text-xs">No File Uploaded</span>
                     )}
                   </div>
-                </div>
-
-                {/* 7. Declaration Confirmation */}
-                <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <span className="text-emerald-300 font-bold text-xs">
-                      Candidate agreed to SELFFITS coach terms & accuracy declaration.
-                    </span>
-                  </div>
-                  <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-black text-[10px]">
-                    VERIFIED
-                  </span>
                 </div>
 
               </div>

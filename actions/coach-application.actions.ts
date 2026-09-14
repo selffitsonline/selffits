@@ -2,6 +2,7 @@
 
 import { db } from "@/lib/db";
 import { PrismaClient } from "@prisma/client";
+import { storageProvider } from "@/lib/storage";
 
 function getPrisma() {
   if (db && "coachApplication" in db && (db as any).coachApplication) {
@@ -12,54 +13,55 @@ function getPrisma() {
 
 export interface CoachApplicationInput {
   fullName: string;
-  email: string;
+  dateOfBirth: string;
+  gender: string;
+  nationality: string;
   phone: string;
-  dateOfBirth?: string;
-  gender?: string;
-  nationality?: string;
-  location?: string;
-  profilePhotoUrl?: string;
-
-  disciplines?: string[];
-
-  highestRank?: string;
-  certificationName?: string;
-  issuingOrganization?: string;
-  yearObtained?: string;
-  certificateNumber?: string;
-  certificateUploadUrl?: string;
-
-  totalExperience?: string;
-  previousAcademy?: string;
-  coachingBio?: string;
-  targetAgeGroups?: string[];
-
-  specializations?: string[];
-
-  hasOnlineExperience?: string;
-  preferredPlatform?: string;
-  isLiveClassAvailable?: string;
-
-  availability?: Record<string, string[]>;
-
-  aboutSelf?: string;
-  whyJoinSelffits?: string;
-  whatMakesGoodCoach?: string;
-
+  countryCallingCode: string;
+  email: string;
+  location: string;
+  beltLevel: string;
+  yearsOfExperience: string;
   instagramUrl?: string;
-  facebookUrl?: string;
-  youtubeUrl?: string;
-  websiteUrl?: string;
-  trainingVideoUrl?: string;
-
-  resumeUrl?: string;
-  qualificationCertsUrl?: string;
-  licenseUrl?: string;
-  idPassportUrl?: string;
-
-  agreedDeclaration?: boolean;
+  resumeUrl: string;
 }
 
+/**
+ * Handle direct Resume file upload to /public/uploads/resumes/
+ */
+export async function uploadCoachResumeAction(formData: FormData) {
+  try {
+    const file = formData.get("file") as File;
+    if (!file || typeof file === "string") {
+      return { success: false, error: "Please select a valid resume file." };
+    }
+
+    // Validate file extension
+    const allowedExtensions = [".pdf", ".doc", ".docx"];
+    const ext = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
+    if (!allowedExtensions.includes(ext)) {
+      return { success: false, error: "Resume file must be a PDF, DOC, or DOCX document." };
+    }
+
+    // Max file size 10MB
+    if (file.size > 10 * 1024 * 1024) {
+      return { success: false, error: "Resume file size must be less than 10 MB." };
+    }
+
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+
+    const uploaded = await storageProvider.uploadFile(buffer, file.name, "resumes");
+    return { success: true, url: uploaded.publicUrl };
+  } catch (err: any) {
+    console.error("uploadCoachResumeAction error:", err);
+    return { success: false, error: "Failed to upload resume file. Please try again." };
+  }
+}
+
+/**
+ * Submit Coach Lead Application to database
+ */
 export async function submitCoachApplicationAction(data: CoachApplicationInput) {
   try {
     // 1. Full Name Validation (MANDATORY)
@@ -70,7 +72,37 @@ export async function submitCoachApplicationAction(data: CoachApplicationInput) 
       return { success: false, error: "Full Name must be at least 2 characters long." };
     }
 
-    // 2. Email Address Validation (MANDATORY)
+    // 2. Date of Birth Validation (MANDATORY)
+    if (!data.dateOfBirth || !data.dateOfBirth.trim()) {
+      return { success: false, error: "Date of Birth is required." };
+    }
+    const dobDate = new Date(data.dateOfBirth.trim());
+    const today = new Date();
+    if (isNaN(dobDate.getTime()) || dobDate >= today) {
+      return { success: false, error: "Please select a valid past Date of Birth." };
+    }
+
+    // 3. Gender Validation (MANDATORY)
+    if (!data.gender || !data.gender.trim()) {
+      return { success: false, error: "Gender is required." };
+    }
+
+    // 4. Nationality Validation (MANDATORY)
+    if (!data.nationality || !data.nationality.trim()) {
+      return { success: false, error: "Nationality is required." };
+    }
+
+    // 5. Phone / WhatsApp & Calling Code Validation (MANDATORY)
+    if (!data.phone || !data.phone.trim()) {
+      return { success: false, error: "Phone / WhatsApp number is required." };
+    }
+    const digitsOnly = data.phone.replace(/\D/g, "");
+    if (digitsOnly.length < 7 || digitsOnly.length > 15) {
+      return { success: false, error: "Please enter a valid Phone / WhatsApp number (7 to 15 digits)." };
+    }
+    const callingCode = data.countryCallingCode ? data.countryCallingCode.trim() : "";
+
+    // 6. Email Address Validation (MANDATORY)
     if (!data.email || !data.email.trim()) {
       return { success: false, error: "Email Address is required." };
     }
@@ -79,71 +111,65 @@ export async function submitCoachApplicationAction(data: CoachApplicationInput) 
       return { success: false, error: "Please enter a valid email address." };
     }
 
-    // 3. Phone / WhatsApp Validation (MANDATORY)
-    if (!data.phone || !data.phone.trim()) {
-      return { success: false, error: "Phone / WhatsApp number is required." };
-    }
-    const digitsOnly = data.phone.replace(/\D/g, "");
-    if (digitsOnly.length < 7 || digitsOnly.length > 15) {
-      return { success: false, error: "Please enter a valid Phone / WhatsApp number (7 to 15 digits)." };
+    // 7. Current Location / Country Validation (MANDATORY)
+    if (!data.location || !data.location.trim()) {
+      return { success: false, error: "Current Location / Country is required." };
     }
 
-    // Date of Birth (Optional check if provided)
-    if (data.dateOfBirth && data.dateOfBirth.trim()) {
-      const dobDate = new Date(data.dateOfBirth.trim());
-      const today = new Date();
-      if (isNaN(dobDate.getTime()) || dobDate >= today) {
-        return { success: false, error: "Please select a valid past Date of Birth." };
+    // 8. Belt Level Validation (MANDATORY)
+    if (!data.beltLevel || !data.beltLevel.trim()) {
+      return { success: false, error: "Belt Level is required. Please type your belt/rank." };
+    }
+
+    // 9. Years of Experience Validation (MANDATORY)
+    if (!data.yearsOfExperience || !data.yearsOfExperience.trim()) {
+      return { success: false, error: "Years of Experience is required." };
+    }
+
+    // 10. Instagram Link (OPTIONAL - Validate format if provided)
+    let instagramUrl: string | null = null;
+    if (data.instagramUrl && data.instagramUrl.trim()) {
+      const trimmedInsta = data.instagramUrl.trim();
+      if (!trimmedInsta.startsWith("http://") && !trimmedInsta.startsWith("https://")) {
+        instagramUrl = `https://${trimmedInsta}`;
+      } else {
+        instagramUrl = trimmedInsta;
       }
     }
 
-    // Safe JSON Serialization for Prisma Optional Fields
-    const safeDisciplines = JSON.parse(JSON.stringify(data.disciplines || []));
-    const safeTargetAgeGroups = JSON.parse(JSON.stringify(data.targetAgeGroups || []));
-    const safeSpecializations = JSON.parse(JSON.stringify(data.specializations || []));
-    const safeAvailability = JSON.parse(JSON.stringify(data.availability || {}));
+    // 11. Resume Upload Validation (MANDATORY)
+    if (!data.resumeUrl || !data.resumeUrl.trim()) {
+      return { success: false, error: "Resume upload is mandatory. Please attach your resume." };
+    }
 
     const prisma = getPrisma();
+
+    // Format full phone string e.g. "+91 9847012345" or store phone digits
+    const fullPhoneFormatted = callingCode
+      ? `${callingCode} ${data.phone.trim()}`
+      : data.phone.trim();
 
     const application = await prisma.coachApplication.create({
       data: {
         fullName: data.fullName.trim(),
+        dateOfBirth: data.dateOfBirth.trim(),
+        gender: data.gender.trim(),
+        nationality: data.nationality.trim(),
+        phone: fullPhoneFormatted,
+        countryCallingCode: callingCode || null,
         email: data.email.trim().toLowerCase(),
-        phone: data.phone.trim(),
-        dateOfBirth: data.dateOfBirth ? data.dateOfBirth.trim() : null,
-        gender: data.gender || null,
-        nationality: data.nationality ? data.nationality.trim() : null,
-        location: data.location ? data.location.trim() : null,
-        profilePhotoUrl: data.profilePhotoUrl || null,
-
-        disciplines: safeDisciplines,
-
-        highestRank: data.highestRank || null,
-        certificationName: data.certificationName || null,
-        issuingOrganization: data.issuingOrganization || null,
-        yearObtained: data.yearObtained || null,
-        certificateNumber: data.certificateNumber || null,
-        certificateUploadUrl: data.certificateUploadUrl || null,
-
-        totalExperience: data.totalExperience || null,
-        previousAcademy: data.previousAcademy || null,
-        coachingBio: data.coachingBio || null,
-        targetAgeGroups: safeTargetAgeGroups,
-
-        availability: safeAvailability,
-
-        instagramUrl: data.instagramUrl || null,
-        facebookUrl: data.facebookUrl || null,
-        youtubeUrl: data.youtubeUrl || null,
-        websiteUrl: data.websiteUrl || null,
-        trainingVideoUrl: data.trainingVideoUrl || null,
-
-        resumeUrl: data.resumeUrl || null,
-        qualificationCertsUrl: data.qualificationCertsUrl || null,
-        licenseUrl: data.licenseUrl || null,
-        idPassportUrl: data.idPassportUrl || null,
-
-        agreedDeclaration: data.agreedDeclaration ?? true,
+        location: data.location.trim(),
+        beltLevel: data.beltLevel.trim(),
+        highestRank: data.beltLevel.trim(), // Storing belt level in highestRank for backward compatibility
+        yearsOfExperience: data.yearsOfExperience.trim(),
+        totalExperience: data.yearsOfExperience.trim(), // Storing experience in totalExperience for backward compatibility
+        instagramUrl: instagramUrl,
+        resumeUrl: data.resumeUrl.trim(),
+        disciplines: [],
+        targetAgeGroups: [],
+        specializations: [],
+        availability: {},
+        agreedDeclaration: true,
         status: "PENDING",
       },
     });

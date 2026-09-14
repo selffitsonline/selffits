@@ -303,9 +303,14 @@ model CoachApplication {
   gender                String?
   nationality           String?
   phone                 String
+  countryCallingCode    String?
   email                 String
   location              String?
   profilePhotoUrl       String?
+
+  // Belt Level & Years of Experience
+  beltLevel             String?
+  yearsOfExperience     String?
 
   // 2. Coaching Discipline
   disciplines           Json

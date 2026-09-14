@@ -1047,34 +1047,22 @@ export async function getAdminCoachApplicationsAction() {
       return {
         id: app.id,
         fullName: app.fullName,
-        gender: app.gender || null,
-        nationality: app.nationality || null,
+        dateOfBirth: app.dateOfBirth || "N/A",
+        gender: app.gender || "Not specified",
+        nationality: app.nationality || "Not specified",
         phone: app.phone,
+        countryCallingCode: app.countryCallingCode || null,
         email: app.email,
-        location: app.location || null,
-        profilePhotoUrl: app.profilePhotoUrl || null,
+        location: app.location || "Not specified",
 
-        rawDisciplines: disciplinesArray,
-        disciplines: disciplinesArray.length > 0 ? disciplinesArray.join(", ") : "Martial Arts & Fitness",
-
-        highestRank: app.highestRank || "N/A",
-        totalExperience: app.totalExperience || "N/A",
-        targetAgeGroups: targetAgeGroupsArray,
-
-        availability: app.availability || {},
+        beltLevel: app.beltLevel || app.highestRank || "N/A",
+        highestRank: app.beltLevel || app.highestRank || "N/A",
+        yearsOfExperience: app.yearsOfExperience || app.totalExperience || "N/A",
+        totalExperience: app.yearsOfExperience || app.totalExperience || "N/A",
 
         instagramUrl: app.instagramUrl || null,
-        facebookUrl: app.facebookUrl || null,
-        youtubeUrl: app.youtubeUrl || null,
-        websiteUrl: app.websiteUrl || null,
-        trainingVideoUrl: app.trainingVideoUrl || null,
-
         resumeUrl: app.resumeUrl || null,
-        qualificationCertsUrl: app.qualificationCertsUrl || null,
-        licenseUrl: app.licenseUrl || null,
-        idPassportUrl: app.idPassportUrl || null,
 
-        agreedDeclaration: app.agreedDeclaration,
         status: app.status,
         appliedDate: app.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
         createdAt: app.createdAt.toISOString(),
