@@ -199,38 +199,52 @@ export default function BecomeCoachPage() {
     setIsSubmitting(true);
 
     try {
-      // Step 1: Upload Resume File
+      // Step 1: Upload Resume File via API Route (eliminates React Flight RPC #441)
       const resumeFormData = new FormData();
       resumeFormData.append("file", resumeFile);
-      const uploadRes = await uploadCoachResumeAction(resumeFormData);
 
-      if (!uploadRes.success || !uploadRes.url) {
-        setErrorMsg(uploadRes.error || "Failed to upload resume file. Please try again.");
+      const uploadResponse = await fetch("/api/coach-application/upload-resume", {
+        method: "POST",
+        body: resumeFormData,
+      });
+
+      const uploadData = await uploadResponse.json();
+
+      if (!uploadResponse.ok || !uploadData.success || !uploadData.url) {
+        setErrorMsg(uploadData.error || "Failed to upload resume file. Please try again.");
         setIsSubmitting(false);
         return;
       }
 
-      // Step 2: Submit Full Application to Database
-      const res = await submitCoachApplicationAction({
-        fullName: fullName.trim(),
-        dateOfBirth: dateOfBirth.trim(),
-        gender: gender.trim(),
-        nationality: nationalityCountry.name.trim(),
-        phone: phoneDigits.trim(),
-        countryCallingCode: phoneCountry.dialCode.trim(),
-        email: email.trim(),
-        location: locationCountry.name.trim(),
-        beltLevel: beltLevel.trim(),
-        yearsOfExperience: yearsOfExperience.trim(),
-        instagramUrl: instagramUrl.trim() || undefined,
-        resumeUrl: uploadRes.url,
+      // Step 2: Submit Full Application to Database via API Route
+      const submitResponse = await fetch("/api/coach-application/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fullName: fullName.trim(),
+          dateOfBirth: dateOfBirth.trim(),
+          gender: gender.trim(),
+          nationality: nationalityCountry.name.trim(),
+          phone: phoneDigits.trim(),
+          countryCallingCode: phoneCountry.dialCode.trim(),
+          email: email.trim(),
+          location: locationCountry.name.trim(),
+          beltLevel: beltLevel.trim(),
+          yearsOfExperience: yearsOfExperience.trim(),
+          instagramUrl: instagramUrl.trim() || undefined,
+          resumeUrl: uploadData.url,
+        }),
       });
 
-      if (res.success) {
+      const submitData = await submitResponse.json();
+
+      if (submitResponse.ok && submitData.success) {
         // Step 3: Redirect to Thank You page ONLY after successful DB submission
         router.push("/become-coach/success");
       } else {
-        setErrorMsg(res.error || "Application submission failed. Please try again.");
+        setErrorMsg(submitData.error || "Application submission failed. Please try again.");
         setIsSubmitting(false);
       }
     } catch (err: any) {
