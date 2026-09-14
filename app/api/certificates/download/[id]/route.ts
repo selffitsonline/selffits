@@ -20,9 +20,16 @@ export async function GET(
 
     const cert = await db.certificate.findUnique({
       where: { id },
-      include: {
+      select: {
+        id: true,
+        userId: true,
+        title: true,
+        certificateNumber: true,
+        beltName: true,
+        fileKey: true,
+        issuedDate: true,
         user: { select: { id: true, name: true, email: true } },
-        program: { select: { title: true } },
+        program: { select: { id: true, title: true } },
       },
     });
 
@@ -89,11 +96,12 @@ export async function GET(
     }
 
     // 2. If no disk file found, decode permanently stored Base64 payload from PostgreSQL database
-    if (!fileBuffer && cert.fileData) {
+    const certAny = cert as any;
+    if (!fileBuffer && certAny.fileData) {
       try {
-        fileBuffer = Buffer.from(cert.fileData, "base64");
-        if (cert.fileMimeType) {
-          mimeType = cert.fileMimeType;
+        fileBuffer = Buffer.from(certAny.fileData, "base64");
+        if (certAny.fileMimeType) {
+          mimeType = certAny.fileMimeType;
         }
       } catch (err) {
         console.warn("Failed to decode persistent fileData from DB:", err);
