@@ -122,13 +122,6 @@ export async function getAdminStudentProgressListAction() {
   // 2. Query users with role STUDENT OR users who are assigned to any batch or enrollment
   try {
     const students = await db.user.findMany({
-      where: {
-        OR: [
-          { role: "STUDENT" },
-          { batchStudents: { some: {} } },
-          { enrollments: { some: {} } },
-        ],
-      },
       orderBy: { createdAt: "desc" },
       include: {
         studentProfile: true,
