@@ -63,13 +63,16 @@ export async function getAdminStudentProgressListAction() {
       orderBy: { createdAt: "desc" },
       include: {
         program: true,
-        coach: true,
         students: { select: { userId: true } },
       },
     });
 
+    const coaches = await db.coachApplication.findMany().catch(() => []);
+    const coachMap = new Map(coaches.map((c) => [c.id, c]));
+
     formattedBatches = batches.map((b) => {
       try {
+        const coach = coachMap.get(b.coachId);
         return {
           id: b.id,
           batchId: b.batchId,
@@ -77,8 +80,8 @@ export async function getAdminStudentProgressListAction() {
           programTitle: b.program?.title || "Martial Arts Program",
           programCategory: b.program?.category || "MARTIAL_ARTS",
           beltLevel: b.beltLevel || "Yellow Belt",
-          coachName: b.coach?.fullName || "Unassigned Coach",
-          coachRank: b.coach?.highestRank || "Certified Coach",
+          coachName: coach?.fullName || "Assigned Coach",
+          coachRank: coach?.highestRank || "Certified Coach",
           dayCombination: b.dayCombination || "Flexible Schedule",
           timeSlot: b.timeSlot || "Flexible Slot",
           clockTiming: b.clockTiming || "Flexible Timing",
@@ -129,11 +132,7 @@ export async function getAdminStudentProgressListAction() {
       orderBy: { createdAt: "desc" },
       include: {
         studentProfile: true,
-        batchStudents: {
-          include: {
-            batch: true,
-          },
-        },
+        batchStudents: true,
         examinations: {
           orderBy: { examDate: "desc" },
         },
@@ -142,34 +141,45 @@ export async function getAdminStudentProgressListAction() {
         },
         enrollments: {
           where: { status: "ACTIVE" },
-          include: { membershipPlan: { include: { program: true } } },
         },
       },
     });
 
+    const allBatchRows = await db.batch.findMany({ select: { id: true, batchId: true, name: true } }).catch(() => []);
+    const batchLookup = new Map<string, any>();
+    allBatchRows.forEach((b) => {
+      batchLookup.set(b.id, b);
+      batchLookup.set(b.batchId, b);
+    });
+
     formattedStudents = students.map((std) => {
       try {
-        const activeEnrollment = Array.isArray(std.enrollments) ? std.enrollments[0] : null;
-        const activeProgramTitle =
-          activeEnrollment?.membershipPlan?.program?.title ||
-          activeEnrollment?.membershipPlan?.name ||
-          "General Martial Arts";
-
         const latestExam = Array.isArray(std.examinations) ? std.examinations[0] : null;
         const currentBelt = std.studentProfile?.currentBelt || "White Belt";
         const awardDateFormatted = safeFormatDate(std.studentProfile?.beltAwardedAt) || "Initial Assignment";
 
         const validBatchStudents = Array.isArray(std.batchStudents)
-          ? std.batchStudents.filter((bs) => bs && (bs.batchId || bs.batch?.id))
+          ? std.batchStudents.filter((bs) => bs && bs.batchId)
           : [];
+
         const batchIds = Array.from(
           new Set(
             validBatchStudents
-              .flatMap((bs) => [bs.batchId, bs.batch?.batchId, bs.batch?.id])
+              .flatMap((bs) => {
+                const matched = batchLookup.get(bs.batchId);
+                return [bs.batchId, matched?.id, matched?.batchId];
+              })
               .filter((x): x is string => typeof x === "string" && x.trim() !== "")
           )
         );
-        const batchNames = validBatchStudents.map((bs) => bs.batch?.name || "Assigned Batch");
+
+        const batchNames = Array.from(
+          new Set(
+            validBatchStudents
+              .map((bs) => batchLookup.get(bs.batchId)?.name || "Assigned Batch")
+              .filter(Boolean)
+          )
+        );
 
         return {
           id: std.id,
@@ -180,7 +190,7 @@ export async function getAdminStudentProgressListAction() {
           createdAtISO: safeISOString(std.createdAt) || new Date().toISOString(),
           currentBelt,
           beltAwardedAt: awardDateFormatted,
-          activeProgram: activeProgramTitle,
+          activeProgram: "General Martial Arts",
           batchIds,
           batchNames,
           totalExams: Array.isArray(std.examinations) ? std.examinations.length : 0,
