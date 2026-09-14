@@ -72,6 +72,7 @@ interface BatchDetailsModalProps {
 }
 
 const BELT_OPTIONS = [
+  "White Belt",
   "Yellow Belt",
   "Orange Belt",
   "Green Belt",
@@ -97,7 +98,7 @@ export function BatchDetailsModal({
   // Editable Batch Details State
   const [meetingUrlInput, setMeetingUrlInput] = useState("");
   const [examDateInput, setExamDateInput] = useState("");
-  const [beltLevelInput, setBeltLevelInput] = useState("Yellow Belt");
+  const [beltLevelInput, setBeltLevelInput] = useState("White Belt");
   const [isSaving, setIsSaving] = useState(false);
   const [isSavedSuccess, setIsSavedSuccess] = useState(false);
 
@@ -110,7 +111,7 @@ export function BatchDetailsModal({
     if (batch && isOpen) {
       setMeetingUrlInput(batch.meetingUrl || "");
       setExamDateInput(batch.examDateISO || "");
-      setBeltLevelInput(batch.beltLevel || "Yellow Belt");
+      setBeltLevelInput(batch.beltLevel || "White Belt");
       setNotification(null);
       setIsSavedSuccess(false);
     }

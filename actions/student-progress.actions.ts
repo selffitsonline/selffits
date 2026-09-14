@@ -289,18 +289,27 @@ export async function getStudentProgressDetailsAction(studentId: string, targetB
       }
     }
 
-    const formattedCertificates = Array.isArray(student.certificates)
-      ? student.certificates.map((cert) => ({
-          id: cert.id,
-          title: cert.title || "Graduation Certificate",
-          certificateNumber: cert.certificateNumber,
-          beltName: cert.beltName || "Belt Award",
-          programTitle: cert.program?.title || "Martial Arts Academy",
-          issuedDate: safeFormatDate(cert.issuedDate) || "Recently",
-          fileKey: cert.fileKey,
-          fileUrl: `/api/certificates/download/${cert.id}`,
-        }))
-      : [];
+    // Deduplicate certificates so each belt level displays maximum 1 current certificate
+    const certList = Array.isArray(student.certificates) ? student.certificates : [];
+    const uniqueBeltMap = new Map<string, typeof certList[0]>();
+    for (const cert of certList) {
+      const key = cert.beltName || cert.title || cert.id;
+      if (!uniqueBeltMap.has(key)) {
+        uniqueBeltMap.set(key, cert);
+      }
+    }
+    const deduplicatedCertificates = Array.from(uniqueBeltMap.values());
+
+    const formattedCertificates = deduplicatedCertificates.map((cert) => ({
+      id: cert.id,
+      title: cert.title || "Graduation Certificate",
+      certificateNumber: cert.certificateNumber,
+      beltName: cert.beltName || "Belt Award",
+      programTitle: cert.program?.title || "Martial Arts Academy",
+      issuedDate: safeFormatDate(cert.issuedDate) || "Recently",
+      fileKey: cert.fileKey,
+      fileUrl: `/api/certificates/download/${cert.id}`,
+    }));
 
     return {
       success: true,

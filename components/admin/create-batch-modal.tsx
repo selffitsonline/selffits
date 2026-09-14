@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { X, Layers, UserCheck, Calendar, Clock, AlertTriangle, BookOpen, Award, Video } from "lucide-react";
 
 const BELT_LEVEL_OPTIONS = [
+  "White Belt",
   "Yellow Belt",
   "Orange Belt",
   "Green Belt",
@@ -47,7 +48,7 @@ export function CreateBatchModal({
 }: CreateBatchModalProps) {
   const [name, setName] = useState("");
   const [programId, setProgramId] = useState("");
-  const [beltLevel, setBeltLevel] = useState("Yellow Belt");
+  const [beltLevel, setBeltLevel] = useState("White Belt");
   const [coachId, setCoachId] = useState("");
   const [selectedDays, setSelectedDays] = useState<string[]>([
     "Monday", "Tuesday", "Wednesday", "Thursday", "Friday"
@@ -109,7 +110,7 @@ export function CreateBatchModal({
     if (initialData) {
       setName(initialData.name || "");
       setProgramId(initialData.programId || "");
-      setBeltLevel(initialData.beltLevel || "Yellow Belt");
+      setBeltLevel(initialData.beltLevel || "White Belt");
       setCoachId(initialData.coachId || "");
       setSelectedDays(parseDayCombinationToDays(initialData.dayCombination));
       setTimeSlot(initialData.timeSlot || timeSlots[0] || "1st Batch");
@@ -119,7 +120,7 @@ export function CreateBatchModal({
     } else {
       setName("");
       setProgramId(programs[0]?.id || "");
-      setBeltLevel("Yellow Belt");
+      setBeltLevel("White Belt");
       setCoachId(coaches[0]?.id || "");
       setSelectedDays(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]);
       setTimeSlot(timeSlots[0] || "1st Batch");

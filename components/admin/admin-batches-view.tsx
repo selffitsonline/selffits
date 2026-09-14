@@ -429,7 +429,7 @@ export function AdminBatchesView({
                 <option value="ALL" className="bg-[#14161D]">
                   All Belts
                 </option>
-                {["Yellow Belt", "Orange Belt", "Green Belt", "Blue Belt", "Purple Belt", "Brown Belt", "Black Belt"].map((b) => (
+                {["White Belt", "Yellow Belt", "Orange Belt", "Green Belt", "Blue Belt", "Purple Belt", "Brown Belt", "Black Belt"].map((b) => (
                   <option key={b} value={b} className="bg-[#14161D]">
                     {b}
                   </option>

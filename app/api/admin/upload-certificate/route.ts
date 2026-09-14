@@ -90,20 +90,56 @@ export async function POST(req: NextRequest) {
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const certificateNumber = `SELFFITS-${beltName.replace(/\s+/g, "").toUpperCase()}-${Date.now().toString().slice(-4)}-${randomSuffix}`;
 
-    // Create Certificate record in PostgreSQL with permanent fileData & fileMimeType
-    const cert = await db.certificate.create({
-      data: {
+    // Query for existing certificate matching exact userId and beltName
+    const existingCerts = await db.certificate.findMany({
+      where: {
         userId,
-        programId,
-        title: titleInput,
-        certificateNumber,
-        fileKey,
-        fileData: fileBase64,
-        fileMimeType,
         beltName,
-        issuedByUserId: issuerUserId,
       },
+      orderBy: { issuedDate: "desc" },
     });
+
+    let cert;
+    if (existingCerts.length > 0) {
+      const primaryCert = existingCerts[0];
+      // Update primary existing certificate with newly uploaded file & details
+      cert = await db.certificate.update({
+        where: { id: primaryCert.id },
+        data: {
+          programId,
+          title: titleInput,
+          certificateNumber,
+          fileKey,
+          fileData: fileBase64,
+          fileMimeType,
+          issuedDate: new Date(),
+          issuedByUserId: issuerUserId,
+        },
+      });
+
+      // Remove any extra duplicate certificate records for this exact belt if any exist
+      if (existingCerts.length > 1) {
+        const duplicateIds = existingCerts.slice(1).map((c) => c.id);
+        await db.certificate.deleteMany({
+          where: { id: { in: duplicateIds } },
+        });
+      }
+    } else {
+      // Create single new Certificate record for this student + belt
+      cert = await db.certificate.create({
+        data: {
+          userId,
+          programId,
+          title: titleInput,
+          certificateNumber,
+          fileKey,
+          fileData: fileBase64,
+          fileMimeType,
+          beltName,
+          issuedByUserId: issuerUserId,
+        },
+      });
+    }
 
     // Synchronize Student Profile Current Belt & Award Date
     await db.studentProfile.upsert({

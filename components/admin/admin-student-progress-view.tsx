@@ -22,6 +22,7 @@ import {
   Trash2,
   ExternalLink,
   Lock,
+  RotateCcw,
 } from "lucide-react";
 import {
   getAdminStudentProgressListAction,
@@ -77,11 +78,31 @@ export function AdminStudentProgressView({
   // Primary Batch Selector State (Defaults to "ALL" so all students are visible)
   const [selectedBatchId, setSelectedBatchId] = useState<string>("ALL");
 
+  // Student Scope Filter State: "ALL" | "ENROLLED_BATCH" | "DIRECT_UNASSIGNED"
+  const [studentScope, setStudentScope] = useState<string>("ALL");
+
   // Additional Filter States
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBeltFilter, setSelectedBeltFilter] = useState("ALL");
   const [selectedExamStatusFilter, setSelectedExamStatusFilter] = useState("ALL");
   const [selectedDateFilter, setSelectedDateFilter] = useState("ALL");
+
+  const handleResetFilters = () => {
+    setStudentScope("ALL");
+    setSelectedBatchId("ALL");
+    setSelectedDateFilter("ALL");
+    setSelectedBeltFilter("ALL");
+    setSelectedExamStatusFilter("ALL");
+    setSearchQuery("");
+  };
+
+  const isFilterActive =
+    studentScope !== "ALL" ||
+    selectedBatchId !== "ALL" ||
+    selectedDateFilter !== "ALL" ||
+    selectedBeltFilter !== "ALL" ||
+    selectedExamStatusFilter !== "ALL" ||
+    searchQuery.trim() !== "";
 
   // Selected Student Details Modal State
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
@@ -132,8 +153,16 @@ export function AdminStudentProgressView({
     }
   };
 
-  // Filter students by selected Batch, Belt, Exam Status, Date, & Search Query
+  // Filter students by Scope, Batch, Belt, Exam Status, Date, & Search Query
   const filteredStudents = students.filter((std) => {
+    // 0. Student Scope Filter
+    if (studentScope === "ENROLLED_BATCH" && (!std.batchIds || std.batchIds.length === 0)) {
+      return false;
+    }
+    if (studentScope === "DIRECT_UNASSIGNED" && std.batchIds && std.batchIds.length > 0) {
+      return false;
+    }
+
     // 1. Primary Batch Filter
     if (selectedBatchId !== "ALL") {
       if (!std.batchIds || !std.batchIds.includes(selectedBatchId)) {
@@ -348,6 +377,20 @@ export function AdminStudentProgressView({
                 <Search className="w-3.5 h-3.5 text-gray-500 absolute left-2.5 top-3" />
               </div>
 
+              {/* 0. Student Scope Filter */}
+              <div className="flex items-center gap-1.5 bg-[#0F1117] border border-white/10 rounded-xl px-3 h-10">
+                <Users className="w-3.5 h-3.5 text-[#0080FF] shrink-0" />
+                <select
+                  value={studentScope}
+                  onChange={(e) => setStudentScope(e.target.value)}
+                  className="bg-transparent text-white text-xs font-semibold focus:outline-none cursor-pointer"
+                >
+                  <option value="ALL" className="bg-[#14161D]">All Students</option>
+                  <option value="ENROLLED_BATCH" className="bg-[#14161D]">Batch Students</option>
+                  <option value="DIRECT_UNASSIGNED" className="bg-[#14161D]">Unassigned Students</option>
+                </select>
+              </div>
+
               {/* 1. Primary Batch Selector */}
               <div className="min-w-[240px] flex-1 xl:flex-none">
                 <select
@@ -395,6 +438,17 @@ export function AdminStudentProgressView({
                   ))}
                 </select>
               </div>
+
+              {/* 4. Reset Filters Button */}
+              {isFilterActive && (
+                <button
+                  onClick={handleResetFilters}
+                  className="px-3.5 py-2 h-10 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+                  title="Reset all active filters"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" /> Reset Filters
+                </button>
+              )}
             </div>
           </div>
 
@@ -798,19 +852,6 @@ export function AdminStudentProgressView({
                 </button>
               </div>
 
-              {/* GREEN SUCCESS NOTIFICATION STATE INSIDE MODAL */}
-              {uploadSuccess && (
-                <div className="p-4 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-xs font-extrabold flex items-center gap-3 animate-in fade-in">
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
-                  <div>
-                    <p className="text-sm font-extrabold">{uploadSuccessMsg || "Certificate uploaded successfully!"}</p>
-                    <p className="text-[11px] text-emerald-300/80 font-normal mt-0.5">
-                      The document has been persisted to the database. Close this window to view it under Issued Certificates.
-                    </p>
-                  </div>
-                </div>
-              )}
-
               {/* ERROR NOTIFICATION STATE INSIDE MODAL */}
               {uploadErrorMsg && (
                 <div className="p-3.5 rounded-xl bg-red-500/20 border border-red-500/40 text-red-400 text-xs font-bold flex items-center gap-2.5">
@@ -819,67 +860,90 @@ export function AdminStudentProgressView({
                 </div>
               )}
 
-              {!uploadSuccess ? (
-                <form onSubmit={handleConfirmUploadCertificate} className="space-y-4 text-xs">
-                  <div>
-                    <label className="block text-gray-300 font-semibold mb-1">Belt Level *</label>
-                    <select
-                      value={uploadBeltName}
-                      onChange={(e) => {
-                        setUploadBeltName(e.target.value);
-                        setUploadCertTitle(`${e.target.value} Graduation Certificate`);
-                      }}
-                      className="w-full p-2.5 rounded-xl bg-[#0F1117] border border-white/10 text-white font-bold focus:outline-none focus:border-[#0080FF]"
-                    >
-                      {BELT_OPTIONS.map((b) => (
-                        <option key={b} value={b} className="bg-[#14161D]">{b}</option>
-                      ))}
-                    </select>
-                  </div>
+              <form onSubmit={handleConfirmUploadCertificate} className="space-y-4 text-xs">
+                <div>
+                  <label className="block text-gray-300 font-semibold mb-1">Belt Level *</label>
+                  <select
+                    value={uploadBeltName}
+                    onChange={(e) => {
+                      setUploadBeltName(e.target.value);
+                      setUploadCertTitle(`${e.target.value} Graduation Certificate`);
+                      setUploadSuccess(false);
+                    }}
+                    className="w-full p-2.5 rounded-xl bg-[#0F1117] border border-white/10 text-white font-bold focus:outline-none focus:border-[#0080FF]"
+                  >
+                    {BELT_OPTIONS.map((b) => (
+                      <option key={b} value={b} className="bg-[#14161D]">{b}</option>
+                    ))}
+                  </select>
+                </div>
 
-                  <div>
-                    <label className="block text-gray-300 font-semibold mb-1">Certificate Title *</label>
-                    <input
-                      type="text"
-                      value={uploadCertTitle}
-                      onChange={(e) => setUploadCertTitle(e.target.value)}
-                      placeholder="e.g. Yellow Belt Graduation Certificate"
-                      className="w-full p-2.5 rounded-xl bg-[#0F1117] border border-white/10 text-white font-bold focus:outline-none focus:border-[#0080FF]"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-gray-300 font-semibold mb-1">Certificate Title *</label>
+                  <input
+                    type="text"
+                    value={uploadCertTitle}
+                    onChange={(e) => {
+                      setUploadCertTitle(e.target.value);
+                      setUploadSuccess(false);
+                    }}
+                    placeholder="e.g. Yellow Belt Graduation Certificate"
+                    className="w-full p-2.5 rounded-xl bg-[#0F1117] border border-white/10 text-white font-bold focus:outline-none focus:border-[#0080FF]"
+                  />
+                </div>
 
-                  <div>
-                    <label className="block text-gray-300 font-semibold mb-1">Certificate Document File (PDF / Image) *</label>
-                    <input
-                      type="file"
-                      accept=".pdf,image/png,image/jpeg,image/webp"
-                      onChange={(e) => {
-                        if (e.target.files && e.target.files[0]) {
-                          setUploadFile(e.target.files[0]);
-                        }
-                      }}
-                      className="w-full p-2 rounded-xl bg-[#0F1117] border border-white/10 text-gray-300 font-semibold file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-[#0080FF] file:text-white hover:file:bg-[#0066CC] cursor-pointer"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-gray-300 font-semibold mb-1">Certificate Document File (PDF / Image) *</label>
+                  <input
+                    type="file"
+                    accept=".pdf,image/png,image/jpeg,image/webp"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        setUploadFile(e.target.files[0]);
+                        setUploadSuccess(false);
+                      }
+                    }}
+                    className="w-full p-2 rounded-xl bg-[#0F1117] border border-white/10 text-gray-300 font-semibold file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-[#0080FF] file:text-white hover:file:bg-[#0066CC] cursor-pointer"
+                  />
+                </div>
 
-                  <div className="p-3 rounded-xl bg-[#0F1117] border border-white/5 space-y-1 text-[11px] text-gray-400">
-                    <p>Student: <span className="text-white font-bold">{studentDetails?.name}</span></p>
-                    <p>Batch: <span className="text-white font-bold">{studentDetails?.batchInfo?.name || "Assigned Batch"}</span></p>
-                    <p>Exam Date: <span className="text-amber-400 font-bold">{studentDetails?.batchInfo?.examDate || "N/A"}</span></p>
-                  </div>
+                <div className="p-3 rounded-xl bg-[#0F1117] border border-white/5 space-y-1 text-[11px] text-gray-400">
+                  <p>Student: <span className="text-white font-bold">{studentDetails?.name}</span></p>
+                  <p>Batch: <span className="text-white font-bold">{studentDetails?.batchInfo?.name || "Assigned Batch"}</span></p>
+                  <p>Exam Date: <span className="text-amber-400 font-bold">{studentDetails?.batchInfo?.examDate || "N/A"}</span></p>
+                </div>
 
-                  <div className="flex items-center justify-end gap-3 pt-2">
+                <div className="flex items-center justify-end gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowUploadCertModal(false);
+                      setUploadSuccess(false);
+                      setUploadSuccessMsg("");
+                    }}
+                    className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 font-bold"
+                  >
+                    {uploadSuccess ? "Close" : "Cancel"}
+                  </button>
+
+                  {uploadSuccess ? (
                     <button
                       type="button"
-                      onClick={() => setShowUploadCertModal(false)}
-                      className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 font-bold"
+                      onClick={() => {
+                        setShowUploadCertModal(false);
+                        setUploadSuccess(false);
+                        setUploadSuccessMsg("");
+                      }}
+                      className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:opacity-90 text-white font-black text-xs shadow-lg shadow-emerald-500/20 flex items-center gap-2 cursor-pointer transition-all animate-in fade-in"
                     >
-                      Cancel
+                      <CheckCircle2 className="w-4 h-4 text-white" />
+                      Certificate Uploaded Successfully!
                     </button>
+                  ) : (
                     <button
                       type="submit"
                       disabled={submitting || !uploadFile}
-                      className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#0080FF] to-[#0055B3] text-white font-bold shadow-md shadow-[#0080FF]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                      className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#0080FF] to-[#0055B3] text-white font-bold shadow-md shadow-[#0080FF]/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                     >
                       {submitting ? (
                         <>
@@ -889,23 +953,9 @@ export function AdminStudentProgressView({
                         "Upload Certificate"
                       )}
                     </button>
-                  </div>
-                </form>
-              ) : (
-                <div className="pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowUploadCertModal(false);
-                      setUploadSuccess(false);
-                      setUploadSuccessMsg("");
-                    }}
-                    className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:opacity-90 text-white font-black text-xs shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 cursor-pointer transition-all"
-                  >
-                    <CheckCircle2 className="w-4 h-4" /> Close Modal & View Certificate
-                  </button>
+                  )}
                 </div>
-              )}
+              </form>
             </div>
           </div>
         )}

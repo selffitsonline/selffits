@@ -358,7 +358,7 @@ export async function createBatchAction(data: {
         name: data.name.trim(),
         programId: data.programId,
         membershipPlanId: data.membershipPlanId || null,
-        beltLevel: data.beltLevel || "Yellow Belt",
+        beltLevel: data.beltLevel || "White Belt",
         coachId: data.coachId,
         dayCombination: data.dayCombination,
         timeSlot: data.timeSlot,
@@ -489,7 +489,7 @@ export async function updateBatchAction(
 
     const updateData: any = {
       name: data.name && data.name.trim() !== "" ? data.name.trim() : existingBatch.name,
-      beltLevel: data.beltLevel || existingBatch.beltLevel || "Yellow Belt",
+      beltLevel: data.beltLevel || existingBatch.beltLevel || "White Belt",
       dayCombination,
       timeSlot,
       clockTiming,
