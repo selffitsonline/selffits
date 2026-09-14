@@ -114,6 +114,16 @@ export async function POST(req: NextRequest) {
           issuedDate: new Date(),
           issuedByUserId: issuerUserId,
         },
+        select: {
+          id: true,
+          userId: true,
+          programId: true,
+          title: true,
+          certificateNumber: true,
+          fileKey: true,
+          issuedDate: true,
+          beltName: true,
+        },
       });
 
       // Remove any extra duplicate certificate records for this exact belt if any exist
@@ -134,6 +144,16 @@ export async function POST(req: NextRequest) {
           fileKey,
           beltName,
           issuedByUserId: issuerUserId,
+        },
+        select: {
+          id: true,
+          userId: true,
+          programId: true,
+          title: true,
+          certificateNumber: true,
+          fileKey: true,
+          issuedDate: true,
+          beltName: true,
         },
       });
     }
