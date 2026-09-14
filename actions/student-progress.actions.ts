@@ -28,23 +28,23 @@ export async function getAdminStudentProgressListAction() {
     const formattedBatches = batches.map((b) => ({
       id: b.id,
       batchId: b.batchId,
-      name: b.name,
-      programTitle: b.program.title,
-      programCategory: b.program.category,
+      name: b.name || "Unnamed Batch",
+      programTitle: b.program?.title || "Martial Arts Program",
+      programCategory: b.program?.category || "MARTIAL_ARTS",
       beltLevel: b.beltLevel || "Yellow Belt",
-      coachName: b.coach.fullName,
-      coachRank: b.coach.highestRank || "Certified Coach",
-      dayCombination: b.dayCombination,
-      timeSlot: b.timeSlot,
-      clockTiming: b.clockTiming,
+      coachName: b.coach?.fullName || "Unassigned Coach",
+      coachRank: b.coach?.highestRank || "Certified Coach",
+      dayCombination: b.dayCombination || "Flexible Schedule",
+      timeSlot: b.timeSlot || "Flexible Slot",
+      clockTiming: b.clockTiming || "Flexible Timing",
       examDate: b.examDate
         ? b.examDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
         : null,
       examDateISO: b.examDate ? b.examDate.toISOString().split("T")[0] : null,
       maxCapacity: b.maxCapacity || 8,
-      studentCount: b.students.length,
-      capacityLabel: `${b.students.length} / ${b.maxCapacity || 8}`,
-      status: b.status,
+      studentCount: Array.isArray(b.students) ? b.students.length : 0,
+      capacityLabel: `${Array.isArray(b.students) ? b.students.length : 0} / ${b.maxCapacity || 8}`,
+      status: b.status || "ACTIVE",
     }));
 
     const students = await db.user.findMany({
@@ -79,13 +79,13 @@ export async function getAdminStudentProgressListAction() {
     });
 
     const formattedStudents = students.map((std) => {
-      const activeEnrollment = std.enrollments[0];
+      const activeEnrollment = Array.isArray(std.enrollments) ? std.enrollments[0] : null;
       const activeProgramTitle =
         activeEnrollment?.membershipPlan?.program?.title ||
         activeEnrollment?.membershipPlan?.name ||
         "General Martial Arts";
 
-      const latestExam = std.examinations[0];
+      const latestExam = Array.isArray(std.examinations) ? std.examinations[0] : null;
       const currentBelt = std.studentProfile?.currentBelt || "White Belt";
 
       const awardDateFormatted = std.studentProfile?.beltAwardedAt
@@ -96,37 +96,42 @@ export async function getAdminStudentProgressListAction() {
           })
         : "Initial Assignment";
 
-      const batchIds = std.batchStudents.map((bs) => bs.batchId);
-      const batchNames = std.batchStudents.map((bs) => bs.batch.name);
+      const validBatchStudents = Array.isArray(std.batchStudents)
+        ? std.batchStudents.filter((bs) => bs && bs.batchId)
+        : [];
+      const batchIds = validBatchStudents.map((bs) => bs.batchId);
+      const batchNames = validBatchStudents.map((bs) => bs.batch?.name || "Assigned Batch");
 
       return {
         id: std.id,
-        name: std.name,
-        email: std.email,
+        name: std.name || "Student",
+        email: std.email || "No email",
         phone: std.studentProfile?.phone || "Not provided",
-        joinedDate: std.createdAt.toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        }),
-        createdAtISO: std.createdAt.toISOString(),
+        joinedDate: std.createdAt
+          ? std.createdAt.toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })
+          : "Recently",
+        createdAtISO: std.createdAt ? std.createdAt.toISOString() : new Date().toISOString(),
         currentBelt,
         beltAwardedAt: awardDateFormatted,
         activeProgram: activeProgramTitle,
         batchIds,
         batchNames,
-        totalExams: std.examinations.length,
+        totalExams: Array.isArray(std.examinations) ? std.examinations.length : 0,
         latestExamStatus: latestExam ? latestExam.status : "NO_EXAM",
-        latestExamDate: latestExam
+        latestExamDate: latestExam && latestExam.examDate
           ? latestExam.examDate.toLocaleDateString("en-US", {
               month: "short",
               day: "numeric",
               year: "numeric",
             })
           : null,
-        latestExamDateISO: latestExam ? latestExam.examDate.toISOString() : null,
-        totalProgressions: std.beltProgressions.length,
-        totalCertificates: std.certificates.length,
+        latestExamDateISO: latestExam && latestExam.examDate ? latestExam.examDate.toISOString() : null,
+        totalProgressions: Array.isArray(std.beltProgressions) ? std.beltProgressions.length : 0,
+        totalCertificates: Array.isArray(std.certificates) ? std.certificates.length : 0,
       };
     });
 
