@@ -80,13 +80,6 @@ export async function POST(req: NextRequest) {
     const uploaded = await storageProvider.uploadFile(buffer, file.name, "certificates");
     const fileKey = uploaded.fileKey;
 
-    // Permanent file content encoding for serverless PostgreSQL persistence
-    const fileBase64 = buffer.toString("base64");
-    let fileMimeType = "application/pdf";
-    if (fileExt === ".png") fileMimeType = "image/png";
-    else if (fileExt === ".jpg" || fileExt === ".jpeg") fileMimeType = "image/jpeg";
-    else if (fileExt === ".webp") fileMimeType = "image/webp";
-
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     const certificateNumber = `SELFFITS-${beltName.replace(/\s+/g, "").toUpperCase()}-${Date.now().toString().slice(-4)}-${randomSuffix}`;
 

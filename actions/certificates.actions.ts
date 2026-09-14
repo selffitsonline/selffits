@@ -55,19 +55,12 @@ export async function issueCertificateAction(payload: {
 
     // Save File via StorageProvider
     let fileKey = `certificates/${Date.now()}-${certificateNumber}.pdf`;
-    let fileDataClean: string | undefined = undefined;
-    let fileMimeType: string | undefined = "application/pdf";
 
     if (fileBase64 && fileName) {
-      fileDataClean = fileBase64.split(",")[1] || fileBase64;
+      const fileDataClean = fileBase64.split(",")[1] || fileBase64;
       const buffer = Buffer.from(fileDataClean, "base64");
       const uploaded = await storageProvider.uploadFile(buffer, fileName, "certificates");
       fileKey = uploaded.fileKey;
-
-      const ext = fileName.slice(fileName.lastIndexOf(".")).toLowerCase();
-      if (ext === ".png") fileMimeType = "image/png";
-      else if (ext === ".jpg" || ext === ".jpeg") fileMimeType = "image/jpeg";
-      else if (ext === ".webp") fileMimeType = "image/webp";
     }
 
     // Create DB Certificate Record
@@ -78,8 +71,6 @@ export async function issueCertificateAction(payload: {
         title,
         certificateNumber,
         fileKey,
-        fileData: fileDataClean,
-        fileMimeType,
         issuedByUserId: session.user.id,
       },
     });

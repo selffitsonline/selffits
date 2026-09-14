@@ -95,20 +95,7 @@ export async function GET(
       }
     }
 
-    // 2. If no disk file found, decode permanently stored Base64 payload from PostgreSQL database
-    const certAny = cert as any;
-    if (!fileBuffer && certAny.fileData) {
-      try {
-        fileBuffer = Buffer.from(certAny.fileData, "base64");
-        if (certAny.fileMimeType) {
-          mimeType = certAny.fileMimeType;
-        }
-      } catch (err) {
-        console.warn("Failed to decode persistent fileData from DB:", err);
-      }
-    }
-
-    // If file buffer was retrieved from disk OR PostgreSQL database, serve actual uploaded file!
+    // Serve physical file if found on storage/disk
     if (fileBuffer) {
       const disposition = isInline
         ? `inline; filename="${fileName}"`
