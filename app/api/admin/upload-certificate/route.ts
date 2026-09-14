@@ -96,6 +96,7 @@ export async function POST(req: NextRequest) {
         userId,
         beltName,
       },
+      select: { id: true, fileKey: true, beltName: true },
       orderBy: { issuedDate: "desc" },
     });
 
