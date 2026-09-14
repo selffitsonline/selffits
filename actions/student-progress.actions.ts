@@ -57,13 +57,21 @@ export async function getAdminStudentProgressListAction() {
     return { success: false, error: authErr?.message || "Authentication validation failed." };
   }
 
-  // 1. Fetch active batches for Batch selection dropdown
+  // 1. Fetch active batches & assigned students directly for 100% consistency with Batch Management
   try {
     const batches = await db.batch.findMany({
       orderBy: { createdAt: "desc" },
       include: {
         program: true,
-        students: { select: { userId: true } },
+        students: {
+          include: {
+            user: {
+              include: {
+                studentProfile: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -115,95 +123,62 @@ export async function getAdminStudentProgressListAction() {
         };
       }
     });
-  } catch (batchErr) {
-    console.error("Error fetching batches in getAdminStudentProgressListAction:", batchErr);
-  }
 
-  // 2. Query users with role STUDENT OR users who are assigned to any batch or enrollment
-  try {
-    const students = await db.user.findMany({
+    // Extract student directory directly from BatchStudent relations + User table
+    const studentMap = new Map<string, any>();
+
+    for (const b of batches) {
+      if (Array.isArray(b.students)) {
+        for (const bs of b.students) {
+          if (bs && bs.user) {
+            const std = bs.user;
+            const existing = studentMap.get(std.id) || {
+              id: std.id,
+              name: std.name || [std.firstName, std.lastName].filter(Boolean).join(" ") || "Student",
+              email: std.email || "No email",
+              phone: std.studentProfile?.phone || "Not provided",
+              joinedDate: safeFormatDate(std.createdAt) || "Recently",
+              createdAtISO: safeISOString(std.createdAt) || new Date().toISOString(),
+              currentBelt: std.studentProfile?.currentBelt || b.beltLevel || "White Belt",
+              beltAwardedAt: safeFormatDate(std.studentProfile?.beltAwardedAt) || "Initial Assignment",
+              activeProgram: b.program?.title || "General Martial Arts",
+              batchIds: [],
+              batchNames: [],
+              totalExams: 0,
+              latestExamStatus: "NO_EXAM",
+              latestExamDate: null,
+              latestExamDateISO: null,
+              totalProgressions: 0,
+              totalCertificates: 0,
+            };
+
+            if (!existing.batchIds.includes(b.id)) existing.batchIds.push(b.id);
+            if (b.batchId && !existing.batchIds.includes(b.batchId)) existing.batchIds.push(b.batchId);
+            if (b.name && !existing.batchNames.includes(b.name)) existing.batchNames.push(b.name);
+
+            studentMap.set(std.id, existing);
+          }
+        }
+      }
+    }
+
+    // Also fetch all other registered users safely
+    const allUsers = await db.user.findMany({
       orderBy: { createdAt: "desc" },
-      include: {
-        studentProfile: true,
-        batchStudents: true,
-        examinations: {
-          orderBy: { examDate: "desc" },
-        },
-        certificates: {
-          orderBy: { issuedDate: "desc" },
-        },
-        enrollments: {
-          where: { status: "ACTIVE" },
-        },
-      },
-    });
+      include: { studentProfile: true },
+    }).catch(() => []);
 
-    const allBatchRows = await db.batch.findMany({ select: { id: true, batchId: true, name: true } }).catch(() => []);
-    const batchLookup = new Map<string, any>();
-    allBatchRows.forEach((b) => {
-      batchLookup.set(b.id, b);
-      batchLookup.set(b.batchId, b);
-    });
-
-    formattedStudents = students.map((std) => {
-      try {
-        const latestExam = Array.isArray(std.examinations) ? std.examinations[0] : null;
-        const currentBelt = std.studentProfile?.currentBelt || "White Belt";
-        const awardDateFormatted = safeFormatDate(std.studentProfile?.beltAwardedAt) || "Initial Assignment";
-
-        const validBatchStudents = Array.isArray(std.batchStudents)
-          ? std.batchStudents.filter((bs) => bs && bs.batchId)
-          : [];
-
-        const batchIds = Array.from(
-          new Set(
-            validBatchStudents
-              .flatMap((bs) => {
-                const matched = batchLookup.get(bs.batchId);
-                return [bs.batchId, matched?.id, matched?.batchId];
-              })
-              .filter((x): x is string => typeof x === "string" && x.trim() !== "")
-          )
-        );
-
-        const batchNames = Array.from(
-          new Set(
-            validBatchStudents
-              .map((bs) => batchLookup.get(bs.batchId)?.name || "Assigned Batch")
-              .filter(Boolean)
-          )
-        );
-
-        return {
-          id: std.id,
-          name: std.name || [std.firstName, std.lastName].filter(Boolean).join(" ") || "Student",
-          email: std.email || "No email",
-          phone: std.studentProfile?.phone || "Not provided",
-          joinedDate: safeFormatDate(std.createdAt) || "Recently",
-          createdAtISO: safeISOString(std.createdAt) || new Date().toISOString(),
-          currentBelt,
-          beltAwardedAt: awardDateFormatted,
-          activeProgram: "General Martial Arts",
-          batchIds,
-          batchNames,
-          totalExams: Array.isArray(std.examinations) ? std.examinations.length : 0,
-          latestExamStatus: latestExam ? latestExam.status : "NO_EXAM",
-          latestExamDate: latestExam ? safeFormatDate(latestExam.examDate) : null,
-          latestExamDateISO: latestExam ? safeISOString(latestExam.examDate) : null,
-          totalProgressions: 0,
-          totalCertificates: Array.isArray(std.certificates) ? std.certificates.length : 0,
-        };
-      } catch (err) {
-        console.error("Error formatting student record:", std.id, err);
-        return {
-          id: std.id,
-          name: std.name || "Student",
-          email: std.email || "",
-          phone: "Not provided",
-          joinedDate: "Recently",
-          createdAtISO: new Date().toISOString(),
-          currentBelt: "White Belt",
-          beltAwardedAt: "Initial Assignment",
+    for (const u of allUsers) {
+      if (!studentMap.has(u.id)) {
+        studentMap.set(u.id, {
+          id: u.id,
+          name: u.name || [u.firstName, u.lastName].filter(Boolean).join(" ") || "Student",
+          email: u.email || "No email",
+          phone: u.studentProfile?.phone || "Not provided",
+          joinedDate: safeFormatDate(u.createdAt) || "Recently",
+          createdAtISO: safeISOString(u.createdAt) || new Date().toISOString(),
+          currentBelt: u.studentProfile?.currentBelt || "White Belt",
+          beltAwardedAt: safeFormatDate(u.studentProfile?.beltAwardedAt) || "Initial Assignment",
           activeProgram: "General Martial Arts",
           batchIds: [],
           batchNames: [],
@@ -213,11 +188,13 @@ export async function getAdminStudentProgressListAction() {
           latestExamDateISO: null,
           totalProgressions: 0,
           totalCertificates: 0,
-        };
+        });
       }
-    });
-  } catch (studentErr) {
-    console.error("Error fetching students in getAdminStudentProgressListAction:", studentErr);
+    }
+
+    formattedStudents = Array.from(studentMap.values());
+  } catch (batchErr) {
+    console.error("Error fetching batches in getAdminStudentProgressListAction:", batchErr);
   }
 
   return { success: true, batches: formattedBatches, students: formattedStudents };
