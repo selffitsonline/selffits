@@ -112,7 +112,8 @@ export function AdminStudentProgressView({
 
   // Modals & Action States
   const [showUploadCertModal, setShowUploadCertModal] = useState(false);
-  const [previewCert, setPreviewCert] = useState<{ id: string; title: string; beltName: string; fileUrl: string; certificateNumber: string } | null>(null);
+  const [previewCert, setPreviewCert] = useState<{ id: string; title: string; beltName: string; fileUrl: string; fileKey?: string; certificateNumber: string } | null>(null);
+  const [certToDelete, setCertToDelete] = useState<{ id: string; title: string; beltName: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [deletingCertId, setDeletingCertId] = useState<string | null>(null);
 
@@ -294,10 +295,7 @@ export function AdminStudentProgressView({
   };
 
   // Handler for Deleting Certificate
-  const handleDeleteCertificate = async (certificateId: string) => {
-    if (!confirm("Are you sure you want to delete this certificate? This action will permanently remove the record and file.")) {
-      return;
-    }
+  const confirmExecuteDelete = async (certificateId: string) => {
     setDeletingCertId(certificateId);
     const res = await deleteStudentCertificateAction({ certificateId });
     setDeletingCertId(null);
@@ -305,7 +303,7 @@ export function AdminStudentProgressView({
     if (res.success) {
       setNotification({ message: res.message || "Certificate deleted successfully.", type: "success" });
       if (selectedStudentId) {
-        await refreshStudentDetails(selectedStudentId);
+        await refreshStudentDetails(selectedStudentId, selectedBatchId);
       }
       await handleRefreshDirectory();
     } else {
@@ -830,7 +828,8 @@ export function AdminStudentProgressView({
                               </button>
 
                               <button
-                                onClick={() => handleDeleteCertificate(cert.id)}
+                                type="button"
+                                onClick={() => setCertToDelete(cert)}
                                 disabled={deletingCertId === cert.id}
                                 className="px-3 py-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-400 text-xs font-bold transition-all flex items-center justify-center gap-1 border border-red-500/30 cursor-pointer"
                                 title="Delete Certificate"
@@ -1001,28 +1000,88 @@ export function AdminStudentProgressView({
                 </button>
               </div>
 
-              <div className="flex-1 w-full bg-[#0F1117] border border-white/10 rounded-2xl overflow-hidden min-h-[500px] max-h-[75vh] flex items-center justify-center relative">
-                <iframe
-                  src={`${previewCert.fileUrl}?inline=true`}
-                  className="w-full h-full min-h-[500px] border-0 rounded-2xl bg-white"
-                  title={previewCert.title}
-                />
+              <div className="flex-1 w-full bg-[#0F1117] border border-white/10 rounded-2xl overflow-hidden min-h-[500px] max-h-[75vh] flex items-center justify-center relative p-2">
+                {previewCert.fileKey?.startsWith("data:image/") ||
+                [".png", ".jpg", ".jpeg", ".webp"].some((ext) => previewCert.fileKey?.toLowerCase().includes(ext)) ? (
+                  <img
+                    src={`${previewCert.fileUrl}?inline=true`}
+                    alt={previewCert.title}
+                    className="max-h-[70vh] max-w-full rounded-xl object-contain shadow-2xl"
+                  />
+                ) : (
+                  <iframe
+                    src={`${previewCert.fileUrl}?inline=true`}
+                    className="w-full h-full min-h-[500px] border-0 rounded-2xl bg-white"
+                    title={previewCert.title}
+                  />
+                )}
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-white/10">
-                <a
-                  href={previewCert.fileUrl}
-                  download
-                  className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white font-semibold text-xs transition-all flex items-center gap-2 border border-white/10"
-                >
-                  <Download className="w-3.5 h-3.5" /> Download Copy
-                </a>
+              <div className="flex items-center justify-end pt-2 border-t border-white/10">
                 <button
                   type="button"
                   onClick={() => setPreviewCert(null)}
-                  className="px-5 py-2 rounded-xl bg-[#0080FF] hover:bg-[#0066CC] text-white font-bold text-xs transition-all cursor-pointer shadow-md shadow-[#0080FF]/20"
+                  className="px-6 py-2.5 rounded-xl bg-[#0080FF] hover:bg-[#0066CC] text-white font-bold text-xs transition-all cursor-pointer shadow-md shadow-[#0080FF]/20"
                 >
                   Close Preview
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal: Confirm Certificate Deletion */}
+        {certToDelete && (
+          <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in">
+            <div className="bg-[#14161D] border border-red-500/30 w-full max-w-md rounded-2xl p-6 space-y-5 shadow-2xl relative">
+              <div className="flex items-center gap-3 border-b border-white/10 pb-4">
+                <div className="w-10 h-10 rounded-xl bg-red-500/20 border border-red-500/40 flex items-center justify-center text-red-400 shrink-0">
+                  <Trash2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-extrabold text-white font-[family-name:var(--font-outfit)]">
+                    Delete Certificate?
+                  </h3>
+                  <p className="text-xs text-gray-400">Confirm permanent deletion</p>
+                </div>
+              </div>
+
+              <div className="space-y-2 text-xs text-gray-300">
+                <p>
+                  Are you sure you want to permanently delete the <strong>{certToDelete.title}</strong> ({certToDelete.beltName}) certificate?
+                </p>
+                <p className="text-amber-400 font-semibold bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/20">
+                  ⚠️ This action cannot be undone. The certificate record and file will be permanently removed.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setCertToDelete(null)}
+                  className="px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 font-bold text-xs transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const targetId = certToDelete.id;
+                    setCertToDelete(null);
+                    await confirmExecuteDelete(targetId);
+                  }}
+                  disabled={deletingCertId === certToDelete.id}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:opacity-90 text-white font-extrabold text-xs shadow-lg shadow-red-500/20 cursor-pointer flex items-center gap-2"
+                >
+                  {deletingCertId === certToDelete.id ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Deleting...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-3.5 h-3.5" /> Yes, Delete Certificate
+                    </>
+                  )}
                 </button>
               </div>
             </div>

@@ -147,26 +147,28 @@ export default function StudentCertificatesPage() {
                 </button>
               </div>
 
-              <div className="flex-1 w-full bg-[#0F1117] border border-white/10 rounded-2xl overflow-hidden min-h-[500px] max-h-[75vh] flex items-center justify-center relative">
-                <iframe
-                  src={`${previewCert.fileUrl}?inline=true`}
-                  className="w-full h-full min-h-[500px] border-0 rounded-2xl bg-white"
-                  title={previewCert.title}
-                />
+              <div className="flex-1 w-full bg-[#0F1117] border border-white/10 rounded-2xl overflow-hidden min-h-[500px] max-h-[75vh] flex items-center justify-center relative p-2">
+                {previewCert.fileKey?.startsWith("data:image/") ||
+                [".png", ".jpg", ".jpeg", ".webp"].some((ext) => previewCert.fileKey?.toLowerCase().includes(ext)) ? (
+                  <img
+                    src={`${previewCert.fileUrl}?inline=true`}
+                    alt={previewCert.title}
+                    className="max-h-[70vh] max-w-full rounded-xl object-contain shadow-2xl"
+                  />
+                ) : (
+                  <iframe
+                    src={`${previewCert.fileUrl}?inline=true`}
+                    className="w-full h-full min-h-[500px] border-0 rounded-2xl bg-white"
+                    title={previewCert.title}
+                  />
+                )}
               </div>
 
-              <div className="flex items-center justify-between pt-2 border-t border-white/10">
-                <a
-                  href={previewCert.fileUrl}
-                  download
-                  className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white font-semibold text-xs transition-all flex items-center gap-2 border border-white/10"
-                >
-                  <Download className="w-3.5 h-3.5" /> Download PDF
-                </a>
+              <div className="flex items-center justify-end pt-2 border-t border-white/10">
                 <button
                   type="button"
                   onClick={() => setPreviewCert(null)}
-                  className="px-5 py-2 rounded-xl bg-[#0080FF] hover:bg-[#0066CC] text-white font-bold text-xs transition-all cursor-pointer shadow-md shadow-[#0080FF]/20"
+                  className="px-6 py-2.5 rounded-xl bg-[#0080FF] hover:bg-[#0066CC] text-white font-bold text-xs transition-all cursor-pointer shadow-md shadow-[#0080FF]/20"
                 >
                   Close Preview
                 </button>
