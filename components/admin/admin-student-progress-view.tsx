@@ -63,6 +63,17 @@ export function AdminStudentProgressView({
   const [batches, setBatches] = useState<any[]>(initialBatches || []);
   const [students, setStudents] = useState<any[]>(initialStudents || []);
 
+  // Sync state when props update from server component re-render / page navigation
+  React.useEffect(() => {
+    setBatches(initialBatches || []);
+    setStudents(initialStudents || []);
+  }, [initialBatches, initialStudents]);
+
+  // Auto-refresh directory on client mount to capture newly created batches/students
+  React.useEffect(() => {
+    handleRefreshDirectory();
+  }, []);
+
   // Primary Batch Selector State (Defaults to "ALL" so all students are visible)
   const [selectedBatchId, setSelectedBatchId] = useState<string>("ALL");
 

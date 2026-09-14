@@ -135,9 +135,15 @@ export async function getAdminStudentProgressListAction() {
         const awardDateFormatted = safeFormatDate(std.studentProfile?.beltAwardedAt) || "Initial Assignment";
 
         const validBatchStudents = Array.isArray(std.batchStudents)
-          ? std.batchStudents.filter((bs) => bs && bs.batchId)
+          ? std.batchStudents.filter((bs) => bs && (bs.batchId || bs.batch?.id))
           : [];
-        const batchIds = validBatchStudents.map((bs) => bs.batchId);
+        const batchIds = Array.from(
+          new Set(
+            validBatchStudents
+              .flatMap((bs) => [bs.batchId, bs.batch?.batchId, bs.batch?.id])
+              .filter((x): x is string => typeof x === "string" && x.trim() !== "")
+          )
+        );
         const batchNames = validBatchStudents.map((bs) => bs.batch?.name || "Assigned Batch");
 
         return {
