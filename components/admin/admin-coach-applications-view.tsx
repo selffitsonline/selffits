@@ -65,35 +65,97 @@ export function AdminCoachApplicationsView({ initialApplications }: AdminCoachAp
     setCurrentPage(1);
   };
 
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [downloadingResumeId, setDownloadingResumeId] = useState<string | null>(null);
+
+  // Authenticated Resume Download via Fetch -> Blob -> Temporary Object URL
+  const handleDownloadResume = async (appId: string, candidateName?: string) => {
+    if (downloadingResumeId) return;
+    setDownloadingResumeId(appId);
+    try {
+      const res = await fetch(`/api/coach-application/resume/${appId}`, {
+        method: "GET",
+        headers: {
+          "Accept": "application/pdf, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document, image/*, */*",
+        },
+      });
+
+      if (!res.ok) {
+        let errText = "Failed to download resume file.";
+        try {
+          const json = await res.json();
+          if (json.error) errText = json.error;
+        } catch {}
+        setMsg({ type: "error", text: errText });
+        return;
+      }
+
+      const disposition = res.headers.get("Content-Disposition");
+      let filename = `Resume_${(candidateName || "Coach").replace(/[^a-zA-Z0-9]/g, "_")}.pdf`;
+      if (disposition && disposition.includes("filename=")) {
+        const match = disposition.match(/filename="?([^";]+)"?/);
+        if (match && match[1]) {
+          filename = match[1];
+        }
+      }
+
+      const blob = await res.blob();
+      if (!blob || blob.size === 0) {
+        setMsg({ type: "error", text: "Resume file content is empty or corrupted." });
+        return;
+      }
+
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => {
+        window.URL.revokeObjectURL(blobUrl);
+      }, 10000);
+    } catch (err: any) {
+      console.error("Resume download error:", err);
+      setMsg({ type: "error", text: "Network error downloading resume file." });
+    } finally {
+      setDownloadingResumeId(null);
+    }
+  };
+
   // Status Approval / Rejection Action
   const handleStatusUpdate = async (id: string, newStatus: "APPROVED" | "REJECTED") => {
+    if (processingId) return;
+    setProcessingId(id);
     setMsg(null);
-    const res = await updateCoachApplicationStatusAction(id, newStatus);
-    if (res.success) {
-      clearAdminCacheKey("admin_coach_apps");
-      clearAdminCacheKey("admin_coaches");
-      clearAdminCacheKey("admin_dashboard_stats");
+    try {
+      const res = await updateCoachApplicationStatusAction(id, newStatus);
+      if (res.success) {
+        clearAdminCacheKey("admin_coach_apps");
+        clearAdminCacheKey("admin_coaches");
+        clearAdminCacheKey("admin_dashboard_stats");
 
-      if (newStatus === "APPROVED") {
-        // Once APPROVED, immediately remove from the application/leads list
-        setApplications((prev) => prev.filter((item) => item.id !== id));
-        if (selectedApp?.id === id) setSelectedApp(null);
-        setMsg({
-          type: "success",
-          text: "Coach application approved! Candidate has been moved to the Active Coaches directory.",
-        });
-      } else {
-        // For REJECTED, update local status
         setApplications((prev) =>
           prev.map((item) => (item.id === id ? { ...item, status: newStatus } : item))
         );
         if (selectedApp?.id === id) {
           setSelectedApp((prev: any) => (prev ? { ...prev, status: newStatus } : null));
         }
-        setMsg({ type: "success", text: "Application status set to Rejected." });
+
+        setMsg({
+          type: "success",
+          text:
+            newStatus === "APPROVED"
+              ? "Coach application approved! Candidate has been promoted to Active Coaches."
+              : "Application status updated to Rejected.",
+        });
+      } else {
+        setMsg({ type: "error", text: res.error || "Failed to update application status." });
       }
-    } else {
-      setMsg({ type: "error", text: res.error || "Failed to update application status." });
+    } catch (err: any) {
+      setMsg({ type: "error", text: "An error occurred while updating status." });
+    } finally {
+      setProcessingId(null);
     }
 
     setTimeout(() => setMsg(null), 5000);
@@ -349,32 +411,49 @@ export function AdminCoachApplicationsView({ initialApplications }: AdminCoachAp
                   </button>
 
                   {app.resumeUrl ? (
-                    <a
-                      href={app.resumeUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-3.5 py-2 rounded-xl bg-[#10B981]/20 hover:bg-[#10B981]/35 text-[#10B981] border border-[#10B981]/30 text-xs font-bold transition-all flex items-center gap-1.5"
+                    <button
+                      type="button"
+                      disabled={downloadingResumeId === app.id}
+                      onClick={() => handleDownloadResume(app.id, app.fullName)}
+                      className="px-3.5 py-2 rounded-xl bg-[#10B981]/20 hover:bg-[#10B981]/35 disabled:opacity-50 text-[#10B981] border border-[#10B981]/30 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
                     >
-                      <Download className="w-3.5 h-3.5 text-[#10B981]" /> Resume
-                    </a>
+                      {downloadingResumeId === app.id ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#10B981]" />
+                      ) : (
+                        <Download className="w-3.5 h-3.5 text-[#10B981]" />
+                      )}
+                      Resume
+                    </button>
                   ) : null}
 
                   <button
                     type="button"
+                    disabled={processingId === app.id}
                     onClick={() => handleStatusUpdate(app.id, "APPROVED")}
-                    className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-lg shadow-emerald-500/20"
+                    className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:pointer-events-none text-white text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-lg shadow-emerald-500/20"
                     title="Approve and move to Active Coaches"
                   >
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Approve
+                    {processingId === app.id ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                    )}
+                    {app.status === "APPROVED" ? "Approved" : "Approve"}
                   </button>
 
                   {app.status !== "REJECTED" && (
                     <button
                       type="button"
+                      disabled={processingId === app.id}
                       onClick={() => handleStatusUpdate(app.id, "REJECTED")}
-                      className="px-3.5 py-2 rounded-xl bg-[#E50914]/20 hover:bg-[#E50914]/40 text-[#EF4444] border border-[#E50914]/30 text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                      className="px-3.5 py-2 rounded-xl bg-[#E50914]/20 hover:bg-[#E50914]/40 disabled:opacity-50 disabled:pointer-events-none text-[#EF4444] border border-[#E50914]/30 text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
                     >
-                      <XCircle className="w-3.5 h-3.5" /> Reject
+                      {processingId === app.id ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <XCircle className="w-3.5 h-3.5" />
+                      )}
+                      Reject
                     </button>
                   )}
                 </div>
@@ -618,14 +697,19 @@ export function AdminCoachApplicationsView({ initialApplications }: AdminCoachAp
                       <span className="text-gray-400 text-[10px]">Persisted database file reference</span>
                     </div>
                     {selectedApp.resumeUrl ? (
-                      <a
-                        href={selectedApp.resumeUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-4 py-2.5 rounded-xl bg-[#10B981] hover:bg-[#0D9668] text-white font-black text-xs transition-all flex items-center gap-1.5 shrink-0 shadow-md shadow-emerald-500/20"
+                      <button
+                        type="button"
+                        disabled={downloadingResumeId === selectedApp.id}
+                        onClick={() => handleDownloadResume(selectedApp.id, selectedApp.fullName)}
+                        className="px-4 py-2.5 rounded-xl bg-[#10B981] hover:bg-[#0D9668] disabled:opacity-50 text-white font-black text-xs transition-all flex items-center gap-1.5 shrink-0 shadow-md shadow-emerald-500/20 cursor-pointer"
                       >
-                        <Download className="w-4 h-4" /> Download Resume
-                      </a>
+                        {downloadingResumeId === selectedApp.id ? (
+                          <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                        ) : (
+                          <Download className="w-4 h-4" />
+                        )}
+                        Download Resume
+                      </button>
                     ) : (
                       <span className="text-red-400 font-bold text-xs">No File Uploaded</span>
                     )}
@@ -648,19 +732,31 @@ export function AdminCoachApplicationsView({ initialApplications }: AdminCoachAp
                   {selectedApp.status !== "REJECTED" && (
                     <button
                       type="button"
+                      disabled={processingId === selectedApp.id}
                       onClick={() => handleStatusUpdate(selectedApp.id, "REJECTED")}
-                      className="px-4 py-2.5 rounded-xl bg-[#E50914]/20 hover:bg-[#E50914]/40 text-[#EF4444] border border-[#E50914]/30 text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer"
+                      className="px-4 py-2.5 rounded-xl bg-[#E50914]/20 hover:bg-[#E50914]/40 disabled:opacity-50 disabled:pointer-events-none text-[#EF4444] border border-[#E50914]/30 text-xs font-extrabold transition-all flex items-center gap-1.5 cursor-pointer"
                     >
-                      <XCircle className="w-4 h-4" /> Reject Candidate
+                      {processingId === selectedApp.id ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <XCircle className="w-4 h-4" />
+                      )}
+                      Reject Candidate
                     </button>
                   )}
 
                   <button
                     type="button"
+                    disabled={processingId === selectedApp.id}
                     onClick={() => handleStatusUpdate(selectedApp.id, "APPROVED")}
-                    className="px-5 py-2.5 rounded-xl bg-[#10B981] hover:bg-[#0D9668] text-white text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-[#10B981]/25"
+                    className="px-5 py-2.5 rounded-xl bg-[#10B981] hover:bg-[#0D9668] disabled:opacity-50 disabled:pointer-events-none text-white text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-[#10B981]/25"
                   >
-                    <CheckCircle2 className="w-4 h-4" /> Approve & Move to Active Coaches
+                    {processingId === selectedApp.id ? (
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <CheckCircle2 className="w-4 h-4" />
+                    )}
+                    {selectedApp.status === "APPROVED" ? "Approved & Active" : "Approve & Move to Active Coaches"}
                   </button>
                 </div>
               </div>

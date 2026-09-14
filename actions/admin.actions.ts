@@ -1024,9 +1024,32 @@ export async function getAdminCoachApplicationsAction() {
     }
 
     // Exclude APPROVED applications from leads/applications list (they belong in Active Coaches)
+    // Use select projection so heavy Base64/binary resume data is NEVER loaded into list payload
     const applications = await db.coachApplication.findMany({
       where: {
         status: { not: "APPROVED" },
+      },
+      select: {
+        id: true,
+        fullName: true,
+        dateOfBirth: true,
+        gender: true,
+        nationality: true,
+        phone: true,
+        countryCallingCode: true,
+        email: true,
+        location: true,
+        beltLevel: true,
+        highestRank: true,
+        yearsOfExperience: true,
+        totalExperience: true,
+        instagramUrl: true,
+        disciplines: true,
+        targetAgeGroups: true,
+        specializations: true,
+        status: true,
+        createdAt: true,
+        resumeUrl: true,
       },
       orderBy: { createdAt: "desc" },
     });
@@ -1043,6 +1066,9 @@ export async function getAdminCoachApplicationsAction() {
         : typeof app.targetAgeGroups === "string"
         ? [app.targetAgeGroups]
         : [];
+
+      // Return lightweight indicator for resumeUrl so multi-MB base64 strings are excluded from list payload
+      const resumeIndicator = app.resumeUrl && app.resumeUrl.trim().length > 0 ? "ATTACHED" : null;
 
       return {
         id: app.id,
@@ -1061,7 +1087,7 @@ export async function getAdminCoachApplicationsAction() {
         totalExperience: app.yearsOfExperience || app.totalExperience || "N/A",
 
         instagramUrl: app.instagramUrl || null,
-        resumeUrl: app.resumeUrl || null,
+        resumeUrl: resumeIndicator,
 
         status: app.status,
         appliedDate: app.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
@@ -1079,8 +1105,20 @@ export async function getAdminCoachApplicationsAction() {
 export async function updateCoachApplicationStatusAction(id: string, status: "APPROVED" | "REJECTED") {
   try {
     const session = await auth();
-    if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
+    if (!session || !session.user || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
       return { success: false, error: "Unauthorized access." };
+    }
+
+    const application = await db.coachApplication.findUnique({
+      where: { id },
+    });
+
+    if (!application) {
+      return { success: false, error: "Coach application record not found." };
+    }
+
+    if (application.status === status) {
+      return { success: true, message: `Application is already ${status.toLowerCase()}.` };
     }
 
     await db.coachApplication.update({
@@ -1088,8 +1126,22 @@ export async function updateCoachApplicationStatusAction(id: string, status: "AP
       data: { status },
     });
 
+    if (status === "APPROVED" && application.email) {
+      try {
+        const existingUser = await db.user.findUnique({
+          where: { email: application.email.toLowerCase() },
+        });
+        if (existingUser) {
+          // Keep user association intact
+        }
+      } catch (userErr) {
+        console.error("Non-fatal error checking user on coach approval:", userErr);
+      }
+    }
+
     revalidatePath("/admin/coach-applications");
     revalidatePath("/admin/coaches");
+    revalidatePath("/admin/dashboard");
     return { success: true, message: `Application ${status.toLowerCase()} successfully.` };
   } catch (err: any) {
     console.error("updateCoachApplicationStatusAction error:", err);
@@ -1247,32 +1299,187 @@ function getProgramLevelName(tierType?: string | null, planName?: string | null)
 }
 
 // 8. STUDENT REGISTRATIONS & MANAGEMENT SYSTEM
-export async function getAdminStudentsAction() {
+export async function getAdminStudentsAction(params?: {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  tab?: "ALL" | "ACTIVE" | "UNENROLLED" | "EXPIRED" | "BLOCKED";
+  category?: string;
+  program?: string;
+}) {
   try {
     const session = await auth();
     if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
       return { success: false, error: "Unauthorized access." };
     }
 
-    const students = await db.user.findMany({
-      where: { role: "STUDENT" },
-      orderBy: { createdAt: "desc" },
-      include: {
-        studentProfile: true,
-        enrollments: {
-          orderBy: { createdAt: "desc" },
-          include: {
-            membershipPlan: {
-              include: {
-                program: true,
+    const page = Math.max(1, params?.page || 1);
+    const pageSize = Math.max(1, Math.min(100, params?.pageSize || 10));
+    const skip = (page - 1) * pageSize;
+
+    const where: any = { role: "STUDENT" };
+
+    if (params?.search && params.search.trim() !== "") {
+      const q = params.search.trim();
+      where.OR = [
+        { name: { contains: q, mode: "insensitive" } },
+        { email: { contains: q, mode: "insensitive" } },
+        { studentProfile: { phone: { contains: q, mode: "insensitive" } } },
+      ];
+    }
+
+    if (params?.tab === "BLOCKED") {
+      where.isBlocked = true;
+    } else if (params?.tab === "ACTIVE") {
+      where.isBlocked = false;
+      where.enrollments = {
+        some: {
+          status: "ACTIVE",
+          endDate: { gte: new Date() },
+        },
+      };
+    } else if (params?.tab === "EXPIRED") {
+      where.isBlocked = false;
+      where.enrollments = {
+        some: {
+          OR: [
+            { status: "EXPIRED" },
+            { endDate: { lt: new Date() } },
+            { remainingClasses: { lte: 0 } },
+          ],
+        },
+        none: {
+          status: "ACTIVE",
+          endDate: { gte: new Date() },
+        },
+      };
+    } else if (params?.tab === "UNENROLLED") {
+      where.isBlocked = false;
+      where.enrollments = {
+        none: {},
+      };
+    }
+
+    if (params?.program && params.program !== "ALL") {
+      where.enrollments = {
+        ...where.enrollments,
+        some: {
+          ...where.enrollments?.some,
+          membershipPlan: {
+            program: {
+              title: { equals: params.program, mode: "insensitive" },
+            },
+          },
+        },
+      };
+    }
+
+    const [totalCount, activeCount, unenrolledCount, expiredCount, blockedCount, students, countForCurrentWhere] = await Promise.all([
+      db.user.count({ where: { role: "STUDENT" } }),
+      db.user.count({
+        where: {
+          role: "STUDENT",
+          isBlocked: false,
+          enrollments: { some: { status: "ACTIVE", endDate: { gte: new Date() } } },
+        },
+      }),
+      db.user.count({
+        where: {
+          role: "STUDENT",
+          isBlocked: false,
+          enrollments: { none: {} },
+        },
+      }),
+      db.user.count({
+        where: {
+          role: "STUDENT",
+          isBlocked: false,
+          enrollments: {
+            some: { OR: [{ status: "EXPIRED" }, { endDate: { lt: new Date() } }, { remainingClasses: { lte: 0 } }] },
+            none: { status: "ACTIVE", endDate: { gte: new Date() } },
+          },
+        },
+      }),
+      db.user.count({ where: { role: "STUDENT", isBlocked: true } }),
+      db.user.findMany({
+        where,
+        skip,
+        take: pageSize,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          name: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          isBlocked: true,
+          createdAt: true,
+          studentProfile: {
+            select: {
+              phone: true,
+              country: true,
+              city: true,
+              emergencyContact: true,
+              age: true,
+              gender: true,
+            },
+          },
+          enrollments: {
+            orderBy: { createdAt: "desc" },
+            take: 3,
+            select: {
+              id: true,
+              status: true,
+              startDate: true,
+              endDate: true,
+              remainingClasses: true,
+              totalClassesGranted: true,
+              classTiming: true,
+              daysPerWeek: true,
+              selectedDays: true,
+              selectedBatch: true,
+              monthlyPrice: true,
+              timezone: true,
+              createdAt: true,
+              membershipPlan: {
+                select: {
+                  id: true,
+                  name: true,
+                  tierType: true,
+                  program: {
+                    select: {
+                      id: true,
+                      title: true,
+                      category: true,
+                      targetAudience: true,
+                    },
+                  },
+                },
               },
             },
           },
         },
-        payments: {
-          orderBy: { createdAt: "desc" },
-        },
-      },
+      }),
+      db.user.count({ where }),
+    ]);
+
+    const pageStudentIds = students.map((s) => s.id);
+    const paymentSums = pageStudentIds.length > 0
+      ? await db.payment.groupBy({
+          by: ["userId"],
+          where: {
+            userId: { in: pageStudentIds },
+            status: "SUCCESS",
+          },
+          _sum: { amount: true },
+        })
+      : [];
+
+    const spentMap = new Map<string, number>();
+    paymentSums.forEach((ps) => {
+      if (ps.userId) {
+        spentMap.set(ps.userId, Number(ps._sum.amount || 0));
+      }
     });
 
     const formattedStudents = students.map((std) => {
@@ -1294,9 +1501,7 @@ export async function getAdminStudentsAction() {
         enrollmentStatus = "EXPIRED";
       }
 
-      const totalSpentNum = std.payments
-        .filter((p) => p.status === "SUCCESS")
-        .reduce((acc, p) => acc + Number(p.amount), 0);
+      const totalSpentNum = spentMap.get(std.id) || 0;
 
       const formattedEnrollments = std.enrollments.map((e) => {
         const prg = e.membershipPlan?.program;
@@ -1333,23 +1538,6 @@ export async function getAdminStudentsAction() {
         };
       });
 
-      const formattedPayments = std.payments.map((p) => ({
-        id: p.id,
-        razorpayOrderId: p.razorpayOrderId,
-        razorpayPaymentId: p.razorpayPaymentId || "Direct Auth",
-        amount: Number(p.amount),
-        currency: p.currency,
-        formattedAmount: `${p.currency === "USD" ? "$" : "₹"}${p.amount}`,
-        status: p.status,
-        date: p.createdAt.toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      }));
-
       const activePrg = activeEnrollment?.membershipPlan?.program;
 
       const activeClassTiming = activeEnrollment
@@ -1370,59 +1558,255 @@ export async function getAdminStudentsAction() {
         ? getProgramLevelName(activeEnrollment.membershipPlan?.tierType, activeEnrollment.membershipPlan?.name)
         : null;
 
-        const activeSelectedDays = activeEnrollment && Array.isArray(activeEnrollment.selectedDays)
-          ? (activeEnrollment.selectedDays as string[])
-          : ["Sunday", "Wednesday", "Saturday"];
+      const activeSelectedDays = activeEnrollment && Array.isArray(activeEnrollment.selectedDays)
+        ? (activeEnrollment.selectedDays as string[])
+        : ["Sunday", "Wednesday", "Saturday"];
 
-        return {
-          id: std.id,
-          name: std.name,
-          firstName: std.firstName || "",
-          lastName: std.lastName || "",
-          email: std.email,
-          phone: std.studentProfile?.phone || "Not provided",
-          country: std.studentProfile?.country || "Not specified",
-          city: std.studentProfile?.city || "Not specified",
-          age: std.studentProfile?.age ? `${std.studentProfile.age} Yrs` : "Not specified",
-          gender: std.studentProfile?.gender || "Not specified",
-          emergencyContact: std.studentProfile?.emergencyContact || "None",
-          isBlocked: std.isBlocked || false,
-          accountStatus: std.isBlocked ? "BLOCKED" : "ACTIVE",
-          joinedDate: std.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-          enrollmentStatus,
-          activeProgram: activePrg?.title || activeEnrollment?.membershipPlan?.name || (hasExpiredEnrollments ? "Expired Membership" : "Unenrolled"),
-          activeCategory: activePrg?.category || null,
-          activeCategoryLabel: activeEnrollment ? getProgramCategoryLabel(activePrg) : "None",
-          activeCourseLevel: activeCourseLevel || "Standard Level",
-          activeClassTiming: activeClassTiming || "03:30 PM to 04:15 PM (GMT)",
-          activeDaysPerWeek: activeEnrollment?.daysPerWeek || 3,
-          activeSelectedDays: activeSelectedDays,
-          activeSelectedBatch: activeEnrollment?.selectedBatch || activeClassTiming || "2nd Batch — 02:30 PM to 03:30 PM (GMT)",
-          activeMonthlyPrice: activeEnrollment?.monthlyPrice ? Number(activeEnrollment.monthlyPrice) : null,
-          activeTimezone: activeEnrollment?.timezone || "GMT (UTC+0)",
-          activeEnrollmentFullTimestamp,
-          totalEnrollments: std.enrollments.length,
-          remainingClasses: activeEnrollment ? activeEnrollment.remainingClasses : 0,
-          totalClasses: activeEnrollment ? activeEnrollment.totalClassesGranted : 0,
-          completedClasses: activeEnrollment
-            ? Math.max(0, activeEnrollment.totalClassesGranted - activeEnrollment.remainingClasses)
-            : 0,
-          expiryDate: activeEnrollment
-            ? activeEnrollment.endDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
-            : null,
-          totalSpentNum,
-          totalSpent: `₹${totalSpentNum.toLocaleString("en-IN")}`,
-          enrollments: formattedEnrollments,
-          payments: formattedPayments,
-        };
-      });
+      return {
+        id: std.id,
+        name: std.name,
+        firstName: std.firstName || "",
+        lastName: std.lastName || "",
+        email: std.email,
+        phone: std.studentProfile?.phone || "Not provided",
+        country: std.studentProfile?.country || "Not specified",
+        city: std.studentProfile?.city || "Not specified",
+        age: std.studentProfile?.age ? `${std.studentProfile.age} Yrs` : "Not specified",
+        gender: std.studentProfile?.gender || "Not specified",
+        emergencyContact: std.studentProfile?.emergencyContact || "None",
+        isBlocked: std.isBlocked || false,
+        accountStatus: std.isBlocked ? "BLOCKED" : "ACTIVE",
+        joinedDate: std.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+        enrollmentStatus,
+        activeProgram: activePrg?.title || activeEnrollment?.membershipPlan?.name || (hasExpiredEnrollments ? "Expired Membership" : "Unenrolled"),
+        activeCategory: activePrg?.category || null,
+        activeCategoryLabel: activeEnrollment ? getProgramCategoryLabel(activePrg) : "None",
+        activeCourseLevel: activeCourseLevel || "Standard Level",
+        activeClassTiming: activeClassTiming || "03:30 PM to 04:15 PM (GMT)",
+        activeDaysPerWeek: activeEnrollment?.daysPerWeek || 3,
+        activeSelectedDays: activeSelectedDays,
+        activeSelectedBatch: activeEnrollment?.selectedBatch || activeClassTiming || "2nd Batch — 02:30 PM to 03:30 PM (GMT)",
+        activeMonthlyPrice: activeEnrollment?.monthlyPrice ? Number(activeEnrollment.monthlyPrice) : null,
+        activeTimezone: activeEnrollment?.timezone || "GMT (UTC+0)",
+        activeEnrollmentFullTimestamp,
+        totalEnrollments: std.enrollments.length,
+        remainingClasses: activeEnrollment ? activeEnrollment.remainingClasses : 0,
+        totalClasses: activeEnrollment ? activeEnrollment.totalClassesGranted : 0,
+        completedClasses: activeEnrollment
+          ? Math.max(0, activeEnrollment.totalClassesGranted - activeEnrollment.remainingClasses)
+          : 0,
+        expiryDate: activeEnrollment
+          ? activeEnrollment.endDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+          : null,
+        totalSpentNum,
+        totalSpent: `₹${totalSpentNum.toLocaleString("en-IN")}`,
+        enrollments: formattedEnrollments,
+        payments: [],
+      };
+    });
 
-    return { success: true, students: formattedStudents };
+    return {
+      success: true,
+      students: formattedStudents,
+      pagination: {
+        currentPage: page,
+        pageSize,
+        totalItems: countForCurrentWhere,
+        totalPages: Math.max(1, Math.ceil(countForCurrentWhere / pageSize)),
+      },
+      counts: {
+        ALL: totalCount,
+        ACTIVE: activeCount,
+        UNENROLLED: unenrolledCount,
+        EXPIRED: expiredCount,
+        BLOCKED: blockedCount,
+      },
+    };
   } catch (err: any) {
     console.error("getAdminStudentsAction error:", err);
     return { success: false, error: "Failed to fetch students list." };
   }
 }
+
+export async function getAdminStudentDetailsAction(studentId: string) {
+  try {
+    const session = await auth();
+    if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
+      return { success: false, error: "Unauthorized access." };
+    }
+
+    const std = await db.user.findUnique({
+      where: { id: studentId },
+      include: {
+        studentProfile: true,
+        enrollments: {
+          orderBy: { createdAt: "desc" },
+          include: {
+            membershipPlan: {
+              include: {
+                program: true,
+              },
+            },
+          },
+        },
+        payments: {
+          orderBy: { createdAt: "desc" },
+        },
+      },
+    });
+
+    if (!std) {
+      return { success: false, error: "Student record not found." };
+    }
+
+    const activeEnrollment = std.enrollments.find(
+      (e) => e.status === "ACTIVE" && new Date(e.endDate) >= new Date()
+    );
+
+    const hasExpiredEnrollments =
+      !activeEnrollment &&
+      std.enrollments.length > 0 &&
+      std.enrollments.some(
+        (e) => e.status === "EXPIRED" || new Date(e.endDate) < new Date() || e.remainingClasses <= 0
+      );
+
+    let enrollmentStatus: "ACTIVE" | "EXPIRED" | "UNENROLLED" = "UNENROLLED";
+    if (activeEnrollment) {
+      enrollmentStatus = "ACTIVE";
+    } else if (hasExpiredEnrollments) {
+      enrollmentStatus = "EXPIRED";
+    }
+
+    const totalSpentNum = std.payments
+      .filter((p) => p.status === "SUCCESS")
+      .reduce((acc, p) => acc + Number(p.amount), 0);
+
+    const formattedEnrollments = std.enrollments.map((e) => {
+      const prg = e.membershipPlan?.program;
+      const totalGranted = e.totalClassesGranted || 0;
+      const remaining = e.remainingClasses || 0;
+      const completed = Math.max(0, totalGranted - remaining);
+
+      const joinedDateFormatted = e.createdAt.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+      const joinedTimeFormatted = e.createdAt.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+
+      return {
+        id: e.id,
+        programTitle: prg?.title || e.membershipPlan?.name || "Martial Arts Program",
+        programCategory: prg?.category || "MARTIAL_ARTS",
+        categoryLabel: getProgramCategoryLabel(prg),
+        membershipPlanName: e.membershipPlan?.name || getProgramLevelName(e.membershipPlan?.tierType),
+        courseLevel: getProgramLevelName(e.membershipPlan?.tierType, e.membershipPlan?.name),
+        startDate: e.startDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+        endDate: e.endDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+        rawEndDate: e.endDate.toISOString(),
+        joinedTimestamp: `Joined: ${joinedDateFormatted} • ${joinedTimeFormatted}`,
+        totalClassesGranted: totalGranted,
+        remainingClasses: remaining,
+        completedClasses: completed,
+        status: e.status,
+      };
+    });
+
+    const formattedPayments = std.payments.map((p) => ({
+      id: p.id,
+      razorpayOrderId: p.razorpayOrderId,
+      razorpayPaymentId: p.razorpayPaymentId || "Direct Auth",
+      amount: Number(p.amount),
+      currency: p.currency,
+      formattedAmount: `${p.currency === "USD" ? "$" : "₹"}${p.amount}`,
+      status: p.status,
+      date: p.createdAt.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    }));
+
+    const activePrg = activeEnrollment?.membershipPlan?.program;
+
+    const activeClassTiming = activeEnrollment
+      ? activeEnrollment.classTiming || "03:30 PM to 04:15 PM (GMT)"
+      : null;
+
+    const activeJoinedDate = activeEnrollment
+      ? activeEnrollment.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+      : null;
+    const activeJoinedTime = activeEnrollment
+      ? activeEnrollment.createdAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true })
+      : null;
+    const activeEnrollmentFullTimestamp = activeEnrollment
+      ? `Joined: ${activeJoinedDate} • ${activeJoinedTime}`
+      : null;
+
+    const activeCourseLevel = activeEnrollment
+      ? getProgramLevelName(activeEnrollment.membershipPlan?.tierType, activeEnrollment.membershipPlan?.name)
+      : null;
+
+    const activeSelectedDays = activeEnrollment && Array.isArray(activeEnrollment.selectedDays)
+      ? (activeEnrollment.selectedDays as string[])
+      : ["Sunday", "Wednesday", "Saturday"];
+
+    return {
+      success: true,
+      student: {
+        id: std.id,
+        name: std.name,
+        firstName: std.firstName || "",
+        lastName: std.lastName || "",
+        email: std.email,
+        phone: std.studentProfile?.phone || "Not provided",
+        country: std.studentProfile?.country || "Not specified",
+        city: std.studentProfile?.city || "Not specified",
+        age: std.studentProfile?.age ? `${std.studentProfile.age} Yrs` : "Not specified",
+        gender: std.studentProfile?.gender || "Not specified",
+        emergencyContact: std.studentProfile?.emergencyContact || "None",
+        isBlocked: std.isBlocked || false,
+        accountStatus: std.isBlocked ? "BLOCKED" : "ACTIVE",
+        joinedDate: std.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+        enrollmentStatus,
+        activeProgram: activePrg?.title || activeEnrollment?.membershipPlan?.name || (hasExpiredEnrollments ? "Expired Membership" : "Unenrolled"),
+        activeCategory: activePrg?.category || null,
+        activeCategoryLabel: activeEnrollment ? getProgramCategoryLabel(activePrg) : "None",
+        activeCourseLevel: activeCourseLevel || "Standard Level",
+        activeClassTiming: activeClassTiming || "03:30 PM to 04:15 PM (GMT)",
+        activeDaysPerWeek: activeEnrollment?.daysPerWeek || 3,
+        activeSelectedDays: activeSelectedDays,
+        activeSelectedBatch: activeEnrollment?.selectedBatch || activeClassTiming || "2nd Batch — 02:30 PM to 03:30 PM (GMT)",
+        activeMonthlyPrice: activeEnrollment?.monthlyPrice ? Number(activeEnrollment.monthlyPrice) : null,
+        activeTimezone: activeEnrollment?.timezone || "GMT (UTC+0)",
+        activeEnrollmentFullTimestamp,
+        totalEnrollments: std.enrollments.length,
+        remainingClasses: activeEnrollment ? activeEnrollment.remainingClasses : 0,
+        totalClasses: activeEnrollment ? activeEnrollment.totalClassesGranted : 0,
+        completedClasses: activeEnrollment
+          ? Math.max(0, activeEnrollment.totalClassesGranted - activeEnrollment.remainingClasses)
+          : 0,
+        expiryDate: activeEnrollment
+          ? activeEnrollment.endDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+          : null,
+        totalSpentNum,
+        totalSpent: `₹${totalSpentNum.toLocaleString("en-IN")}`,
+        enrollments: formattedEnrollments,
+        payments: formattedPayments,
+      },
+    };
+  } catch (err: any) {
+    console.error("getAdminStudentDetailsAction error:", err);
+    return { success: false, error: "Failed to load student details." };
+  }
+}
+
 
 export async function getAdminStudentCategoriesAction() {
   try {

@@ -359,44 +359,9 @@ async function main() {
     },
   });
 
-  // 6. Approved Coaches
-  const coach1 = await prisma.coachApplication.upsert({
-    where: { id: "coach-master-rahul" },
-    update: { status: CoachAppStatus.APPROVED },
-    create: {
-      id: "coach-master-rahul",
-      fullName: "Master Rahul Sharma",
-      email: "coach.rahul@selffits.com",
-      phone: "+91 9876500001",
-      disciplines: ["Kung Fu", "Taekwondo"],
-      highestRank: "5th Dan Black Belt",
-      totalExperience: "12+ Years",
-      targetAgeGroups: ["ADULTS", "TEENS"],
-      specializations: ["Shaolin Forms", "Sparring"],
-      availability: ["Morning", "Evening"],
-      status: CoachAppStatus.APPROVED,
-    },
-  });
+  // 7. Batches & Student Assignments (linked to genuine coach Sujith John)
+  const genuineCoachId = "cmta3f1zj0000nm3zlxskea8d";
 
-  const coach2 = await prisma.coachApplication.upsert({
-    where: { id: "coach-[#0080FF]-ananya" },
-    update: { status: CoachAppStatus.APPROVED },
-    create: {
-      id: "coach-[#0080FF]-ananya",
-      fullName: "Sensei Ananya Roy",
-      email: "ananya.roy@selffits.com",
-      phone: "+91 9876500002",
-      disciplines: ["Karate", "Yoga"],
-      highestRank: "3rd Dan Black Belt",
-      totalExperience: "8+ Years",
-      targetAgeGroups: ["KIDS", "LADIES_ONLY"],
-      specializations: ["Kata", "Functional Fitness"],
-      availability: ["Morning", "Evening"],
-      status: CoachAppStatus.APPROVED,
-    },
-  });
-
-  // 7. Batches & Student Assignments
   const batch1 = await prisma.batch.upsert({
     where: { batchId: "BATCH-KUNGFU-101" },
     update: { meetingUrl: "https://meet.google.com/selffits-kungfu-live" },
@@ -405,7 +370,7 @@ async function main() {
       name: "Kung Fu Shaolin Morning Batch",
       programId: kungFuPrg.id,
       membershipPlanId: kungFuBlueBelt.id,
-      coachId: coach1.id,
+      coachId: genuineCoachId,
       dayCombination: "Sunday & Wednesday",
       timeSlot: "Morning",
       clockTiming: "09:00 AM to 09:45 AM (GMT)",
@@ -423,7 +388,7 @@ async function main() {
       name: "Karate Kids Evening Warriors",
       programId: karatePrg.id,
       membershipPlanId: karateYellowBelt.id,
-      coachId: coach2.id,
+      coachId: genuineCoachId,
       dayCombination: "Monday & Thursday",
       timeSlot: "Evening",
       clockTiming: "04:00 PM to 04:45 PM (GMT)",

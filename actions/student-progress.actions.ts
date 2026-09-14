@@ -245,7 +245,6 @@ export async function getStudentProgressDetailsAction(studentId: string, targetB
             title: true,
             certificateNumber: true,
             beltName: true,
-            fileKey: true,
             issuedDate: true,
             program: { select: { id: true, title: true } },
           },
@@ -338,7 +337,6 @@ export async function getStudentProgressDetailsAction(studentId: string, targetB
       beltName: cert.beltName || "Belt Award",
       programTitle: cert.program?.title || "Martial Arts Academy",
       issuedDate: safeFormatDate(cert.issuedDate) || "Recently",
-      fileKey: cert.fileKey,
       fileUrl: `/api/certificates/download/${cert.id}`,
     }));
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { AdminShell } from "@/components/admin/admin-shell";
 import {
   Search,
@@ -17,19 +17,39 @@ import {
   RefreshCw,
   ChevronLeft,
   ChevronRight,
+  Loader2,
 } from "lucide-react";
 import { StudentDetailsModal } from "@/components/admin/student-details-modal";
 import { BlockStudentModal } from "@/components/admin/block-student-modal";
-import { toggleBlockStudentAction } from "@/actions/admin.actions";
+import {
+  toggleBlockStudentAction,
+  getAdminStudentsAction,
+  getAdminStudentDetailsAction,
+} from "@/actions/admin.actions";
 
 interface AdminStudentsViewProps {
   initialStudents: any[];
+  initialPagination?: {
+    currentPage: number;
+    pageSize: number;
+    totalItems: number;
+    totalPages: number;
+  };
+  initialCounts?: {
+    ALL: number;
+    ACTIVE: number;
+    UNENROLLED: number;
+    EXPIRED: number;
+    BLOCKED: number;
+  };
   initialCategories: string[];
   initialPrograms: { id: string; title: string; categoryLabel: string }[];
 }
 
 export function AdminStudentsView({
   initialStudents,
+  initialPagination,
+  initialCounts,
   initialCategories,
   initialPrograms,
 }: AdminStudentsViewProps) {
@@ -39,17 +59,26 @@ export function AdminStudentsView({
     initialPrograms || []
   );
 
-  React.useEffect(() => {
-    setStudents(initialStudents || []);
-  }, [initialStudents]);
+  const [pagination, setPagination] = useState(
+    initialPagination || {
+      currentPage: 1,
+      pageSize: 10,
+      totalItems: initialStudents?.length || 0,
+      totalPages: 1,
+    }
+  );
 
-  React.useEffect(() => {
-    setCategories(initialCategories || []);
-  }, [initialCategories]);
+  const [counts, setCounts] = useState(
+    initialCounts || {
+      ALL: initialStudents?.length || 0,
+      ACTIVE: 0,
+      UNENROLLED: 0,
+      EXPIRED: 0,
+      BLOCKED: 0,
+    }
+  );
 
-  React.useEffect(() => {
-    setPrograms(initialPrograms || []);
-  }, [initialPrograms]);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Filter States
   const [activeTab, setActiveTab] = useState<"ALL" | "ACTIVE" | "UNENROLLED" | "EXPIRED" | "BLOCKED">("ALL");
@@ -58,94 +87,124 @@ export function AdminStudentsView({
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   // Pagination / Page Indexing States
-  const [currentPage, setCurrentPage] = useState<number>(1);
-  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
+  const [currentPage, setCurrentPage] = useState<number>(initialPagination?.currentPage || 1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(initialPagination?.pageSize || 10);
 
   // Modals
   const [selectedStudentForDetails, setSelectedStudentForDetails] = useState<any | null>(null);
   const [selectedStudentForBlock, setSelectedStudentForBlock] = useState<any | null>(null);
   const [notification, setNotification] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
-  // Handlers for state updates that reset current page to 1
+  useEffect(() => {
+    setCategories(initialCategories || []);
+  }, [initialCategories]);
+
+  useEffect(() => {
+    setPrograms(initialPrograms || []);
+  }, [initialPrograms]);
+
+  // Fetch paginated data from server
+  const fetchStudents = useCallback(
+    async (
+      page: number,
+      size: number,
+      tab: string,
+      category: string,
+      program: string,
+      search: string
+    ) => {
+      setIsLoading(true);
+      try {
+        const res = await getAdminStudentsAction({
+          page,
+          pageSize: size,
+          tab: tab as any,
+          category,
+          program,
+          search,
+        });
+
+        if (res.success && res.students) {
+          setStudents(res.students);
+          if (res.pagination) setPagination(res.pagination);
+          if (res.counts) setCounts(res.counts);
+        }
+      } catch (err) {
+        console.error("Error fetching students:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
+  // Initial load check if props updated
+  useEffect(() => {
+    if (initialStudents) {
+      setStudents(initialStudents);
+    }
+    if (initialPagination) {
+      setPagination(initialPagination);
+    }
+    if (initialCounts) {
+      setCounts(initialCounts);
+    }
+  }, [initialStudents, initialPagination, initialCounts]);
+
+  // Handlers for state updates
   const handleTabChange = (tab: "ALL" | "ACTIVE" | "UNENROLLED" | "EXPIRED" | "BLOCKED") => {
     setActiveTab(tab);
     setCurrentPage(1);
+    fetchStudents(1, itemsPerPage, tab, selectedCategory, selectedProgram, searchQuery);
   };
 
   const handleCategoryChange = (cat: string) => {
     setSelectedCategory(cat);
     setCurrentPage(1);
+    fetchStudents(1, itemsPerPage, activeTab, cat, selectedProgram, searchQuery);
   };
 
   const handleProgramChange = (prg: string) => {
     setSelectedProgram(prg);
     setCurrentPage(1);
+    fetchStudents(1, itemsPerPage, activeTab, selectedCategory, prg, searchQuery);
   };
 
   const handleSearchChange = (q: string) => {
     setSearchQuery(q);
     setCurrentPage(1);
+    fetchStudents(1, itemsPerPage, activeTab, selectedCategory, selectedProgram, q);
   };
 
   const handleItemsPerPageChange = (size: number) => {
     setItemsPerPage(size);
     setCurrentPage(1);
+    fetchStudents(1, size, activeTab, selectedCategory, selectedProgram, searchQuery);
   };
 
-  // Tab counts calculations
-  const counts = {
-    ALL: students.length,
-    ACTIVE: students.filter((s) => !s.isBlocked && s.enrollmentStatus === "ACTIVE").length,
-    UNENROLLED: students.filter((s) => !s.isBlocked && s.enrollmentStatus === "UNENROLLED").length,
-    EXPIRED: students.filter((s) => !s.isBlocked && s.enrollmentStatus === "EXPIRED").length,
-    BLOCKED: students.filter((s) => s.isBlocked).length,
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    fetchStudents(page, itemsPerPage, activeTab, selectedCategory, selectedProgram, searchQuery);
   };
 
-  // Filter logic combined
-  const filteredStudents = students.filter((student) => {
-    // Tab Filter
-    if (activeTab === "ACTIVE" && (student.isBlocked || student.enrollmentStatus !== "ACTIVE")) return false;
-    if (activeTab === "UNENROLLED" && (student.isBlocked || student.enrollmentStatus !== "UNENROLLED")) return false;
-    if (activeTab === "EXPIRED" && (student.isBlocked || student.enrollmentStatus !== "EXPIRED")) return false;
-    if (activeTab === "BLOCKED" && !student.isBlocked) return false;
-
-    // Category Filter
-    if (selectedCategory !== "ALL") {
-      const matchesActiveCat = student.activeCategoryLabel === selectedCategory;
-      const matchesAnyEnrollmentCat = student.enrollments?.some(
-        (e: any) => e.categoryLabel === selectedCategory
-      );
-      if (!matchesActiveCat && !matchesAnyEnrollmentCat) return false;
+  // Open details modal and fetch complete details (including payments) on demand
+  const handleOpenDetails = async (std: any) => {
+    setSelectedStudentForDetails(std);
+    try {
+      const res = await getAdminStudentDetailsAction(std.id);
+      if (res.success && res.student) {
+        setSelectedStudentForDetails(res.student);
+      }
+    } catch (err) {
+      console.error("Failed to load student details:", err);
     }
+  };
 
-    // Program Filter
-    if (selectedProgram !== "ALL") {
-      const matchesActivePrg = student.activeProgram === selectedProgram;
-      const matchesAnyEnrollmentPrg = student.enrollments?.some(
-        (e: any) => e.programTitle === selectedProgram
-      );
-      if (!matchesActivePrg && !matchesAnyEnrollmentPrg) return false;
-    }
-
-    // Search Query Filter (Name, Email, Phone)
-    if (searchQuery.trim() !== "") {
-      const q = searchQuery.toLowerCase().trim();
-      const matchName = student.name?.toLowerCase().includes(q);
-      const matchEmail = student.email?.toLowerCase().includes(q);
-      const matchPhone = student.phone?.toLowerCase().includes(q);
-      if (!matchName && !matchEmail && !matchPhone) return false;
-    }
-
-    return true;
-  });
-
-  // Page Indexing Calculations
-  const totalItems = filteredStudents.length;
-  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
-  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
+  const totalItems = pagination.totalItems;
+  const totalPages = pagination.totalPages;
+  const safeCurrentPage = pagination.currentPage;
   const startIndex = (safeCurrentPage - 1) * itemsPerPage;
-  const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
-  const paginatedStudents = filteredStudents.slice(startIndex, endIndex);
+  const endIndex = Math.min(startIndex + students.length, totalItems);
 
   const handleToggleBlockConfirm = async (studentId: string, willBlock: boolean) => {
     const res = await toggleBlockStudentAction(studentId, willBlock);
@@ -162,7 +221,6 @@ export function AdminStudentsView({
         )
       );
 
-      // Also update currently open details modal if applicable
       if (selectedStudentForDetails?.id === studentId) {
         setSelectedStudentForDetails((prev: any) =>
           prev
@@ -208,8 +266,9 @@ export function AdminStudentsView({
         {/* Header Section */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-extrabold text-white font-[family-name:var(--font-outfit)]">
+            <h1 className="text-2xl font-extrabold text-white font-[family-name:var(--font-outfit)] flex items-center gap-3">
               Centralized Student Management Directory
+              {isLoading && <Loader2 className="w-5 h-5 text-[#0080FF] animate-spin" />}
             </h1>
             <p className="text-xs text-gray-400 mt-1">
               Database-backed student account controls, active course enrollments, class progress tracking, and payment histories.
@@ -360,6 +419,7 @@ export function AdminStudentsView({
                   setSelectedProgram("ALL");
                   setSearchQuery("");
                   setCurrentPage(1);
+                  fetchStudents(1, itemsPerPage, activeTab, "ALL", "ALL", "");
                 }}
                 className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5"
               >
@@ -370,7 +430,15 @@ export function AdminStudentsView({
         </div>
 
         {/* Student Table */}
-        <div className="bg-[#14161D] border border-white/10 rounded-2xl overflow-hidden shadow-xl">
+        <div className="bg-[#14161D] border border-white/10 rounded-2xl overflow-hidden shadow-xl relative">
+          {isLoading && (
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-[1px] z-10 flex items-center justify-center">
+              <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#14161D] border border-white/10 text-xs font-bold text-[#0080FF]">
+                <Loader2 className="w-4 h-4 animate-spin" /> Fetching Page Data...
+              </div>
+            </div>
+          )}
+
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-[#0F1117] text-gray-400 font-extrabold uppercase border-b border-white/10">
@@ -386,7 +454,7 @@ export function AdminStudentsView({
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {paginatedStudents.length === 0 ? (
+                {students.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="p-12 text-center text-gray-500">
                       <Users className="w-8 h-8 text-gray-600 mx-auto mb-2 opacity-50" />
@@ -397,13 +465,13 @@ export function AdminStudentsView({
                     </td>
                   </tr>
                 ) : (
-                  paginatedStudents.map((std) => (
+                  students.map((std) => (
                     <tr
                       key={std.id}
                       className={`hover:bg-white/5 transition-colors cursor-pointer ${
                         std.isBlocked ? "bg-red-500/[0.02]" : ""
                       }`}
-                      onClick={() => setSelectedStudentForDetails(std)}
+                      onClick={() => handleOpenDetails(std)}
                     >
                       {/* Student Profile Info */}
                       <td className="p-4">
@@ -516,7 +584,7 @@ export function AdminStudentsView({
                       <td className="p-4 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => setSelectedStudentForDetails(std)}
+                            onClick={() => handleOpenDetails(std)}
                             className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-300 hover:text-white transition-colors"
                             title="View Full Profile"
                           >
@@ -580,8 +648,8 @@ export function AdminStudentsView({
               {/* Page Navigation Controls */}
               <div className="flex items-center gap-1">
                 <button
-                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                  disabled={safeCurrentPage === 1}
+                  onClick={() => handlePageChange(Math.max(1, safeCurrentPage - 1))}
+                  disabled={safeCurrentPage === 1 || isLoading}
                   className="p-1.5 rounded-lg border border-white/10 bg-[#14161D] text-gray-300 hover:bg-white/10 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-all"
                   title="Previous Page"
                 >
@@ -604,7 +672,8 @@ export function AdminStudentsView({
                       <React.Fragment key={page}>
                         {showEllipsis && <span className="px-1 text-gray-500 font-bold">...</span>}
                         <button
-                          onClick={() => setCurrentPage(page)}
+                          onClick={() => handlePageChange(page)}
+                          disabled={isLoading}
                           className={`w-7 h-7 rounded-lg text-xs font-extrabold transition-all ${
                             safeCurrentPage === page
                               ? "bg-[#0080FF] text-white shadow-md shadow-[#0080FF]/20"
@@ -618,8 +687,8 @@ export function AdminStudentsView({
                   })}
 
                 <button
-                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                  disabled={safeCurrentPage === totalPages}
+                  onClick={() => handlePageChange(Math.min(totalPages, safeCurrentPage + 1))}
+                  disabled={safeCurrentPage === totalPages || isLoading}
                   className="p-1.5 rounded-lg border border-white/10 bg-[#14161D] text-gray-300 hover:bg-white/10 hover:text-white disabled:opacity-30 disabled:pointer-events-none transition-all"
                   title="Next Page"
                 >
@@ -650,3 +719,4 @@ export function AdminStudentsView({
     </AdminShell>
   );
 }
+

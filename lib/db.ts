@@ -4,16 +4,14 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-// Ensure fresh PrismaClient instance if models were dynamically added
-let client = globalForPrisma.prisma;
-
-if (!client || !("batch" in client)) {
-  client = new PrismaClient({
+const prismaClientSingleton = () => {
+  return new PrismaClient({
     log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
   });
-  if (process.env.NODE_ENV !== "production") {
-    globalForPrisma.prisma = client;
-  }
-}
+};
+
+const client = globalForPrisma.prisma ?? prismaClientSingleton();
+
+globalForPrisma.prisma = client;
 
 export const db = client;

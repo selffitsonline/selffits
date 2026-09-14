@@ -148,20 +148,11 @@ export default function StudentCertificatesPage() {
               </div>
 
               <div className="flex-1 w-full bg-[#0F1117] border border-white/10 rounded-2xl overflow-hidden min-h-[500px] max-h-[75vh] flex items-center justify-center relative p-2">
-                {previewCert.fileKey?.startsWith("data:image/") ||
-                [".png", ".jpg", ".jpeg", ".webp"].some((ext) => previewCert.fileKey?.toLowerCase().includes(ext)) ? (
-                  <img
-                    src={`${previewCert.fileUrl}?inline=true`}
-                    alt={previewCert.title}
-                    className="max-h-[70vh] max-w-full rounded-xl object-contain shadow-2xl"
-                  />
-                ) : (
-                  <iframe
-                    src={`${previewCert.fileUrl}?inline=true`}
-                    className="w-full h-full min-h-[500px] border-0 rounded-2xl bg-white"
-                    title={previewCert.title}
-                  />
-                )}
+                <iframe
+                  src={`${previewCert.fileUrl}?inline=true`}
+                  className="w-full h-full min-h-[500px] border-0 rounded-2xl bg-white"
+                  title={previewCert.title}
+                />
               </div>
 
               <div className="flex items-center justify-end pt-2 border-t border-white/10">

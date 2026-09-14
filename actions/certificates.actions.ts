@@ -130,7 +130,14 @@ export async function getStudentCertificatesAction() {
 
     const certificates = await db.certificate.findMany({
       where: { userId: session.user.id },
-      include: { program: true },
+      select: {
+        id: true,
+        title: true,
+        certificateNumber: true,
+        beltName: true,
+        issuedDate: true,
+        program: { select: { id: true, title: true } },
+      },
       orderBy: { issuedDate: "desc" },
     });
 

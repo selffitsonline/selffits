@@ -13,19 +13,24 @@ export default async function AdminStudentsPage() {
   }
 
   const [studentsRes, categoriesRes] = await Promise.all([
-    getAdminStudentsAction(),
+    getAdminStudentsAction({ page: 1, pageSize: 10, tab: "ALL" }),
     getAdminStudentCategoriesAction(),
   ]);
 
   const initialStudents = studentsRes?.students || [];
+  const initialPagination = studentsRes?.pagination || { currentPage: 1, pageSize: 10, totalItems: 0, totalPages: 1 };
+  const initialCounts = studentsRes?.counts || { ALL: 0, ACTIVE: 0, UNENROLLED: 0, EXPIRED: 0, BLOCKED: 0 };
   const initialCategories = categoriesRes?.categories || [];
   const initialPrograms = categoriesRes?.programs || [];
 
   return (
     <AdminStudentsView
       initialStudents={initialStudents}
+      initialPagination={initialPagination}
+      initialCounts={initialCounts}
       initialCategories={initialCategories}
       initialPrograms={initialPrograms}
     />
   );
 }
+

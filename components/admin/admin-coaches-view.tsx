@@ -62,6 +62,62 @@ export function AdminCoachesView({ initialCoaches }: AdminCoachesViewProps) {
   const [selectedCoachForSuspend, setSelectedCoachForSuspend] = useState<any | null>(null);
   const [selectedCoachForDelete, setSelectedCoachForDelete] = useState<any | null>(null);
 
+  const [downloadingResumeId, setDownloadingResumeId] = useState<string | null>(null);
+
+  const handleDownloadResume = async (coachId: string, coachName?: string) => {
+    if (downloadingResumeId) return;
+    setDownloadingResumeId(coachId);
+    try {
+      const res = await fetch(`/api/coach-application/resume/${coachId}`, {
+        method: "GET",
+        headers: {
+          "Accept": "application/pdf, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document, image/*, */*",
+        },
+      });
+
+      if (!res.ok) {
+        let errText = "Failed to download resume file.";
+        try {
+          const json = await res.json();
+          if (json.error) errText = json.error;
+        } catch {}
+        setNotification({ message: errText, type: "error" });
+        return;
+      }
+
+      const disposition = res.headers.get("Content-Disposition");
+      let filename = `Resume_${(coachName || "Coach").replace(/[^a-zA-Z0-9]/g, "_")}.pdf`;
+      if (disposition && disposition.includes("filename=")) {
+        const match = disposition.match(/filename="?([^";]+)"?/);
+        if (match && match[1]) {
+          filename = match[1];
+        }
+      }
+
+      const blob = await res.blob();
+      if (!blob || blob.size === 0) {
+        setNotification({ message: "Resume file content is empty or corrupted.", type: "error" });
+        return;
+      }
+
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => {
+        window.URL.revokeObjectURL(blobUrl);
+      }, 10000);
+    } catch (err: any) {
+      console.error("Coach resume download error:", err);
+      setNotification({ message: "Network error downloading resume file.", type: "error" });
+    } finally {
+      setDownloadingResumeId(null);
+    }
+  };
+
   // Handlers resetting page to 1
   const handleTabChange = (tab: "ALL" | "ACTIVE" | "SUSPENDED") => {
     setActiveTab(tab);
@@ -413,14 +469,19 @@ export function AdminCoachesView({ initialCoaches }: AdminCoachesViewProps) {
                       <div className="flex items-center justify-between text-[11px] text-gray-400 pb-1">
                         <span>Approved: {coach.createdAt}</span>
                         {coach.resumeUrl && (
-                          <a
-                            href={coach.resumeUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-[#0080FF] hover:underline font-bold flex items-center gap-1"
+                          <button
+                            type="button"
+                            disabled={downloadingResumeId === coach.id}
+                            onClick={() => handleDownloadResume(coach.id, coach.fullName)}
+                            className="text-[#0080FF] hover:underline disabled:opacity-50 font-bold flex items-center gap-1 cursor-pointer"
                           >
-                            <Download className="w-3 h-3" /> Resume
-                          </a>
+                            {downloadingResumeId === coach.id ? (
+                              <RefreshCw className="w-3 h-3 animate-spin text-[#0080FF]" />
+                            ) : (
+                              <Download className="w-3 h-3" />
+                            )}
+                            Resume
+                          </button>
                         )}
                       </div>
 
