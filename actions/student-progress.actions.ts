@@ -23,13 +23,20 @@ function safeISOString(d?: Date | string | null): string | null {
 
 // 1. GET ADMIN STUDENT PROGRESS LIST (Central directory of students with belt & exam status)
 export async function getAdminStudentProgressListAction() {
+  let formattedBatches: any[] = [];
+  let formattedStudents: any[] = [];
+
   try {
     const session = await auth();
     if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
       return { success: false, error: "Unauthorized access to Admin portal." };
     }
+  } catch (authErr) {
+    console.error("Auth check warning in getAdminStudentProgressListAction:", authErr);
+  }
 
-    // Fetch active batches for Batch selection dropdown
+  // 1. Fetch active batches for Batch selection dropdown
+  try {
     const batches = await db.batch.findMany({
       orderBy: { createdAt: "desc" },
       include: {
@@ -39,7 +46,7 @@ export async function getAdminStudentProgressListAction() {
       },
     });
 
-    const formattedBatches = batches.map((b) => {
+    formattedBatches = batches.map((b) => {
       try {
         return {
           id: b.id,
@@ -83,13 +90,18 @@ export async function getAdminStudentProgressListAction() {
         };
       }
     });
+  } catch (batchErr) {
+    console.error("Error fetching batches in getAdminStudentProgressListAction:", batchErr);
+  }
 
-    // Query users with role STUDENT OR users who are assigned to any batch
+  // 2. Query users with role STUDENT OR users who are assigned to any batch or enrollment
+  try {
     const students = await db.user.findMany({
       where: {
         OR: [
           { role: "STUDENT" },
           { batchStudents: { some: {} } },
+          { enrollments: { some: {} } },
         ],
       },
       orderBy: { createdAt: "desc" },
@@ -97,22 +109,14 @@ export async function getAdminStudentProgressListAction() {
         studentProfile: true,
         batchStudents: {
           include: {
-            batch: {
-              include: { program: true },
-            },
+            batch: true,
           },
         },
         examinations: {
           orderBy: { examDate: "desc" },
-          include: { program: true },
-        },
-        beltProgressions: {
-          orderBy: { awardDate: "desc" },
-          include: { certificate: true, examination: true },
         },
         certificates: {
           orderBy: { issuedDate: "desc" },
-          include: { program: true },
         },
         enrollments: {
           where: { status: "ACTIVE" },
@@ -121,7 +125,7 @@ export async function getAdminStudentProgressListAction() {
       },
     });
 
-    const formattedStudents = students.map((std) => {
+    formattedStudents = students.map((std) => {
       try {
         const activeEnrollment = Array.isArray(std.enrollments) ? std.enrollments[0] : null;
         const activeProgramTitle =
@@ -131,7 +135,6 @@ export async function getAdminStudentProgressListAction() {
 
         const latestExam = Array.isArray(std.examinations) ? std.examinations[0] : null;
         const currentBelt = std.studentProfile?.currentBelt || "White Belt";
-
         const awardDateFormatted = safeFormatDate(std.studentProfile?.beltAwardedAt) || "Initial Assignment";
 
         const validBatchStudents = Array.isArray(std.batchStudents)
@@ -148,7 +151,7 @@ export async function getAdminStudentProgressListAction() {
 
         return {
           id: std.id,
-          name: std.name || "Student",
+          name: std.name || [std.firstName, std.lastName].filter(Boolean).join(" ") || "Student",
           email: std.email || "No email",
           phone: std.studentProfile?.phone || "Not provided",
           joinedDate: safeFormatDate(std.createdAt) || "Recently",
@@ -162,7 +165,7 @@ export async function getAdminStudentProgressListAction() {
           latestExamStatus: latestExam ? latestExam.status : "NO_EXAM",
           latestExamDate: latestExam ? safeFormatDate(latestExam.examDate) : null,
           latestExamDateISO: latestExam ? safeISOString(latestExam.examDate) : null,
-          totalProgressions: Array.isArray(std.beltProgressions) ? std.beltProgressions.length : 0,
+          totalProgressions: 0,
           totalCertificates: Array.isArray(std.certificates) ? std.certificates.length : 0,
         };
       } catch (err) {
@@ -188,12 +191,11 @@ export async function getAdminStudentProgressListAction() {
         };
       }
     });
-
-    return { success: true, batches: formattedBatches, students: formattedStudents };
-  } catch (err: any) {
-    console.error("getAdminStudentProgressListAction error:", err);
-    return { success: false, error: err?.message || "Failed to fetch student progress list." };
+  } catch (studentErr) {
+    console.error("Error fetching students in getAdminStudentProgressListAction:", studentErr);
   }
+
+  return { success: true, batches: formattedBatches, students: formattedStudents };
 }
 
 // 2. GET SINGLE STUDENT PROGRESS DETAILS FOR ADMIN VIEW

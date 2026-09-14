@@ -13,8 +13,8 @@ export default async function AdminStudentProgressPage() {
   }
 
   const res = await getAdminStudentProgressListAction();
-  const initialBatches = res?.success ? (res.batches || []) : [];
-  const initialStudents = res?.success ? (res.students || []) : [];
+  const initialBatches = res?.batches || [];
+  const initialStudents = res?.students || [];
 
   return (
     <AdminStudentProgressView
