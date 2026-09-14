@@ -148,8 +148,10 @@ export function AdminStudentProgressView({
   const handleRefreshDirectory = async () => {
     const res = await getAdminStudentProgressListAction();
     if (res.success) {
-      if (res.batches) setBatches(res.batches);
-      if (res.students) setStudents(res.students);
+      if (Array.isArray(res.batches) && res.batches.length > 0) setBatches(res.batches);
+      if (Array.isArray(res.students) && res.students.length > 0) setStudents(res.students);
+    } else {
+      console.warn("getAdminStudentProgressListAction warning:", res.error);
     }
   };
 

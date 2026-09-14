@@ -612,6 +612,7 @@ export async function assignStudentToBatchAction(batchId: string, userId: string
     }
 
     revalidatePath("/admin/batches");
+    revalidatePath("/admin/student-progress");
     revalidatePath("/admin/students");
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/programs");
@@ -653,6 +654,7 @@ export async function removeStudentFromBatchAction(batchId: string, userId: stri
     }
 
     revalidatePath("/admin/batches");
+    revalidatePath("/admin/student-progress");
     revalidatePath("/admin/students");
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/programs");
@@ -683,6 +685,7 @@ export async function deactivateOrDeleteBatchAction(batchId: string, deletePerma
     }
 
     revalidatePath("/admin/batches");
+    revalidatePath("/admin/student-progress");
     revalidatePath("/admin/dashboard");
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/programs");

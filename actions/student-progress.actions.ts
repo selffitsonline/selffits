@@ -28,11 +28,24 @@ export async function getAdminStudentProgressListAction() {
 
   try {
     const session = await auth();
-    if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
+    let isAdmin = session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN";
+
+    if (!isAdmin && session?.user?.id) {
+      const dbUser = await db.user.findUnique({
+        where: { id: session.user.id },
+        select: { role: true },
+      });
+      if (dbUser && (dbUser.role === "ADMIN" || dbUser.role === "SUPER_ADMIN")) {
+        isAdmin = true;
+      }
+    }
+
+    if (!session || !isAdmin) {
       return { success: false, error: "Unauthorized access to Admin portal." };
     }
-  } catch (authErr) {
-    console.error("Auth check warning in getAdminStudentProgressListAction:", authErr);
+  } catch (authErr: any) {
+    console.error("Auth check error in getAdminStudentProgressListAction:", authErr);
+    return { success: false, error: authErr?.message || "Authentication validation failed." };
   }
 
   // 1. Fetch active batches for Batch selection dropdown
