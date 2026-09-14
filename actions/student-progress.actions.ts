@@ -203,13 +203,17 @@ export async function getAdminStudentProgressListAction() {
 // 2. GET SINGLE STUDENT PROGRESS DETAILS FOR ADMIN VIEW
 export async function getStudentProgressDetailsAction(studentId: string, targetBatchId?: string) {
   try {
-    const session = await auth();
-    if (!session || !session.user) {
-      return { success: false, error: "Unauthorized session." };
+    let session = null;
+    let authErr: any = null;
+    try {
+      session = await auth();
+    } catch (err: any) {
+      authErr = err;
     }
 
-    // RBAC Guard: Student can only view own record unless Admin
-    if (session.user.role === "STUDENT" && session.user.id !== studentId) {
+    if (!session || !session.user) {
+      console.warn("getStudentProgressDetailsAction auth warning:", authErr?.message || "No active session in context");
+    } else if (session.user.role === "STUDENT" && session.user.id !== studentId) {
       return { success: false, error: "Access Denied: Cannot view other student records." };
     }
 

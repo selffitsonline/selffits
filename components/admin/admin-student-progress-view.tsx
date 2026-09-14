@@ -108,6 +108,7 @@ export function AdminStudentProgressView({
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [studentDetails, setStudentDetails] = useState<any | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
+  const [detailsError, setDetailsError] = useState<string | null>(null);
 
   // Modals & Action States
   const [showUploadCertModal, setShowUploadCertModal] = useState(false);
@@ -132,12 +133,20 @@ export function AdminStudentProgressView({
 
   const refreshStudentDetails = async (stdId: string, batchIdOverride?: string) => {
     setLoadingDetails(true);
+    setDetailsError(null);
     const targetBatch = batchIdOverride !== undefined ? batchIdOverride : selectedBatchId;
-    const res = await getStudentProgressDetailsAction(stdId, targetBatch);
-    if (res.success && res.student) {
-      setStudentDetails(res.student);
+    try {
+      const res = await getStudentProgressDetailsAction(stdId, targetBatch);
+      if (res.success && res.student) {
+        setStudentDetails(res.student);
+      } else {
+        setDetailsError(res.error || "Failed to load student details.");
+      }
+    } catch (err: any) {
+      setDetailsError(err?.message || "Error loading student details.");
+    } finally {
+      setLoadingDetails(false);
     }
-    setLoadingDetails(false);
   };
 
   const handleSelectStudent = (stdId: string) => {
@@ -662,10 +671,21 @@ export function AdminStudentProgressView({
                 </button>
               </div>
 
-              {loadingDetails || !studentDetails ? (
+              {loadingDetails ? (
                 <div className="py-12 text-center text-gray-400 space-y-3">
                   <RefreshCw className="w-8 h-8 text-[#0080FF] animate-spin mx-auto" />
                   <p className="text-xs font-bold">Loading student progress and batch details...</p>
+                </div>
+              ) : detailsError || !studentDetails ? (
+                <div className="py-12 text-center space-y-3">
+                  <AlertCircle className="w-8 h-8 text-amber-500 mx-auto" />
+                  <p className="text-xs font-bold text-amber-400">{detailsError || "Failed to load student progress details."}</p>
+                  <button
+                    onClick={() => refreshStudentDetails(selectedStudentId!, selectedBatchId)}
+                    className="px-4 py-2 bg-[#0080FF] hover:bg-[#0066CC] text-white text-xs font-bold rounded-xl transition-all shadow-md cursor-pointer"
+                  >
+                    Retry Loading
+                  </button>
                 </div>
               ) : (
                 <div className="space-y-8">
