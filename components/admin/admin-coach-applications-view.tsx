@@ -26,9 +26,11 @@ import {
   Upload,
   Briefcase,
   Globe,
+  Key,
 } from "lucide-react";
 import { updateCoachApplicationStatusAction } from "@/actions/admin.actions";
 import { clearAdminCacheKey } from "@/lib/admin-cache";
+import { CoachLoginAccountModal } from "@/components/admin/coach-login-account-modal";
 
 interface AdminCoachApplicationsViewProps {
   initialApplications: any[];
@@ -37,6 +39,8 @@ interface AdminCoachApplicationsViewProps {
 export function AdminCoachApplicationsView({ initialApplications }: AdminCoachApplicationsViewProps) {
   const [applications, setApplications] = useState<any[]>(initialApplications || []);
   const [msg, setMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [loginModalCoach, setLoginModalCoach] = useState<any | null>(null);
+  const [loginModalMode, setLoginModalMode] = useState<"CREATE" | "RESET">("CREATE");
 
   // Selected Application for Detail Modal
   const [selectedApp, setSelectedApp] = useState<any | null>(null);
@@ -745,25 +749,54 @@ export function AdminCoachApplicationsView({ initialApplications }: AdminCoachAp
                     </button>
                   )}
 
-                  <button
-                    type="button"
-                    disabled={processingId === selectedApp.id}
-                    onClick={() => handleStatusUpdate(selectedApp.id, "APPROVED")}
-                    className="px-5 py-2.5 rounded-xl bg-[#10B981] hover:bg-[#0D9668] disabled:opacity-50 disabled:pointer-events-none text-white text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-[#10B981]/25"
-                  >
-                    {processingId === selectedApp.id ? (
-                      <RefreshCw className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <CheckCircle2 className="w-4 h-4" />
-                    )}
-                    {selectedApp.status === "APPROVED" ? "Approved & Active" : "Approve & Move to Active Coaches"}
-                  </button>
+                  {selectedApp.status === "APPROVED" ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLoginModalCoach({
+                          id: selectedApp.id,
+                          fullName: selectedApp.fullName,
+                          email: selectedApp.email,
+                        });
+                        setLoginModalMode("CREATE");
+                      }}
+                      className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#10B981] to-[#059669] hover:opacity-95 text-black text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-[#10B981]/25 active:scale-95"
+                    >
+                      <Key className="w-4 h-4" />
+                      Create Login Account
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      disabled={processingId === selectedApp.id}
+                      onClick={() => handleStatusUpdate(selectedApp.id, "APPROVED")}
+                      className="px-5 py-2.5 rounded-xl bg-[#10B981] hover:bg-[#0D9668] disabled:opacity-50 disabled:pointer-events-none text-white text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-lg shadow-[#10B981]/25"
+                    >
+                      {processingId === selectedApp.id ? (
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="w-4 h-4" />
+                      )}
+                      Approve &amp; Move to Active Coaches
+                    </button>
+                  )}
                 </div>
               </div>
 
             </div>
           </div>
         )}
+
+        <CoachLoginAccountModal
+          isOpen={!!loginModalCoach}
+          onClose={() => setLoginModalCoach(null)}
+          coach={loginModalCoach}
+          mode={loginModalMode}
+          onSuccess={(message) => {
+            setMsg({ type: "success", text: message });
+            setTimeout(() => setMsg(null), 5000);
+          }}
+        />
       </div>
     </AdminShell>
   );

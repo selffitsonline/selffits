@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import bcrypt from "bcryptjs";
 
 export async function getAdminDashboardStatsAction() {
   try {
@@ -897,7 +898,6 @@ export async function uploadHomepageImageAction(formData: FormData) {
 }
 
 // 4. COACH MANAGEMENT ACTIONS
-// 4. COACH MANAGEMENT ACTIONS
 export async function getAdminCoachesAction() {
   try {
     const session = await auth();
@@ -912,12 +912,32 @@ export async function getAdminCoachesAction() {
       orderBy: { createdAt: "desc" },
     });
 
+    const coachEmails = coaches.map((c) => c.email.toLowerCase().trim());
+    const users = await db.user.findMany({
+      where: {
+        email: { in: coachEmails },
+      },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        createdAt: true,
+      },
+    });
+
+    const userMap = new Map(users.map((u) => [u.email.toLowerCase().trim(), u]));
+
     const formatted = coaches.map((c) => {
       const disciplinesArray = Array.isArray(c.disciplines)
         ? (c.disciplines as string[])
         : typeof c.disciplines === "string"
         ? [c.disciplines]
         : [];
+
+      const linkedUser = userMap.get(c.email.toLowerCase().trim());
+      const hasLoginAccount = !!linkedUser;
+      const loginEmail = linkedUser?.email || null;
+      const loginRole = linkedUser?.role || null;
 
       return {
         id: c.id,
@@ -931,6 +951,9 @@ export async function getAdminCoachesAction() {
         status: c.status,
         isSuspended: c.status === "SUSPENDED",
         resumeUrl: c.resumeUrl || c.qualificationCertsUrl || null,
+        hasLoginAccount,
+        loginEmail,
+        loginRole,
         createdAt: c.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
       };
     });
@@ -939,6 +962,173 @@ export async function getAdminCoachesAction() {
   } catch (err: any) {
     console.error("getAdminCoachesAction error:", err);
     return { success: false, error: "Failed to fetch coaches list." };
+  }
+}
+
+export async function createCoachLoginAccountAction(data: {
+  coachId: string;
+  loginEmail: string;
+  password: string;
+  confirmPassword: string;
+}) {
+  try {
+    const session = await auth();
+    if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
+      return { success: false, error: "Unauthorized access." };
+    }
+
+    const { coachId, loginEmail, password, confirmPassword } = data;
+
+    if (!coachId || !loginEmail || !password || !confirmPassword) {
+      return { success: false, error: "All fields are required." };
+    }
+
+    if (password.length < 6) {
+      return { success: false, error: "Password must be at least 6 characters long." };
+    }
+
+    if (password !== confirmPassword) {
+      return { success: false, error: "Passwords do not match." };
+    }
+
+    const coach = await db.coachApplication.findUnique({
+      where: { id: coachId },
+    });
+
+    if (!coach) {
+      return { success: false, error: "Coach application record not found." };
+    }
+
+    if (coach.status !== "APPROVED") {
+      return { success: false, error: "Coach application must be approved before creating a login account." };
+    }
+
+    const normalizedEmail = loginEmail.toLowerCase().trim();
+
+    // Check if user already exists
+    const existingUser = await db.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    if (existingUser) {
+      if (existingUser.role === "COACH") {
+        return {
+          success: false,
+          error: "A Coach login account already exists for this email address. Please use 'Reset Password' to update their credentials.",
+        };
+      }
+
+      // If user was registered as STUDENT, upgrade to COACH and update password
+      await db.user.update({
+        where: { id: existingUser.id },
+        data: {
+          role: "COACH",
+          passwordHash,
+          name: coach.fullName || existingUser.name,
+        },
+      });
+
+      revalidatePath("/admin/coaches");
+      revalidatePath("/admin/coach-applications");
+
+      return {
+        success: true,
+        message: `Login account enabled for Coach ${coach.fullName} (${normalizedEmail}) with COACH role.`,
+      };
+    }
+
+    // Create new User record with COACH role
+    await db.user.create({
+      data: {
+        name: coach.fullName,
+        email: normalizedEmail,
+        passwordHash,
+        role: "COACH",
+        emailVerified: new Date(),
+      },
+    });
+
+    revalidatePath("/admin/coaches");
+    revalidatePath("/admin/coach-applications");
+
+    return {
+      success: true,
+      message: `Login account created successfully for Coach ${coach.fullName} (${normalizedEmail}). Coach can now log in at /login.`,
+    };
+  } catch (err: any) {
+    console.error("createCoachLoginAccountAction error:", err);
+    return { success: false, error: "Failed to create coach login account." };
+  }
+}
+
+export async function resetCoachPasswordAction(data: {
+  coachId: string;
+  newPassword: string;
+  confirmPassword: string;
+}) {
+  try {
+    const session = await auth();
+    if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
+      return { success: false, error: "Unauthorized access." };
+    }
+
+    const { coachId, newPassword, confirmPassword } = data;
+
+    if (!coachId || !newPassword || !confirmPassword) {
+      return { success: false, error: "All fields are required." };
+    }
+
+    if (newPassword.length < 6) {
+      return { success: false, error: "New password must be at least 6 characters long." };
+    }
+
+    if (newPassword !== confirmPassword) {
+      return { success: false, error: "Passwords do not match." };
+    }
+
+    const coach = await db.coachApplication.findUnique({
+      where: { id: coachId },
+    });
+
+    if (!coach) {
+      return { success: false, error: "Coach application record not found." };
+    }
+
+    const user = await db.user.findFirst({
+      where: {
+        email: { equals: coach.email.toLowerCase().trim(), mode: "insensitive" },
+      },
+    });
+
+    if (!user) {
+      return {
+        success: false,
+        error: "No login account found for this coach. Please use 'Create Login Account' first.",
+      };
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    await db.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        role: "COACH",
+      },
+    });
+
+    revalidatePath("/admin/coaches");
+    revalidatePath("/admin/coach-applications");
+
+    return {
+      success: true,
+      message: `Password successfully reset for Coach ${coach.fullName} (${user.email}).`,
+    };
+  } catch (err: any) {
+    console.error("resetCoachPasswordAction error:", err);
+    return { success: false, error: "Failed to reset coach password." };
   }
 }
 

@@ -58,6 +58,9 @@ export async function middleware(req: NextRequest) {
     }
 
     if (token.role !== "ADMIN" && token.role !== "SUPER_ADMIN") {
+      if (token.role === "COACH") {
+        return NextResponse.redirect(new URL("/coach/dashboard", req.url));
+      }
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
   }

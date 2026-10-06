@@ -21,10 +21,12 @@ import {
   AlertCircle,
   Edit,
   Trash2,
+  Key,
 } from "lucide-react";
 import { EditCoachDisciplinesModal } from "@/components/admin/edit-coach-disciplines-modal";
 import { SuspendCoachModal } from "@/components/admin/suspend-coach-modal";
 import { DeleteCoachModal } from "@/components/admin/delete-coach-modal";
+import { CoachLoginAccountModal } from "@/components/admin/coach-login-account-modal";
 import {
   toggleSuspendCoachAction,
   deleteCoachAccountAction,
@@ -61,6 +63,8 @@ export function AdminCoachesView({ initialCoaches }: AdminCoachesViewProps) {
   const [selectedCoachForEdit, setSelectedCoachForEdit] = useState<any | null>(null);
   const [selectedCoachForSuspend, setSelectedCoachForSuspend] = useState<any | null>(null);
   const [selectedCoachForDelete, setSelectedCoachForDelete] = useState<any | null>(null);
+  const [loginModalCoach, setLoginModalCoach] = useState<any | null>(null);
+  const [loginModalMode, setLoginModalMode] = useState<"CREATE" | "RESET">("CREATE");
 
   const [downloadingResumeId, setDownloadingResumeId] = useState<string | null>(null);
 
@@ -236,6 +240,24 @@ export function AdminCoachesView({ initialCoaches }: AdminCoachesViewProps) {
       setNotification({ message: res.error || "Failed to update specializations.", type: "error" });
     }
     setTimeout(() => setNotification(null), 4000);
+  };
+
+  // Login Account Success Handler
+  const handleLoginAccountSuccess = (message: string, coachId: string, loginEmail: string) => {
+    setCoaches((prev) =>
+      prev.map((c) =>
+        c.id === coachId
+          ? {
+              ...c,
+              hasLoginAccount: true,
+              loginEmail: loginEmail,
+              loginRole: "COACH",
+            }
+          : c
+      )
+    );
+    setNotification({ message, type: "success" });
+    setTimeout(() => setNotification(null), 5000);
   };
 
   return (
@@ -465,7 +487,50 @@ export function AdminCoachesView({ initialCoaches }: AdminCoachesViewProps) {
                     </div>
 
                     {/* Card Actions Footer */}
-                    <div className="pt-4 border-t border-white/10 flex flex-col gap-2">
+                    <div className="pt-4 border-t border-white/10 flex flex-col gap-3">
+                      {/* Coach Login Account Status & Action */}
+                      {coach.hasLoginAccount ? (
+                        <div className="p-3 rounded-xl bg-[#10B981]/10 border border-[#10B981]/30 flex items-center justify-between gap-2">
+                          <div className="space-y-0.5 overflow-hidden">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-[#10B981] tracking-wider">
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Login Account: Created
+                            </span>
+                            <p className="text-[11px] font-mono text-gray-200 truncate">
+                              {coach.loginEmail || coach.email}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setLoginModalCoach(coach);
+                              setLoginModalMode("RESET");
+                            }}
+                            className="px-2.5 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-white text-[11px] font-bold transition-all flex items-center gap-1 shrink-0 cursor-pointer border border-white/15 active:scale-95"
+                          >
+                            <Key className="w-3 h-3 text-[#10B981]" /> Reset Password
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-2">
+                          <div className="space-y-0.5">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-amber-400 tracking-wider">
+                              <AlertCircle className="w-3.5 h-3.5" /> Login Account: Not Created
+                            </span>
+                            <p className="text-[11px] text-gray-400">Coach cannot log in yet.</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setLoginModalCoach(coach);
+                              setLoginModalMode("CREATE");
+                            }}
+                            className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#10B981] to-[#059669] hover:opacity-95 text-black font-black text-xs uppercase tracking-wider transition-all shadow-md shadow-[#10B981]/20 flex items-center gap-1.5 shrink-0 cursor-pointer active:scale-95"
+                          >
+                            <Key className="w-3.5 h-3.5" /> Create Login Account
+                          </button>
+                        </div>
+                      )}
+
                       <div className="flex items-center justify-between text-[11px] text-gray-400 pb-1">
                         <span>Approved: {coach.createdAt}</span>
                         {coach.resumeUrl && (
@@ -633,6 +698,14 @@ export function AdminCoachesView({ initialCoaches }: AdminCoachesViewProps) {
           onClose={() => setSelectedCoachForDelete(null)}
           coach={selectedCoachForDelete}
           onConfirm={handleDeleteConfirm}
+        />
+
+        <CoachLoginAccountModal
+          isOpen={!!loginModalCoach}
+          onClose={() => setLoginModalCoach(null)}
+          coach={loginModalCoach}
+          mode={loginModalMode}
+          onSuccess={handleLoginAccountSuccess}
         />
       </div>
     </AdminShell>
