@@ -1132,10 +1132,13 @@ export async function updateCoachApplicationStatusAction(id: string, status: "AP
           where: { email: application.email.toLowerCase() },
         });
         if (existingUser) {
-          // Keep user association intact
+          await db.user.update({
+            where: { id: existingUser.id },
+            data: { role: "COACH" },
+          });
         }
       } catch (userErr) {
-        console.error("Non-fatal error checking user on coach approval:", userErr);
+        console.error("Non-fatal error updating user role on coach approval:", userErr);
       }
     }
 

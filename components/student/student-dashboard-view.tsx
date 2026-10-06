@@ -199,11 +199,13 @@ export function StudentDashboardView({
               </div>
 
               <div className="p-4 rounded-2xl bg-[#0F1117] border border-white/5 space-y-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Selected Batch Timing (GMT)</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                  {batchInfo?.nextSession ? `Next Class: ${batchInfo.nextSession.relativeLabel}` : "Selected Batch Timing (GMT)"}
+                </span>
                 <p className="text-xs font-extrabold text-white flex items-center gap-2">
                   <Clock className="w-4 h-4 text-[#10B981]" />{" "}
                   {batchInfo
-                    ? `${batchInfo.dayCombination} • ${batchInfo.clockTiming}`
+                    ? `${batchInfo.nextSession?.nextClassFullDate || batchInfo.dayCombination} • ${batchInfo.clockTiming}`
                     : activeStudentData.selectedBatch || activeStudentData.nextClassTime}
                 </p>
               </div>

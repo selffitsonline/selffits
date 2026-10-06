@@ -56,6 +56,8 @@ export default function LoginPage() {
 
       if (role === "ADMIN" || role === "SUPER_ADMIN") {
         window.location.replace("/admin/dashboard");
+      } else if (role === "COACH") {
+        window.location.replace("/coach/dashboard");
       } else if (callbackUrl && !callbackUrl.startsWith("/admin")) {
         window.location.replace(callbackUrl);
       } else {
@@ -66,6 +68,8 @@ export default function LoginPage() {
         const session = await getSession();
         if (session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN") {
           window.location.replace("/admin/dashboard");
+        } else if (session?.user?.role === "COACH") {
+          window.location.replace("/coach/dashboard");
         } else {
           window.location.replace("/dashboard");
         }

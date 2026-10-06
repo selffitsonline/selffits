@@ -3,6 +3,7 @@
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { calculateNextClassSession } from "@/lib/class-schedule";
 
 const TIME_SLOT_MAP: Record<string, string> = {
   "1st Batch": "05:15 PM to 06:00 PM (GMT)",
@@ -763,6 +764,7 @@ export async function getCentralClassReadinessForUser(userId: string) {
     capacityLabel: `${b.students.length} / ${b.maxCapacity}`,
     batchStatus: b.status,
     isReady: isReady,
+    nextSession: calculateNextClassSession(b.dayCombination, b.clockTiming, b.timeSlot),
     assignedAt: assignment.assignedAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
   };
 }

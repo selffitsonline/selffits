@@ -9,6 +9,7 @@ generator client {
 
 enum Role {
   STUDENT
+  COACH
   ADMIN
   SUPER_ADMIN
 }
@@ -215,6 +216,8 @@ model Certificate {
   title             String
   certificateNumber String   @unique
   fileKey           String
+  fileData          String?
+  fileMimeType      String?
   issuedDate        DateTime @default(now())
   issuedByUserId    String
   issuedByUser      User     @relation("AdminIssuedCertificates", fields: [issuedByUserId], references: [id])

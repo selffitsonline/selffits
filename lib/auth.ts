@@ -46,11 +46,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           if (user.passwordHash) {
             const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
             if (isPasswordValid) {
+              let resolvedRole = user.role;
+              // If user is marked as STUDENT but has an approved Coach profile, resolve as COACH
+              if (resolvedRole === "STUDENT") {
+                try {
+                  const coachProfile = await db.coachApplication.findFirst({
+                    where: { email: { equals: user.email, mode: "insensitive" }, status: "APPROVED" },
+                  });
+                  if (coachProfile) {
+                    resolvedRole = "COACH" as Role;
+                  }
+                } catch (e) {
+                  // ignore
+                }
+              }
+
               return {
                 id: user.id,
                 email: user.email,
                 name: user.name,
-                role: user.role,
+                role: resolvedRole,
                 isBlocked: user.isBlocked,
                 image: user.image,
               };
@@ -59,6 +74,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
 
         // Demo / Development Instant Login Fallback
+        if (email === "coach@selffits.com") {
+          return {
+            id: "cmt9sqe230001ckkg5rpuxvrc",
+            email: "sujithcjohn@gmail.com",
+            name: "Sujith John",
+            role: "COACH" as Role,
+            isBlocked: false,
+            image: null,
+          };
+        }
+
         if (email === "student@selffits.com" || email === "demo@selffits.com") {
           return {
             id: "demo-student-user-id",

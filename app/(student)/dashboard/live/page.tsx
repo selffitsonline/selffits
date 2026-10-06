@@ -123,8 +123,12 @@ export default function StudentLiveClassesPage() {
                 <div className="flex items-center gap-2.5 text-gray-300">
                   <Calendar className="w-4 h-4 text-[#E50914] shrink-0" />
                   <div>
-                    <span className="text-gray-400 block text-[10px] uppercase font-bold">Days Schedule:</span>
-                    <span className="font-bold text-white">{batchInfo.dayCombination}</span>
+                    <span className="text-gray-400 block text-[10px] uppercase font-bold">
+                      {batchInfo.nextSession ? `Next Class: ${batchInfo.nextSession.relativeLabel}` : "Days Schedule:"}
+                    </span>
+                    <span className="font-bold text-white">
+                      {batchInfo.nextSession ? batchInfo.nextSession.nextClassFullDate : batchInfo.dayCombination}
+                    </span>
                   </div>
                 </div>
 

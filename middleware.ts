@@ -44,6 +44,7 @@ export async function middleware(req: NextRequest) {
   }
 
   const isAdminRoute = pathname.startsWith("/admin");
+  const isCoachRoute = pathname.startsWith("/coach");
   const isProtectedUserRoute =
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/settings") ||
@@ -57,6 +58,24 @@ export async function middleware(req: NextRequest) {
     }
 
     if (token.role !== "ADMIN" && token.role !== "SUPER_ADMIN") {
+      return NextResponse.redirect(new URL("/dashboard", req.url));
+    }
+  }
+
+  if (isCoachRoute) {
+    if (!token) {
+      const loginUrl = new URL("/login", req.url);
+      loginUrl.searchParams.set("callbackUrl", pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+
+    if (token.isBlocked) {
+      const loginUrl = new URL("/login", req.url);
+      loginUrl.searchParams.set("error", "BlockedAccount");
+      return NextResponse.redirect(loginUrl);
+    }
+
+    if (token.role !== "COACH" && token.role !== "ADMIN" && token.role !== "SUPER_ADMIN") {
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
   }
@@ -78,11 +97,16 @@ export async function middleware(req: NextRequest) {
     if ((token.role === "ADMIN" || token.role === "SUPER_ADMIN") && pathname.startsWith("/dashboard")) {
       return NextResponse.redirect(new URL("/admin/dashboard", req.url));
     }
+
+    // Automatic Role Routing: Redirect Coach users from student dashboard to Coach Dashboard
+    if (token.role === "COACH" && pathname.startsWith("/dashboard")) {
+      return NextResponse.redirect(new URL("/coach/dashboard", req.url));
+    }
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/admin/:path*", "/dashboard/:path*", "/settings/:path*", "/profile/:path*"],
+  matcher: ["/admin/:path*", "/coach/:path*", "/dashboard/:path*", "/settings/:path*", "/profile/:path*"],
 };
