@@ -107,7 +107,7 @@ export function CoachLoginAccountModal({
       }
     } catch (err: any) {
       console.error("Coach login modal error:", err);
-      setErrorMsg("An unexpected error occurred. Please try again.");
+      setErrorMsg(err?.message ? `Error: ${err.message}` : "An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }

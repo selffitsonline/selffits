@@ -1,6 +1,6 @@
 "use server";
 
-import { db } from "@/lib/db";
+import { db, ensureDatabaseEnums } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
@@ -973,8 +973,9 @@ export async function createCoachLoginAccountAction(data: {
 }) {
   try {
     const session = await auth();
-    if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
-      return { success: false, error: "Unauthorized access." };
+    const userRole = session?.user?.role;
+    if (!session || !session.user || (userRole !== "ADMIN" && userRole !== "SUPER_ADMIN")) {
+      return { success: false, error: "Unauthorized access. Admin privileges required." };
     }
 
     const { coachId, loginEmail, password, confirmPassword } = data;
@@ -991,75 +992,145 @@ export async function createCoachLoginAccountAction(data: {
       return { success: false, error: "Passwords do not match." };
     }
 
-    const coach = await db.coachApplication.findUnique({
+    const normalizedEmail = loginEmail.toLowerCase().trim();
+
+    // Ensure database contains the COACH enum value (auto-healing for PostgreSQL schema)
+    await ensureDatabaseEnums();
+
+    // 1. Locate Coach Application record by ID with fallback by email
+    let coach = await db.coachApplication.findUnique({
       where: { id: coachId },
     });
+
+    if (!coach && normalizedEmail) {
+      coach = await db.coachApplication.findFirst({
+        where: {
+          email: { equals: normalizedEmail, mode: "insensitive" },
+        },
+      });
+    }
 
     if (!coach) {
       return { success: false, error: "Coach application record not found." };
     }
 
-    if (coach.status !== "APPROVED") {
-      return { success: false, error: "Coach application must be approved before creating a login account." };
+    const coachStatus = String(coach.status || "").toUpperCase();
+    if (coachStatus !== "APPROVED") {
+      return {
+        success: false,
+        error: `Coach application must be approved first (current status: ${coach.status}).`,
+      };
     }
 
-    const normalizedEmail = loginEmail.toLowerCase().trim();
-
-    // Check if user already exists
-    const existingUser = await db.user.findUnique({
-      where: { email: normalizedEmail },
+    // 2. Check if a User account already exists (case-insensitive)
+    const existingUser = await db.user.findFirst({
+      where: {
+        email: { equals: normalizedEmail, mode: "insensitive" },
+      },
     });
 
     const passwordHash = await bcrypt.hash(password, 10);
+    const coachDisplayName = coach.fullName?.trim() || existingUser?.name || "Coach";
 
     if (existingUser) {
       if (existingUser.role === "COACH") {
         return {
           success: false,
-          error: "A Coach login account already exists for this email address. Please use 'Reset Password' to update their credentials.",
+          error: `A Coach login account already exists for ${existingUser.email}. Please use 'Reset Password' to update their credentials.`,
         };
       }
 
       // If user was registered as STUDENT, upgrade to COACH and update password
-      await db.user.update({
-        where: { id: existingUser.id },
-        data: {
-          role: "COACH",
-          passwordHash,
-          name: coach.fullName || existingUser.name,
-        },
-      });
+      try {
+        await db.user.update({
+          where: { id: existingUser.id },
+          data: {
+            role: "COACH",
+            passwordHash,
+            name: coachDisplayName,
+          },
+        });
+      } catch (updateErr: any) {
+        if (
+          updateErr?.message?.includes("enum") ||
+          updateErr?.message?.includes("Role") ||
+          updateErr?.message?.includes("invalid input value")
+        ) {
+          await db.$executeRawUnsafe(`ALTER TYPE "Role" ADD VALUE IF NOT EXISTS 'COACH';`);
+          await db.user.update({
+            where: { id: existingUser.id },
+            data: {
+              role: "COACH",
+              passwordHash,
+              name: coachDisplayName,
+            },
+          });
+        } else {
+          throw updateErr;
+        }
+      }
 
       revalidatePath("/admin/coaches");
       revalidatePath("/admin/coach-applications");
 
       return {
         success: true,
-        message: `Login account enabled for Coach ${coach.fullName} (${normalizedEmail}) with COACH role.`,
+        message: `Login account enabled for Coach ${coachDisplayName} (${normalizedEmail}) with COACH role.`,
       };
     }
 
-    // Create new User record with COACH role
-    await db.user.create({
-      data: {
-        name: coach.fullName,
-        email: normalizedEmail,
-        passwordHash,
-        role: "COACH",
-        emailVerified: new Date(),
-      },
-    });
+    // 3. Create new User record with COACH role (with auto-healing retry if enum was missing)
+    try {
+      await db.user.create({
+        data: {
+          name: coachDisplayName,
+          email: normalizedEmail,
+          passwordHash,
+          role: "COACH",
+          emailVerified: new Date(),
+        },
+      });
+    } catch (createErr: any) {
+      if (
+        createErr?.message?.includes("enum") ||
+        createErr?.message?.includes("Role") ||
+        createErr?.message?.includes("invalid input value")
+      ) {
+        await db.$executeRawUnsafe(`ALTER TYPE "Role" ADD VALUE IF NOT EXISTS 'COACH';`);
+        await db.user.create({
+          data: {
+            name: coachDisplayName,
+            email: normalizedEmail,
+            passwordHash,
+            role: "COACH",
+            emailVerified: new Date(),
+          },
+        });
+      } else {
+        throw createErr;
+      }
+    }
 
     revalidatePath("/admin/coaches");
     revalidatePath("/admin/coach-applications");
 
     return {
       success: true,
-      message: `Login account created successfully for Coach ${coach.fullName} (${normalizedEmail}). Coach can now log in at /login.`,
+      message: `Login account created successfully for Coach ${coachDisplayName} (${normalizedEmail}). Coach can now log in at /login.`,
     };
   } catch (err: any) {
-    console.error("createCoachLoginAccountAction error:", err);
-    return { success: false, error: "Failed to create coach login account." };
+    console.error("createCoachLoginAccountAction error:", {
+      coachId: data?.coachId,
+      email: data?.loginEmail,
+      message: err?.message,
+      code: err?.code,
+    });
+    return {
+      success: false,
+      error: err?.message
+        ? `Failed to create coach account: ${err.message}`
+        : "Failed to create coach login account.",
+    };
   }
 }
 
@@ -1070,8 +1141,9 @@ export async function resetCoachPasswordAction(data: {
 }) {
   try {
     const session = await auth();
-    if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
-      return { success: false, error: "Unauthorized access." };
+    const userRole = session?.user?.role;
+    if (!session || !session.user || (userRole !== "ADMIN" && userRole !== "SUPER_ADMIN")) {
+      return { success: false, error: "Unauthorized access. Admin privileges required." };
     }
 
     const { coachId, newPassword, confirmPassword } = data;
@@ -1088,17 +1160,27 @@ export async function resetCoachPasswordAction(data: {
       return { success: false, error: "Passwords do not match." };
     }
 
-    const coach = await db.coachApplication.findUnique({
+    await ensureDatabaseEnums();
+
+    let coach = await db.coachApplication.findUnique({
       where: { id: coachId },
     });
+
+    if (!coach) {
+      coach = await db.coachApplication.findFirst({
+        where: { id: coachId },
+      });
+    }
 
     if (!coach) {
       return { success: false, error: "Coach application record not found." };
     }
 
+    const coachEmail = coach.email.toLowerCase().trim();
+
     const user = await db.user.findFirst({
       where: {
-        email: { equals: coach.email.toLowerCase().trim(), mode: "insensitive" },
+        email: { equals: coachEmail, mode: "insensitive" },
       },
     });
 
@@ -1111,13 +1193,32 @@ export async function resetCoachPasswordAction(data: {
 
     const passwordHash = await bcrypt.hash(newPassword, 10);
 
-    await db.user.update({
-      where: { id: user.id },
-      data: {
-        passwordHash,
-        role: "COACH",
-      },
-    });
+    try {
+      await db.user.update({
+        where: { id: user.id },
+        data: {
+          passwordHash,
+          role: "COACH",
+        },
+      });
+    } catch (updateErr: any) {
+      if (
+        updateErr?.message?.includes("enum") ||
+        updateErr?.message?.includes("Role") ||
+        updateErr?.message?.includes("invalid input value")
+      ) {
+        await db.$executeRawUnsafe(`ALTER TYPE "Role" ADD VALUE IF NOT EXISTS 'COACH';`);
+        await db.user.update({
+          where: { id: user.id },
+          data: {
+            passwordHash,
+            role: "COACH",
+          },
+        });
+      } else {
+        throw updateErr;
+      }
+    }
 
     revalidatePath("/admin/coaches");
     revalidatePath("/admin/coach-applications");
@@ -1127,8 +1228,17 @@ export async function resetCoachPasswordAction(data: {
       message: `Password successfully reset for Coach ${coach.fullName} (${user.email}).`,
     };
   } catch (err: any) {
-    console.error("resetCoachPasswordAction error:", err);
-    return { success: false, error: "Failed to reset coach password." };
+    console.error("resetCoachPasswordAction error:", {
+      coachId: data?.coachId,
+      message: err?.message,
+      code: err?.code,
+    });
+    return {
+      success: false,
+      error: err?.message
+        ? `Failed to reset password: ${err.message}`
+        : "Failed to reset coach password.",
+    };
   }
 }
 
