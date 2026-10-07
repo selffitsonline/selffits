@@ -1,10 +1,33 @@
 import React from "react";
+import type { Metadata } from "next";
 import { Header } from "@/components/public/header";
 import { Footer } from "@/components/public/footer";
+import { JsonLd } from "@/components/seo/json-ld";
+import { generateBreadcrumbSchema } from "@/lib/seo";
+
+export const metadata: Metadata = {
+  title: "Terms of Service",
+  description:
+    "SELFFITS Academy Terms of Service: Membership access, live class conduct standards, belt certification evaluations, and subscription policies.",
+  alternates: {
+    canonical: "https://selffits.com/terms",
+  },
+  openGraph: {
+    title: "Terms of Service | SELFFITS Academy",
+    description: "Terms and conditions governing membership, live classes, and certifications.",
+    url: "https://selffits.com/terms",
+  },
+};
 
 export default function TermsPage() {
+  const breadcrumbSchema = generateBreadcrumbSchema([
+    { name: "Home", url: "/" },
+    { name: "Terms of Service", url: "/terms" },
+  ]);
+
   return (
     <div className="min-h-screen bg-[#0A0B0E] text-white flex flex-col selection:bg-[#E50914] selection:text-white">
+      <JsonLd data={breadcrumbSchema} />
       <Header />
 
       <main className="flex-grow pt-28 pb-20">

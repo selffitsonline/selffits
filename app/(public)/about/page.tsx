@@ -1,15 +1,37 @@
-"use client";
-
 import React from "react";
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { Header } from "@/components/public/header";
 import { Footer } from "@/components/public/footer";
 import { ShieldCheck, Video, Award, Heart, CheckCircle2 } from "lucide-react";
+import { JsonLd } from "@/components/seo/json-ld";
+import { generateBreadcrumbSchema } from "@/lib/seo";
+
+export const metadata: Metadata = {
+  title: "About Us",
+  description:
+    "Democratizing authentic martial arts & high-intensity fitness training globally through real-time virtual classrooms with certified black belt senseis.",
+  alternates: {
+    canonical: "https://selffits.com/about",
+  },
+  openGraph: {
+    title: "About Us | SELFFITS Academy",
+    description:
+      "Democratizing authentic martial arts & high-intensity fitness training globally through real-time virtual classrooms.",
+    url: "https://selffits.com/about",
+  },
+};
 
 export default function AboutPage() {
+  const breadcrumbSchema = generateBreadcrumbSchema([
+    { name: "Home", url: "/" },
+    { name: "About Us", url: "/about" },
+  ]);
+
   return (
     <div className="min-h-screen bg-[#0A0B0E] text-white flex flex-col selection:bg-[#E50914] selection:text-white">
+      <JsonLd data={breadcrumbSchema} />
       <Header />
 
       <main className="flex-grow pt-28 pb-20">
@@ -58,7 +80,7 @@ export default function AboutPage() {
           <div className="relative rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
             <Image
               src="/images/adults_martial_arts.png"
-              alt="SELFFITS Master Instructor"
+              alt="SELFFITS Master Martial Arts Instructor teaching live class"
               width={600}
               height={450}
               className="w-full h-[400px] object-cover"
@@ -103,7 +125,7 @@ export default function AboutPage() {
         {/* CTA */}
         <section className="mt-20 text-center px-4">
           <Link
-            href="/membership"
+            href="/programs"
             className="px-8 py-4 rounded-xl bg-gradient-to-r from-[#E50914] to-[#FF1E27] text-white font-bold text-base hover:opacity-95 transition-all shadow-xl shadow-[#E50914]/25 inline-block"
           >
             Start Your Training Today

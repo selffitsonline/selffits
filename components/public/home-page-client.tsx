@@ -281,7 +281,7 @@ export function HomePageClient({ initialData }: HomePageClientProps) {
               >
                 <Image
                   src={s.imageUrl || "/images/hero1.jpg"}
-                  alt={`Hero Background Slide ${idx + 1}`}
+                  alt={s.titleMain ? `${s.titleMain} ${s.titleHighlight || ""} - SELFFITS Online Academy`.trim() : `SELFFITS Online Martial Arts and Fitness Live Class ${idx + 1}`}
                   fill
                   priority={idx === 0}
                   unoptimized
@@ -716,7 +716,7 @@ export function HomePageClient({ initialData }: HomePageClientProps) {
             <div className="relative rounded-2xl overflow-hidden border border-white/10">
               <Image
                 src={about.imageUrl || "/images/kids_martial_arts.png"}
-                alt="About Academy"
+                alt="About SELFFITS Online Fitness & Martial Arts Academy"
                 width={600}
                 height={400}
                 className="w-full h-[260px] sm:h-[380px] object-cover"

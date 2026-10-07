@@ -101,7 +101,7 @@ export function Footer() {
             <Link href="/" className="inline-block">
               <Image
                 src="/logo-updated.jpg"
-                alt="SELFFITS Logo"
+                alt="SELFFITS - Global Online Fitness & Martial Arts Academy Logo"
                 width={160}
                 height={55}
                 className="h-10 w-auto object-contain rounded"
@@ -166,16 +166,16 @@ export function Footer() {
             </h3>
             <ul className="space-y-2.5 text-xs">
               <li>
-                <Link href="/programs/kids-martial-arts" className="hover:text-white transition-colors">Kids Martial Arts</Link>
+                <Link href="/programs?cat=mma&audience=kids" className="hover:text-white transition-colors">Kids Martial Arts</Link>
               </li>
               <li>
-                <Link href="/programs/adults-karate" className="hover:text-white transition-colors">Adults Karate & Self Defence</Link>
+                <Link href="/programs?cat=mma&audience=adults" className="hover:text-white transition-colors">Adults Karate & Self Defence</Link>
               </li>
               <li>
-                <Link href="/programs/ladies-fitness" className="hover:text-white transition-colors">Ladies Only Fitness</Link>
+                <Link href="/programs?cat=mma&audience=ladies" className="hover:text-white transition-colors">Ladies Only Fitness</Link>
               </li>
               <li>
-                <Link href="/programs/weight-loss" className="hover:text-white transition-colors">Fitness & Weight Management</Link>
+                <Link href="/programs?cat=hiit&audience=adults" className="hover:text-white transition-colors">Fitness & Weight Management</Link>
               </li>
               <li>
                 <Link href="/programs" className="hover:text-white transition-colors">Program Completion Certifications</Link>

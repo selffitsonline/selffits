@@ -1,11 +1,27 @@
-"use client";
-
 import React from "react";
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { Header } from "@/components/public/header";
 import { Footer } from "@/components/public/footer";
 import { Star, Award, PlayCircle } from "lucide-react";
+import { JsonLd } from "@/components/seo/json-ld";
+import { generateBreadcrumbSchema } from "@/lib/seo";
+
+export const metadata: Metadata = {
+  title: "Success Stories & Student Reviews",
+  description:
+    "Discover how students around the world achieve official belt ranks and fitness milestones with SELFFITS live virtual academy.",
+  alternates: {
+    canonical: "https://selffits.com/success-stories",
+  },
+  openGraph: {
+    title: "Success Stories & Reviews | SELFFITS Academy",
+    description:
+      "Discover how students around the world achieve official belt ranks and fitness milestones with SELFFITS live virtual academy.",
+    url: "https://selffits.com/success-stories",
+  },
+};
 
 export default function SuccessStoriesPage() {
   const stories = [
@@ -13,7 +29,8 @@ export default function SuccessStoriesPage() {
       name: "Priya & Rahul Nair",
       role: "Parents of Arjun (Kid Student)",
       achievement: "Level 3 Mastery Earned",
-      quote: "SELFFITS changed my 12-year-old son's routine completely. He passed his martial arts curriculum evaluation right from our living room! Sensei Rahul corrects every kick posture live.",
+      quote:
+        "SELFFITS changed my 12-year-old son's routine completely. He passed his martial arts curriculum evaluation right from our living room! Sensei Rahul corrects every kick posture live.",
       image: "/images/kids_martial_arts.png",
       location: "Bengaluru, India",
     },
@@ -21,7 +38,8 @@ export default function SuccessStoriesPage() {
       name: "David Miller",
       role: "Adult Martial Arts & HIIT Student",
       achievement: "5-Day/Wk Transformation",
-      quote: "The 5 Days / Week Weight Loss program helped me lose 6 kg while boosting my stamina. Having a live coach watch my form prevented any back pain.",
+      quote:
+        "The 5 Days / Week Weight Loss program helped me lose 6 kg while boosting my stamina. Having a live coach watch my form prevented any back pain.",
       image: "/images/adults_martial_arts.png",
       location: "London, UK",
     },
@@ -29,14 +47,21 @@ export default function SuccessStoriesPage() {
       name: "Ananya Roy",
       role: "Ladies Only Batch Student",
       achievement: "Advanced Martial Scholar",
-      quote: "The Ladies Only batch is super comfortable and high energy. I feel so much stronger, toned, and confident in self-defense tactics.",
+      quote:
+        "The Ladies Only batch is super comfortable and high energy. I feel so much stronger, toned, and confident in self-defense tactics.",
       image: "/images/ladies_fitness.png",
       location: "Dubai, UAE",
     },
   ];
 
+  const breadcrumbSchema = generateBreadcrumbSchema([
+    { name: "Home", url: "/" },
+    { name: "Success Stories", url: "/success-stories" },
+  ]);
+
   return (
     <div className="min-h-screen bg-[#0A0B0E] text-white flex flex-col selection:bg-[#E50914] selection:text-white">
+      <JsonLd data={breadcrumbSchema} />
       <Header />
 
       <main className="flex-grow pt-28 pb-20">
@@ -54,10 +79,18 @@ export default function SuccessStoriesPage() {
 
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
           {stories.map((story, idx) => (
-            <div key={idx} className="bg-[#14161D] border border-white/10 rounded-2xl overflow-hidden flex flex-col justify-between p-6 space-y-4">
+            <div
+              key={idx}
+              className="bg-[#14161D] border border-white/10 rounded-2xl overflow-hidden flex flex-col justify-between p-6 space-y-4"
+            >
               <div>
                 <div className="relative h-48 rounded-xl overflow-hidden mb-4 border border-white/10">
-                  <Image src={story.image} alt={story.name} fill className="object-cover" />
+                  <Image
+                    src={story.image}
+                    alt={`${story.name} - ${story.achievement} at SELFFITS`}
+                    fill
+                    className="object-cover"
+                  />
                   <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
                     <PlayCircle className="w-12 h-12 text-white/80 hover:text-[#E50914] transition-colors cursor-pointer" />
                   </div>
@@ -77,7 +110,9 @@ export default function SuccessStoriesPage() {
               <div className="pt-4 border-t border-white/10 flex items-center justify-between">
                 <div>
                   <h4 className="text-sm font-bold text-white">{story.name}</h4>
-                  <p className="text-[11px] text-gray-400">{story.role} • {story.location}</p>
+                  <p className="text-[11px] text-gray-400">
+                    {story.role} • {story.location}
+                  </p>
                 </div>
                 <span className="px-2.5 py-1 rounded bg-[#E50914]/15 text-[#E50914] text-[10px] font-bold">
                   {story.achievement}

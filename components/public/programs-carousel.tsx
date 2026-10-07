@@ -148,7 +148,7 @@ export function ProgramsCarousel({ items }: { items?: ProgramCardItem[] }) {
                 <div className="relative h-48 sm:h-52 overflow-hidden">
                   <Image
                     src={prog.image || "/images/kids_martial_arts.png"}
-                    alt={prog.title}
+                    alt={prog.title ? `${prog.title} - SELFFITS Program` : "SELFFITS Martial Arts & Fitness Program"}
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
                   />

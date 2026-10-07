@@ -62,10 +62,10 @@ function FailedContent() {
       </div>
 
       <Link
-        href="/membership"
+        href="/programs"
         className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-white font-semibold pt-2"
       >
-        <ArrowLeft className="w-3.5 h-3.5" /> Return to Membership Plans
+        <ArrowLeft className="w-3.5 h-3.5" /> Return to Programs & Memberships
       </Link>
     </div>
   );

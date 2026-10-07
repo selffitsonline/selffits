@@ -1,10 +1,33 @@
 import React from "react";
+import type { Metadata } from "next";
 import { Header } from "@/components/public/header";
 import { Footer } from "@/components/public/footer";
+import { JsonLd } from "@/components/seo/json-ld";
+import { generateBreadcrumbSchema } from "@/lib/seo";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy",
+  description:
+    "SELFFITS Academy Privacy Policy: Learn how we protect student personal information, data security, and transaction privacy.",
+  alternates: {
+    canonical: "https://selffits.com/privacy",
+  },
+  openGraph: {
+    title: "Privacy Policy | SELFFITS Academy",
+    description: "Learn how we protect student personal information and transaction privacy.",
+    url: "https://selffits.com/privacy",
+  },
+};
 
 export default function PrivacyPage() {
+  const breadcrumbSchema = generateBreadcrumbSchema([
+    { name: "Home", url: "/" },
+    { name: "Privacy Policy", url: "/privacy" },
+  ]);
+
   return (
     <div className="min-h-screen bg-[#0A0B0E] text-white flex flex-col selection:bg-[#E50914] selection:text-white">
+      <JsonLd data={breadcrumbSchema} />
       <Header />
 
       <main className="flex-grow pt-28 pb-20">

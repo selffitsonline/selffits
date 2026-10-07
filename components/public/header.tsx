@@ -128,7 +128,7 @@ export function Header() {
           <Link href="/" className="flex items-center group shrink-0">
             <Image
               src="/logo-updated.jpg"
-              alt="SELFFITS Logo"
+              alt="SELFFITS Academy Logo - Global Online Fitness & Martial Arts Academy"
               width={240}
               height={85}
               priority
@@ -281,7 +281,7 @@ export function Header() {
                 >
                   <Image
                     src="/logo-updated.jpg"
-                    alt="SELFFITS Logo"
+                    alt="SELFFITS Academy Logo"
                     width={240}
                     height={85}
                     className="h-10 sm:h-12 w-auto object-contain rounded-xl shadow-md"

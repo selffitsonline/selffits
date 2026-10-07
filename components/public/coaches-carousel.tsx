@@ -175,7 +175,7 @@ export function CoachesCarousel({ items }: { items?: Coach[] }) {
                 <div className="relative h-56 sm:h-60 w-full overflow-hidden">
                   <Image
                     src={coach.image || "/images/adults_martial_arts.png"}
-                    alt={coach.name}
+                    alt={coach.name ? `${coach.name} - SELFFITS Master Coach` : "SELFFITS Master Martial Arts Coach"}
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
                   />
