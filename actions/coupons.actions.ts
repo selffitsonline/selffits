@@ -1,6 +1,6 @@
 "use server";
 
-import { db } from "@/lib/db";
+import { db, ensureCouponTables } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { DiscountType, Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
@@ -32,6 +32,7 @@ export async function validateCouponAction(payload: {
   userEmail?: string;
 }): Promise<ValidateCouponResult> {
   try {
+    await ensureCouponTables();
     const rawCode = payload.code;
     const currentAmount = Math.max(0, Number(payload.currentAmount) || 0);
 
@@ -191,6 +192,7 @@ function serializeCoupon(coupon: any): SerializedAdminCoupon {
 export async function getAdminCouponsAction() {
   try {
     await requireAdminSession();
+    await ensureCouponTables();
 
     const coupons = await db.coupon.findMany({
       orderBy: { createdAt: "desc" },
@@ -225,6 +227,7 @@ export async function createAdminCouponAction(payload: {
 }) {
   try {
     await requireAdminSession();
+    await ensureCouponTables();
 
     const normalizedCode = (payload.code || "").trim().toUpperCase();
     if (!normalizedCode || normalizedCode.length < 2) {
@@ -308,6 +311,7 @@ export async function updateAdminCouponAction(
 ) {
   try {
     await requireAdminSession();
+    await ensureCouponTables();
 
     const existing = await db.coupon.findUnique({ where: { id } });
     if (!existing) {
@@ -383,6 +387,7 @@ export async function updateAdminCouponAction(
 export async function toggleAdminCouponActiveAction(id: string) {
   try {
     await requireAdminSession();
+    await ensureCouponTables();
 
     const existing = await db.coupon.findUnique({ where: { id } });
     if (!existing) {
@@ -409,6 +414,7 @@ export async function toggleAdminCouponActiveAction(id: string) {
 export async function deleteAdminCouponAction(id: string) {
   try {
     await requireAdminSession();
+    await ensureCouponTables();
 
     const existing = await db.coupon.findUnique({
       where: { id },
@@ -448,6 +454,7 @@ export async function deleteAdminCouponAction(id: string) {
 export async function getAdminCouponUsagesAction(couponId: string) {
   try {
     await requireAdminSession();
+    await ensureCouponTables();
 
     const usages = await db.couponUsage.findMany({
       where: { couponId },

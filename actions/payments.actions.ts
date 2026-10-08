@@ -1,6 +1,6 @@
 "use server";
 
-import { db } from "@/lib/db";
+import { db, ensureCouponTables } from "@/lib/db";
 import { razorpay } from "@/lib/razorpay";
 import { resend, EMAIL_FROM } from "@/lib/resend";
 import { auth } from "@/lib/auth";
@@ -123,6 +123,7 @@ export async function createRazorpayOrderAction(
   couponCode?: string
 ) {
   try {
+    await ensureCouponTables();
     const session = await auth();
     if (!session || !session.user) {
       return { success: false, error: "Please log in to complete your enrollment purchase." };
@@ -565,6 +566,7 @@ export async function createDirectCardEnrollmentAction(
   }
 ) {
   try {
+    await ensureCouponTables();
     const session = await auth();
     if (!session || !session.user) {
       return { success: false, error: "Please log in to complete your enrollment purchase." };

@@ -1,6 +1,6 @@
 "use server";
 
-import { db, ensureDatabaseEnums } from "@/lib/db";
+import { db, ensureDatabaseEnums, ensureCouponTables } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import bcrypt from "bcryptjs";
@@ -813,6 +813,7 @@ export async function getAdminHomepageManagementAction() {
     const testimonialsSection = settingsMap["homepage_testimonials"] || defaultTestimonialsSection;
 
     // 2.1 PROMOTIONAL COUPON CTA (Directly below Explore Our Programs)
+    await ensureCouponTables();
     const allCoupons = await db.coupon.findMany({
       orderBy: { createdAt: "desc" },
       select: {
