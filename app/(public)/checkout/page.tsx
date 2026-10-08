@@ -1,11 +1,12 @@
 "use client";
 
-import React, { Suspense } from "react";
+import React, { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Header } from "@/components/public/header";
 import { Footer } from "@/components/public/footer";
 import { RazorpayCheckout } from "@/components/public/razorpay-checkout";
-import { ShieldCheck, Check, Calendar, Clock, Sparkles } from "lucide-react";
+import { Check, Calendar, Clock, Sparkles, Tag } from "lucide-react";
+import { validateCouponAction } from "@/actions/coupons.actions";
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
@@ -13,8 +14,8 @@ function CheckoutContent() {
   const freqParam = searchParams.get("freq") || "3";
   const daysParam = searchParams.get("days") || "Sunday,Wednesday,Saturday";
   const batchParam = searchParams.get("batch") || "2nd Batch — 02:30 PM to 03:30 PM (GMT)";
-  const currencyParam = (searchParams.get("currency") as "INR" | "USD") || "USD";
   const priceParam = searchParams.get("price") || "55";
+  const martialArtsTypeParam = searchParams.get("type") || searchParams.get("martialArtsType") || "";
 
   const dietAddonParam = searchParams.get("dietAddon") === "true";
   const dietPriceParam = parseFloat(searchParams.get("dietPrice") || "10") || 10;
@@ -25,6 +26,61 @@ function CheckoutContent() {
   const priceNum = parseFloat(priceParam) || 55;
 
   const planName = `${daysPerWeek} ${daysPerWeek === 1 ? "Day" : "Days"} / Week Membership Plan`;
+
+  // Coupon state
+  const [couponCodeInput, setCouponCodeInput] = useState("");
+  const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
+  const [appliedCoupon, setAppliedCoupon] = useState<{
+    code: string;
+    discountType: string;
+    discountValue: number;
+    discountAmount: number;
+    finalAmount: number;
+  } | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
+
+  const handleApplyCoupon = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!couponCodeInput.trim()) {
+      setCouponError("Please enter a coupon code.");
+      return;
+    }
+
+    setIsApplyingCoupon(true);
+    setCouponError(null);
+
+    try {
+      const res = await validateCouponAction({
+        code: couponCodeInput.trim(),
+        currentAmount: priceNum,
+      });
+
+      if (res.success && res.coupon) {
+        setAppliedCoupon({
+          code: res.coupon.code,
+          discountType: res.coupon.discountType,
+          discountValue: res.coupon.discountValue,
+          discountAmount: res.discountAmount || 0,
+          finalAmount: res.finalAmount !== undefined ? res.finalAmount : priceNum,
+        });
+        setCouponError(null);
+      } else {
+        setAppliedCoupon(null);
+        setCouponError(res.error || "Invalid coupon code.");
+      }
+    } catch {
+      setCouponError("Unable to validate coupon code at this time.");
+      setAppliedCoupon(null);
+    } finally {
+      setIsApplyingCoupon(false);
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    setAppliedCoupon(null);
+    setCouponCodeInput("");
+    setCouponError(null);
+  };
 
   return (
     <main className="flex-grow pt-28 pb-20">
@@ -57,6 +113,15 @@ function CheckoutContent() {
               <span className="text-gray-400 font-semibold">Selected Membership Plan:</span>
               <span className="font-extrabold text-white text-right">{planName}</span>
             </div>
+
+            {martialArtsTypeParam && (
+              <div className="flex items-start justify-between text-sm">
+                <span className="text-gray-400 font-semibold">Martial Arts Type:</span>
+                <span className="font-extrabold text-[#E50914] text-right">
+                  {martialArtsTypeParam}
+                </span>
+              </div>
+            )}
 
             <div className="flex items-start justify-between text-sm">
               <span className="text-gray-400 font-semibold flex items-center gap-1.5">
@@ -92,15 +157,105 @@ function CheckoutContent() {
               <span className="font-bold text-gray-200">GMT (UTC+0)</span>
             </div>
 
-            <div className="flex items-center justify-between text-sm pt-2 border-t border-white/10">
-              <span className="text-gray-400 font-semibold">Total Amount:</span>
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-black text-white font-[family-name:var(--font-outfit)]">
-                  ${priceNum}
-                </span>
-                {!dietAddonParam && <span className="text-xs text-gray-400 font-normal"> / month</span>}
-              </div>
+            {/* Coupon Code Input Section */}
+            <div className="pt-3 border-t border-white/10 space-y-2">
+              <label htmlFor="coupon-code-input" className="text-xs font-bold text-gray-300 block">
+                Coupon Code
+              </label>
+
+              {appliedCoupon ? (
+                <div className="flex items-center justify-between p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+                  <div className="flex items-center gap-2">
+                    <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <div>
+                      <span className="text-xs font-black text-white tracking-wider">
+                        {appliedCoupon.code}
+                      </span>
+                      <span className="text-[11px] text-emerald-400 block font-semibold">
+                        ✓ Coupon applied (-${appliedCoupon.discountAmount.toFixed(2)})
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRemoveCoupon}
+                    className="text-xs text-gray-400 hover:text-white px-2.5 py-1 rounded-lg bg-white/5 hover:bg-white/10 transition-colors"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleApplyCoupon} className="space-y-1.5">
+                  <div className="flex gap-2">
+                    <input
+                      id="coupon-code-input"
+                      type="text"
+                      placeholder="Enter code"
+                      value={couponCodeInput}
+                      onChange={(e) => {
+                        setCouponCodeInput(e.target.value);
+                        if (couponError) setCouponError(null);
+                      }}
+                      className="flex-grow h-10 px-3.5 rounded-xl bg-[#0F1117] border border-white/15 text-white placeholder-gray-500 text-xs uppercase tracking-wider focus:outline-none focus:border-[#0080FF] transition-colors"
+                    />
+                    <button
+                      type="submit"
+                      disabled={isApplyingCoupon || !couponCodeInput.trim()}
+                      className="px-4 h-10 rounded-xl bg-[#0080FF] hover:bg-[#0060DF] text-white font-bold text-xs uppercase tracking-wider transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                    >
+                      {isApplyingCoupon ? "Applying..." : "Apply"}
+                    </button>
+                  </div>
+                  {couponError && (
+                    <p className="text-[11px] text-red-400 font-semibold pt-0.5">
+                      {couponError}
+                    </p>
+                  )}
+                </form>
+              )}
             </div>
+
+            {/* Price Breakdown with/without Coupon */}
+            {appliedCoupon ? (
+              <div className="space-y-2 pt-3 border-t border-white/10">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-400 font-semibold">Original Price:</span>
+                  <span className="font-bold text-gray-300">${priceNum.toFixed(2)}</span>
+                </div>
+
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-emerald-400 font-semibold flex items-center gap-1.5">
+                    <Tag className="w-3.5 h-3.5" /> Coupon:
+                  </span>
+                  <span className="font-extrabold text-emerald-400">{appliedCoupon.code}</span>
+                </div>
+
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-emerald-400 font-semibold">Discount:</span>
+                  <span className="font-extrabold text-emerald-400">-${appliedCoupon.discountAmount.toFixed(2)}</span>
+                </div>
+
+                <div className="flex items-center justify-between text-sm pt-2 border-t border-white/10">
+                  <span className="text-white font-extrabold">Total:</span>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-2xl font-black text-white font-[family-name:var(--font-outfit)]">
+                      ${appliedCoupon.finalAmount.toFixed(2)}
+                    </span>
+                    {!dietAddonParam && <span className="text-xs text-gray-400 font-normal"> / month</span>}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between text-sm pt-2 border-t border-white/10">
+                <span className="text-gray-400 font-semibold">Total:</span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-black text-white font-[family-name:var(--font-outfit)]">
+                    ${priceNum}
+                  </span>
+                  {!dietAddonParam && <span className="text-xs text-gray-400 font-normal"> / month</span>}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="pt-4 border-t border-white/10 space-y-3">
@@ -134,15 +289,20 @@ function CheckoutContent() {
           <RazorpayCheckout
             planId={planId}
             planName={planName}
-            priceUSD={priceNum}
+            priceUSD={appliedCoupon ? appliedCoupon.finalAmount : priceNum}
+            couponCode={appliedCoupon ? appliedCoupon.code : undefined}
+            originalPriceUSD={priceNum}
+            discountAmountUSD={appliedCoupon ? appliedCoupon.discountAmount : 0}
             scheduleData={{
               daysPerWeek,
               selectedDays,
               selectedBatch,
-              monthlyPrice: priceNum,
+              monthlyPrice: appliedCoupon ? appliedCoupon.finalAmount : priceNum,
+              couponCode: appliedCoupon ? appliedCoupon.code : undefined,
               timezone: "GMT (UTC+0)",
               includeDietNutrition: dietAddonParam,
               dietNutritionPrice: dietPriceParam,
+              martialArtsType: martialArtsTypeParam || undefined,
             }}
           />
         </div>

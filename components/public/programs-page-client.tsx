@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/public/header";
 import { Footer } from "@/components/public/footer";
 import { StudentScheduleSelector, StudentScheduleSelectionState } from "@/components/public/student-schedule-selector";
+import { MARTIAL_ARTS_TYPES } from "@/lib/schedule-config";
 import { ShieldCheck, Flame, Sparkles } from "lucide-react";
 
 type MainTab = "mma" | "hiit";
@@ -16,9 +17,9 @@ function getCategoryContextTitle(mainTab: MainTab, audience: MmaCategory) {
       case "kids":
         return "Kids Martial Arts";
       case "adults":
-        return "Adult Martial Arts";
+        return "Adults Mix Martial Arts";
       case "ladies":
-        return "Ladies Martial Arts";
+        return "Ladies Only Martial Arts";
     }
   } else {
     switch (audience) {
@@ -38,6 +39,7 @@ function ProgramsContent() {
 
   const urlCat = searchParams.get("cat");
   const urlAudience = searchParams.get("audience");
+  const urlType = searchParams.get("type");
 
   const [mainTab, setMainTab] = useState<MainTab>(() =>
     urlCat === "hiit" ? "hiit" : "mma"
@@ -45,6 +47,12 @@ function ProgramsContent() {
   const [audienceCategory, setAudienceCategory] = useState<MmaCategory>(() =>
     urlAudience === "adults" ? "adults" : urlAudience === "ladies" ? "ladies" : "kids"
   );
+  const [martialArtsType, setMartialArtsType] = useState<string>(() => {
+    if (urlType && (MARTIAL_ARTS_TYPES as readonly string[]).includes(urlType)) {
+      return urlType;
+    }
+    return "Karate";
+  });
 
   useEffect(() => {
     if (urlCat === "hiit" || urlCat === "mma") {
@@ -53,7 +61,10 @@ function ProgramsContent() {
     if (urlAudience === "adults" || urlAudience === "ladies" || urlAudience === "kids") {
       setAudienceCategory(urlAudience);
     }
-  }, [urlCat, urlAudience]);
+    if (urlType && (MARTIAL_ARTS_TYPES as readonly string[]).includes(urlType)) {
+      setMartialArtsType(urlType);
+    }
+  }, [urlCat, urlAudience, urlType]);
 
   const handleScheduleCheckout = (state: StudentScheduleSelectionState) => {
     const params = new URLSearchParams();
@@ -66,6 +77,9 @@ function ProgramsContent() {
     params.set("dietPrice", String(state.dietNutritionPrice || 10));
     params.set("price", String(state.totalPriceUSD));
     params.set("plan", `plan-${state.daysPerWeek}-day`);
+    if (mainTab === "mma" && martialArtsType) {
+      params.set("type", martialArtsType);
+    }
 
     router.push(`/checkout?${params.toString()}`);
   };
@@ -92,8 +106,8 @@ function ProgramsContent() {
         </section>
 
         {/* UNIFIED COMPACT PROGRAM CONTROL DOCK */}
-        <section className="sticky top-[68px] sm:top-[76px] md:top-[80px] z-40 max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
-          <div className="bg-[#14161D]/95 backdrop-blur-xl p-2.5 sm:p-3 rounded-2xl border border-white/15 shadow-2xl space-y-2.5">
+        <section className="sticky top-[68px] sm:top-[76px] md:top-[80px] z-40 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mb-8">
+          <div className="bg-[#14161D]/95 backdrop-blur-xl p-3 sm:p-4 rounded-2xl border border-white/15 shadow-2xl space-y-3">
             {/* Row 1: Program Category Tabs */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <button
@@ -127,6 +141,44 @@ function ProgramsContent() {
                 <span>Fitness & Weight Management</span>
               </button>
             </div>
+
+            {/* Row 1.5: Clean Radio Button Selection for Martial Arts Type under Mixed Martial Arts */}
+            {mainTab === "mma" && (
+              <div className="pt-2.5 border-t border-white/10 space-y-2">
+                <div className="flex items-center px-1">
+                  <span className="text-[11px] sm:text-xs font-extrabold uppercase tracking-wider text-gray-300">
+                    Martial Arts Type
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 px-0.5">
+                  {MARTIAL_ARTS_TYPES.map((type) => {
+                    const isSelected = martialArtsType === type;
+                    return (
+                      <label
+                        key={type}
+                        className={`flex items-center gap-2 cursor-pointer text-xs sm:text-sm font-bold py-2 px-2.5 sm:px-3 rounded-xl transition-all select-none border whitespace-nowrap ${
+                          isSelected
+                            ? "bg-white/10 text-white border-white/20 shadow-sm"
+                            : "text-gray-300 hover:text-white hover:bg-white/5 border-transparent"
+                        } ${type === "Weapons Only" ? "col-span-2 sm:col-span-1 md:col-span-1" : ""}`}
+                      >
+                        <input
+                          type="radio"
+                          name="martialArtsType"
+                          value={type}
+                          checked={isSelected}
+                          onChange={() => setMartialArtsType(type)}
+                          className="w-4 h-4 shrink-0 text-[#E50914] bg-[#0F1117] border-white/20 focus:ring-[#E50914] focus:ring-1 cursor-pointer accent-[#E50914]"
+                        />
+                        <span className={`whitespace-nowrap tracking-tight ${isSelected ? "text-white font-extrabold" : "text-gray-300"}`}>
+                          {type}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Row 2: Audience Tabs with Integrated Age Badges */}
             <div className="grid grid-cols-3 gap-2 pt-2 border-t border-white/10">
@@ -167,6 +219,7 @@ function ProgramsContent() {
             category={mainTab === "mma" ? "mixed-martial-arts" : "fitness-weight-management"}
             group={audienceCategory}
             title={contextTitle}
+            martialArtsType={mainTab === "mma" ? martialArtsType : undefined}
             initialDaysPerWeek={1}
             initialSelectedDays={["Sunday"]}
             showCheckoutCta={true}

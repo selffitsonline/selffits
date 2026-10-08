@@ -11,6 +11,7 @@ export default function CheckoutSuccessPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const planId = searchParams.get("plan") || "plan-3-day";
+  const martialArtsType = searchParams.get("type");
   const [countdown, setCountdown] = useState(10);
 
   const plansData: Record<string, any> = {
@@ -71,6 +72,12 @@ export default function CheckoutSuccessPage() {
               <span className="text-gray-400">Enrolled Program:</span>
               <span className="font-extrabold text-white text-sm">{selectedPlan.name}</span>
             </div>
+            {martialArtsType && (
+              <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                <span className="text-gray-400">Martial Arts Type:</span>
+                <span className="font-extrabold text-[#E50914] text-xs">{martialArtsType}</span>
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <span className="text-gray-400">Class Access:</span>
               <span className="font-semibold text-[#0080FF]">{selectedPlan.duration}</span>

@@ -31,6 +31,16 @@ export interface CentralScheduleConfig {
   membershipPlans: MembershipPlanConfig[];
 }
 
+export const MARTIAL_ARTS_TYPES = [
+  "Karate",
+  "Kick Boxing",
+  "Yoga",
+  "Tai Chi",
+  "Weapons Only",
+] as const;
+
+export type MartialArtsType = (typeof MARTIAL_ARTS_TYPES)[number];
+
 // 1. MMA - KIDS
 export const DEFAULT_MMA_KIDS_SCHEDULE_CONFIG: CentralScheduleConfig = {
   trainingDays: [

@@ -49,6 +49,45 @@ export async function POST(req: Request) {
             },
           });
         }
+
+        // Idempotent coupon usage record in case webhook is processed
+        if (existingPayment.couponCode) {
+          const couponRecord = await db.coupon.findUnique({
+            where: { code: existingPayment.couponCode },
+          });
+
+          if (couponRecord) {
+            const existingUsage = await db.couponUsage.findUnique({
+              where: {
+                couponId_orderId: {
+                  couponId: couponRecord.id,
+                  orderId: orderId,
+                },
+              },
+            });
+
+            if (!existingUsage) {
+              await db.$transaction(async (tx) => {
+                await tx.couponUsage.create({
+                  data: {
+                    couponId: couponRecord.id,
+                    userId: existingPayment.userId,
+                    paymentId: existingPayment.id,
+                    orderId: orderId,
+                    discountApplied: existingPayment.discountAmount || 0,
+                  },
+                });
+
+                await tx.coupon.update({
+                  where: { id: couponRecord.id },
+                  data: {
+                    usageCount: { increment: 1 },
+                  },
+                });
+              });
+            }
+          }
+        }
       }
     }
 

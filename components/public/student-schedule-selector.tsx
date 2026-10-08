@@ -32,12 +32,14 @@ export interface StudentScheduleSelectionState {
   includeDietNutrition: boolean;
   dietNutritionPrice: number;
   totalPriceUSD: number;
+  martialArtsType?: string;
 }
 
 export interface StudentScheduleSelectorProps {
   category?: string;
   group?: string;
   title?: string;
+  martialArtsType?: string;
   initialDaysPerWeek?: number;
   initialSelectedDays?: string[];
   initialSelectedBatch?: string;
@@ -50,6 +52,7 @@ export function StudentScheduleSelector({
   category = "mixed-martial-arts",
   group = "kids",
   title = "Mixed Martial Arts",
+  martialArtsType,
   initialDaysPerWeek = 1,
   initialSelectedDays = ["Sunday"],
   initialSelectedBatch = "2nd Batch — 02:30 PM to 03:30 PM (GMT)",
@@ -174,6 +177,7 @@ export function StudentScheduleSelector({
         includeDietNutrition: includeDietNutrition && dietConfig.activeStatus,
         dietNutritionPrice: dietConfig.priceUSD,
         totalPriceUSD,
+        martialArtsType: martialArtsType || undefined,
       });
     }
   }, [
@@ -185,6 +189,7 @@ export function StudentScheduleSelector({
     dietConfig.activeStatus,
     dietConfig.priceUSD,
     totalPriceUSD,
+    martialArtsType,
   ]);
 
   const isSelectionValid = selectedDays.length === daysPerWeek && !!selectedBatch;
@@ -201,6 +206,16 @@ export function StudentScheduleSelector({
             {title}
           </h3>
         </div>
+        {martialArtsType && (
+          <div className="flex flex-col items-start sm:items-end justify-center shrink-0">
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-[#E50914] px-2.5 py-1 rounded-full bg-[#E50914]/15 border border-[#E50914]/30 whitespace-nowrap">
+              Martial Arts Type
+            </span>
+            <span className="text-xl sm:text-2xl font-extrabold text-white font-[family-name:var(--font-outfit)] mt-2 tracking-tight whitespace-nowrap">
+              {martialArtsType}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* STEP 1: SELECT MEMBERSHIP FREQUENCY */}
@@ -505,6 +520,15 @@ export function StudentScheduleSelector({
             </span>
           </div>
 
+          {martialArtsType && (
+            <div className="space-y-1">
+              <span className="text-gray-400 font-semibold block">Martial Arts Type:</span>
+              <span className="font-extrabold text-[#E50914] text-sm block">
+                {martialArtsType}
+              </span>
+            </div>
+          )}
+
           <div className="space-y-1">
             <span className="text-gray-400 font-semibold block">Selected Training Days:</span>
             <span className="font-extrabold text-[#0080FF] text-sm block">
@@ -556,6 +580,7 @@ export function StudentScheduleSelector({
                   includeDietNutrition: includeDietNutrition && dietConfig.activeStatus,
                   dietNutritionPrice: dietConfig.priceUSD,
                   totalPriceUSD,
+                  martialArtsType: martialArtsType || undefined,
                 })
               }
               className="w-full py-4 rounded-xl bg-gradient-to-r from-[#E50914] to-[#FF1E27] text-white font-extrabold text-sm uppercase tracking-wider hover:opacity-95 transition-all shadow-xl shadow-[#E50914]/25 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"

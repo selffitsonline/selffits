@@ -11,6 +11,7 @@ export interface CoachBatchStudent {
   email: string;
   image?: string | null;
   assignedAt: string;
+  martialArtsType?: string | null;
 }
 
 export interface CoachBatchInfo {
@@ -115,6 +116,14 @@ export async function getCoachDashboardDataAction(): Promise<{
                 name: true,
                 email: true,
                 image: true,
+                enrollments: {
+                  where: { status: "ACTIVE" },
+                  orderBy: { createdAt: "desc" },
+                  take: 1,
+                  select: {
+                    martialArtsType: true,
+                  },
+                },
               },
             },
           },
@@ -138,11 +147,13 @@ export async function getCoachDashboardDataAction(): Promise<{
 
       const studentsList: CoachBatchStudent[] = b.students.map((bs) => {
         uniqueStudentIds.add(bs.user.id);
+        const activeEnr = (bs.user as any).enrollments?.[0];
         return {
           id: bs.user.id,
           name: bs.user.name,
           email: bs.user.email,
           image: bs.user.image,
+          martialArtsType: activeEnr?.martialArtsType || null,
           assignedAt: bs.assignedAt.toLocaleDateString("en-US", {
             month: "short",
             day: "numeric",

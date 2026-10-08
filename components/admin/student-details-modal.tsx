@@ -30,6 +30,7 @@ interface EnrollmentItem {
   totalClassesGranted: number;
   remainingClasses: number;
   completedClasses: number;
+  martialArtsType?: string | null;
   status: string;
 }
 
@@ -66,6 +67,7 @@ interface StudentDetailsModalProps {
     activeProgram: string;
     activeCategoryLabel: string;
     activeCourseLevel?: string;
+    activeMartialArtsType?: string | null;
     activeClassTiming?: string;
     activeEnrollmentFullTimestamp?: string | null;
     totalEnrollments: number;
@@ -234,6 +236,14 @@ export function StudentDetailsModal({
                         Category: {student.activeCategoryLabel}
                       </span>
                     </div>
+                    {(student as any).activeMartialArtsType && (
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span className="text-gray-400 text-xs font-medium">Martial Arts Type:</span>
+                        <span className="px-2 py-0.5 rounded-md bg-[#E50914]/15 text-[#E50914] border border-[#E50914]/30 font-black text-xs">
+                          {(student as any).activeMartialArtsType}
+                        </span>
+                      </div>
+                    )}
                     {student.activeClassTiming && (
                       <div className="mt-2 space-y-1">
                         <p className="text-gray-300 text-xs flex items-center gap-1.5 font-semibold">
@@ -360,6 +370,11 @@ export function StudentDetailsModal({
                           <td className="p-3">
                             <p className="font-bold text-white">{e.programTitle}</p>
                             <p className="text-[#10B981] font-semibold text-[11px]">{e.courseLevel || e.membershipPlanName}</p>
+                            {(e as any).martialArtsType && (
+                              <p className="text-[#E50914] font-semibold text-[10px] mt-0.5">
+                                Martial Arts Type: {(e as any).martialArtsType}
+                              </p>
+                            )}
                             {e.joinedTimestamp && (
                               <p className="text-gray-400 text-[10px] flex items-center gap-1 mt-0.5 font-medium">
                                 <Clock className="w-3 h-3 text-gray-500 shrink-0" />

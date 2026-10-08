@@ -6,6 +6,7 @@ import { resend, EMAIL_FROM } from "@/lib/resend";
 import { auth } from "@/lib/auth";
 import crypto from "crypto";
 import { PaymentSuccessEmail } from "@/emails/payment-success.email";
+import { validateCouponAction } from "@/actions/coupons.actions";
 
 export type PaymentPlanDetail = {
   id: string;
@@ -118,7 +119,8 @@ async function getOrCreateMembershipPlan(plan: PaymentPlanDetail) {
 export async function createRazorpayOrderAction(
   planId: string,
   currency: "INR" | "USD" = "USD",
-  amountOverride?: number
+  amountOverride?: number,
+  couponCode?: string
 ) {
   try {
     const session = await auth();
@@ -133,8 +135,31 @@ export async function createRazorpayOrderAction(
 
     const plan = PLAN_MAP[planId] || PLAN_MAP["plan-3-day"];
     const basePrice = amountOverride && amountOverride > 0 ? amountOverride : (currency === "INR" ? plan.priceINR : plan.priceUSD);
-    const amountInSubunits = Math.round(basePrice * 100);
 
+    let finalPrice = basePrice;
+    let originalPrice = basePrice;
+    let discountAmount = 0;
+    let appliedCouponCode: string | null = null;
+
+    if (couponCode && typeof couponCode === "string" && couponCode.trim()) {
+      const couponValidation = await validateCouponAction({
+        code: couponCode,
+        currentAmount: basePrice,
+        userId: user.id,
+        userEmail: user.email,
+      });
+
+      if (!couponValidation.success) {
+        return { success: false, error: couponValidation.error || "Invalid coupon code." };
+      }
+
+      finalPrice = couponValidation.finalAmount!;
+      originalPrice = couponValidation.originalAmount!;
+      discountAmount = couponValidation.discountAmount!;
+      appliedCouponCode = couponValidation.coupon!.code;
+    }
+
+    const amountInSubunits = Math.round(finalPrice * 100);
     const receipt = `rcpt_${Date.now()}_${user.id.slice(-6)}`;
 
     const order = await razorpay.orders.create({
@@ -145,6 +170,9 @@ export async function createRazorpayOrderAction(
         userId: user.id,
         planId: plan.id,
         planName: plan.name,
+        couponCode: appliedCouponCode || "",
+        discountAmount: String(discountAmount),
+        originalAmount: String(originalPrice),
       },
     });
 
@@ -152,7 +180,10 @@ export async function createRazorpayOrderAction(
       data: {
         userId: user.id,
         razorpayOrderId: order.id,
-        amount: basePrice,
+        amount: finalPrice,
+        originalAmount: originalPrice,
+        discountAmount: discountAmount > 0 ? discountAmount : null,
+        couponCode: appliedCouponCode,
         currency: currency,
         status: "PENDING",
       },
@@ -162,7 +193,10 @@ export async function createRazorpayOrderAction(
       success: true,
       orderId: order.id,
       amount: amountInSubunits,
-      displayAmount: basePrice,
+      displayAmount: finalPrice,
+      originalAmount: originalPrice,
+      discountAmount: discountAmount,
+      couponCode: appliedCouponCode,
       currency: currency,
       keyId: process.env.RAZORPAY_KEY_ID || "rzp_test_placeholder",
       planName: plan.name,
@@ -188,6 +222,7 @@ export async function verifyPaymentSignatureAction(payload: {
   timezone?: string;
   includeDietNutrition?: boolean;
   dietNutritionPrice?: number;
+  martialArtsType?: string;
 }) {
   try {
     const session = await auth();
@@ -212,6 +247,7 @@ export async function verifyPaymentSignatureAction(payload: {
       timezone,
       includeDietNutrition,
       dietNutritionPrice,
+      martialArtsType,
     } = payload;
     const secret = process.env.RAZORPAY_KEY_SECRET || "secret_placeholder";
 
@@ -224,6 +260,10 @@ export async function verifyPaymentSignatureAction(payload: {
       return { success: false, error: "Invalid Razorpay payment signature." };
     }
 
+    const existingPayment = await db.payment.findUnique({
+      where: { razorpayOrderId },
+    });
+
     const plan = PLAN_MAP[planId] || PLAN_MAP["plan-3-day"];
     const startDate = new Date();
     const endDate = new Date();
@@ -232,6 +272,11 @@ export async function verifyPaymentSignatureAction(payload: {
     const membershipPlan = await getOrCreateMembershipPlan(plan);
     const classTimingLabel = selectedBatch ? selectedBatch : "02:30 PM to 03:30 PM (GMT)";
 
+    const finalPaidPrice = existingPayment?.amount ? Number(existingPayment.amount) : (monthlyPrice || plan.priceUSD);
+    const finalOriginalPrice = existingPayment?.originalAmount ? Number(existingPayment.originalAmount) : (monthlyPrice || plan.priceUSD);
+    const finalDiscountAmount = existingPayment?.discountAmount ? Number(existingPayment.discountAmount) : 0;
+    const finalCouponCode = existingPayment?.couponCode || null;
+
     const result = await db.$transaction(async (tx) => {
       let enrollment;
       try {
@@ -239,11 +284,15 @@ export async function verifyPaymentSignatureAction(payload: {
           data: {
             userId: user.id,
             membershipPlanId: membershipPlan.id,
+            martialArtsType: martialArtsType || null,
             classTiming: classTimingLabel,
             daysPerWeek: daysPerWeek || (selectedDays ? selectedDays.length : 3),
             selectedDays: selectedDays || ["Sunday", "Wednesday", "Saturday"],
             selectedBatch: selectedBatch || "2nd Batch — 02:30 PM to 03:30 PM (GMT)",
-            monthlyPrice: monthlyPrice || plan.priceUSD,
+            monthlyPrice: finalPaidPrice,
+            couponCode: finalCouponCode,
+            discountAmount: finalDiscountAmount > 0 ? finalDiscountAmount : null,
+            originalAmount: finalOriginalPrice,
             includeDietNutrition: !!includeDietNutrition,
             dietNutritionPrice: dietNutritionPrice || 0,
             timezone: timezone || "GMT (UTC+0)",
@@ -260,7 +309,12 @@ export async function verifyPaymentSignatureAction(payload: {
           data: {
             userId: user.id,
             membershipPlanId: membershipPlan.id,
+            martialArtsType: martialArtsType || null,
             classTiming: classTimingLabel,
+            monthlyPrice: finalPaidPrice,
+            couponCode: finalCouponCode,
+            discountAmount: finalDiscountAmount > 0 ? finalDiscountAmount : null,
+            originalAmount: finalOriginalPrice,
             startDate,
             endDate,
             totalClassesGranted: plan.totalClasses,
@@ -280,6 +334,44 @@ export async function verifyPaymentSignatureAction(payload: {
         },
       });
 
+      // Idempotently record coupon usage if a coupon was used
+      if (finalCouponCode) {
+        const couponRecord = await tx.coupon.findUnique({
+          where: { code: finalCouponCode },
+        });
+
+        if (couponRecord) {
+          const existingUsage = await tx.couponUsage.findUnique({
+            where: {
+              couponId_orderId: {
+                couponId: couponRecord.id,
+                orderId: razorpayOrderId,
+              },
+            },
+          });
+
+          if (!existingUsage) {
+            await tx.couponUsage.create({
+              data: {
+                couponId: couponRecord.id,
+                userId: user.id,
+                userEmail: user.email ? user.email.toLowerCase().trim() : null,
+                paymentId: updatedPayment.id,
+                orderId: razorpayOrderId,
+                discountApplied: finalDiscountAmount > 0 ? finalDiscountAmount : 0,
+              },
+            });
+
+            await tx.coupon.update({
+              where: { id: couponRecord.id },
+              data: {
+                usageCount: { increment: 1 },
+              },
+            });
+          }
+        }
+      }
+
       return { enrollment, updatedPayment };
     });
 
@@ -296,6 +388,7 @@ export async function verifyPaymentSignatureAction(payload: {
           currency: "INR",
           orderId: razorpayOrderId,
           dashboardUrl: `${baseUrl}/dashboard`,
+          martialArtsType: martialArtsType || null,
         }),
       });
     } catch (mailErr) {
@@ -416,6 +509,10 @@ export async function getStudentEnrollmentAction() {
         isReady: readiness.isReady,
         includeDietNutrition: !!item.includeDietNutrition,
         dietNutritionPrice: item.dietNutritionPrice ? Number(item.dietNutritionPrice) : 0,
+        martialArtsType: item.martialArtsType || null,
+        couponCode: item.couponCode || null,
+        discountAmount: item.discountAmount ? Number(item.discountAmount) : null,
+        originalAmount: item.originalAmount ? Number(item.originalAmount) : null,
       };
     });
 
@@ -463,6 +560,8 @@ export async function createDirectCardEnrollmentAction(
     timezone?: string;
     includeDietNutrition?: boolean;
     dietNutritionPrice?: number;
+    martialArtsType?: string;
+    couponCode?: string;
   }
 ) {
   try {
@@ -478,6 +577,32 @@ export async function createDirectCardEnrollmentAction(
 
     const plan = PLAN_MAP[planId] || PLAN_MAP["plan-3-day"];
     const basePrice = scheduleData?.monthlyPrice || (currency === "INR" ? plan.priceINR : plan.priceUSD);
+
+    let finalPrice = basePrice;
+    let originalPrice = basePrice;
+    let discountAmount = 0;
+    let appliedCouponCode: string | null = null;
+    let couponRecord: any = null;
+
+    if (scheduleData?.couponCode && typeof scheduleData.couponCode === "string" && scheduleData.couponCode.trim()) {
+      const couponValidation = await validateCouponAction({
+        code: scheduleData.couponCode,
+        currentAmount: basePrice,
+        userId: user.id,
+        userEmail: user.email,
+      });
+
+      if (!couponValidation.success) {
+        return { success: false, error: couponValidation.error || "Invalid coupon code." };
+      }
+
+      finalPrice = couponValidation.finalAmount!;
+      originalPrice = couponValidation.originalAmount!;
+      discountAmount = couponValidation.discountAmount!;
+      appliedCouponCode = couponValidation.coupon!.code;
+      couponRecord = couponValidation.coupon;
+    }
+
     const startDate = new Date();
     const endDate = new Date();
     endDate.setMonth(endDate.getMonth() + plan.durationMonths);
@@ -486,6 +611,8 @@ export async function createDirectCardEnrollmentAction(
     const classTimingLabel = scheduleData?.selectedBatch ? scheduleData.selectedBatch : "02:30 PM to 03:30 PM (GMT)";
 
     const uniqueNonce = Math.random().toString(36).substring(2, 7);
+    const orderId = `card_order_${Date.now()}_${uniqueNonce}`;
+    const paymentId = `card_pay_${Date.now()}_${uniqueNonce}`;
 
     const result = await db.$transaction(async (tx) => {
       let enrollment;
@@ -494,11 +621,15 @@ export async function createDirectCardEnrollmentAction(
           data: {
             userId: user.id,
             membershipPlanId: membershipPlan.id,
+            martialArtsType: scheduleData?.martialArtsType || null,
             classTiming: classTimingLabel,
             daysPerWeek: scheduleData?.daysPerWeek || (scheduleData?.selectedDays ? scheduleData.selectedDays.length : 3),
             selectedDays: scheduleData?.selectedDays || ["Sunday", "Wednesday", "Saturday"],
             selectedBatch: scheduleData?.selectedBatch || "2nd Batch — 02:30 PM to 03:30 PM (GMT)",
-            monthlyPrice: basePrice,
+            monthlyPrice: finalPrice,
+            couponCode: appliedCouponCode,
+            discountAmount: discountAmount > 0 ? discountAmount : null,
+            originalAmount: originalPrice,
             includeDietNutrition: !!scheduleData?.includeDietNutrition,
             dietNutritionPrice: scheduleData?.dietNutritionPrice || 0,
             timezone: scheduleData?.timezone || "GMT (UTC+0)",
@@ -515,7 +646,12 @@ export async function createDirectCardEnrollmentAction(
           data: {
             userId: user.id,
             membershipPlanId: membershipPlan.id,
+            martialArtsType: scheduleData?.martialArtsType || null,
             classTiming: classTimingLabel,
+            monthlyPrice: finalPrice,
+            couponCode: appliedCouponCode,
+            discountAmount: discountAmount > 0 ? discountAmount : null,
+            originalAmount: originalPrice,
             startDate,
             endDate,
             totalClassesGranted: plan.totalClasses,
@@ -529,14 +665,49 @@ export async function createDirectCardEnrollmentAction(
         data: {
           userId: user.id,
           enrollmentId: enrollment.id,
-          razorpayOrderId: `card_order_${Date.now()}_${uniqueNonce}`,
-          razorpayPaymentId: `card_pay_${Date.now()}_${uniqueNonce}`,
+          razorpayOrderId: orderId,
+          razorpayPaymentId: paymentId,
           razorpaySignature: "direct_card_authorization",
-          amount: basePrice,
+          amount: finalPrice,
+          originalAmount: originalPrice,
+          discountAmount: discountAmount > 0 ? discountAmount : null,
+          couponCode: appliedCouponCode,
           currency: currency,
           status: "SUCCESS",
         },
       });
+
+      // Record coupon usage if applied
+      if (couponRecord) {
+        const existingUsage = await tx.couponUsage.findUnique({
+          where: {
+            couponId_orderId: {
+              couponId: couponRecord.id,
+              orderId: orderId,
+            },
+          },
+        });
+
+        if (!existingUsage) {
+          await tx.couponUsage.create({
+            data: {
+              couponId: couponRecord.id,
+              userId: user.id,
+              userEmail: user.email ? user.email.toLowerCase().trim() : null,
+              paymentId: payment.id,
+              orderId: orderId,
+              discountApplied: discountAmount > 0 ? discountAmount : 0,
+            },
+          });
+
+          await tx.coupon.update({
+            where: { id: couponRecord.id },
+            data: {
+              usageCount: { increment: 1 },
+            },
+          });
+        }
+      }
 
       return { enrollment, payment };
     });

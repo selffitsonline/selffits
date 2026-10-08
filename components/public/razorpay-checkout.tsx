@@ -8,11 +8,19 @@ import {
   verifyPaymentSignatureAction,
   createDirectCardEnrollmentAction,
 } from "@/actions/payments.actions";
-import { ShieldCheck, Lock, CreditCard, Sparkles, CheckCircle2, AlertCircle } from "lucide-react";
+import { ShieldCheck, Lock, CreditCard, Sparkles, AlertCircle } from "lucide-react";
+
+interface RazorpayInstance {
+  open: () => void;
+}
+
+interface RazorpayConstructor {
+  new (options: Record<string, unknown>): RazorpayInstance;
+}
 
 declare global {
   interface Window {
-    Razorpay: any;
+    Razorpay: RazorpayConstructor;
   }
 }
 
@@ -21,6 +29,9 @@ interface RazorpayCheckoutProps {
   planName: string;
   priceINR?: number;
   priceUSD: number;
+  couponCode?: string;
+  originalPriceUSD?: number;
+  discountAmountUSD?: number;
   scheduleData?: {
     daysPerWeek?: number;
     selectedDays?: string[];
@@ -29,10 +40,19 @@ interface RazorpayCheckoutProps {
     timezone?: string;
     includeDietNutrition?: boolean;
     dietNutritionPrice?: number;
+    martialArtsType?: string;
+    couponCode?: string;
   };
 }
 
-export function RazorpayCheckout({ planId, planName, priceUSD, scheduleData }: RazorpayCheckoutProps) {
+export function RazorpayCheckout({
+  planId,
+  planName,
+  priceUSD,
+  couponCode,
+  originalPriceUSD,
+  scheduleData,
+}: RazorpayCheckoutProps) {
   const router = useRouter();
   const { data: session } = useSession();
   const currency = "USD";
@@ -98,14 +118,22 @@ export function RazorpayCheckout({ planId, planName, priceUSD, scheduleData }: R
     setIsLoading(true);
     setErrorMsg(null);
 
-    const res = await createDirectCardEnrollmentAction(planId, currency, scheduleData);
+    const effectiveCoupon = couponCode || scheduleData?.couponCode;
+    const res = await createDirectCardEnrollmentAction(planId, currency, {
+      ...scheduleData,
+      monthlyPrice: priceUSD,
+      couponCode: effectiveCoupon,
+    });
     if (!res.success) {
       setErrorMsg(res.error || "Payment authorization failed.");
       setIsLoading(false);
       return;
     }
 
-    router.push(`/checkout/success?plan=${planId}&enrolled=true`);
+    const successUrl = `/checkout/success?plan=${planId}&enrolled=true${
+      scheduleData?.martialArtsType ? `&type=${encodeURIComponent(scheduleData.martialArtsType)}` : ""
+    }`;
+    router.push(successUrl);
     router.refresh();
   };
 
@@ -140,7 +168,8 @@ export function RazorpayCheckout({ planId, planName, priceUSD, scheduleData }: R
       return;
     }
 
-    const orderRes = await createRazorpayOrderAction(planId, currency, priceUSD);
+    const effectiveCoupon = couponCode || scheduleData?.couponCode;
+    const orderRes = await createRazorpayOrderAction(planId, currency, priceUSD, effectiveCoupon);
     if (!orderRes.success || !orderRes.orderId) {
       setErrorMsg(orderRes.error || "Order creation failed.");
       setIsLoading(false);
@@ -162,7 +191,11 @@ export function RazorpayCheckout({ planId, planName, priceUSD, scheduleData }: R
       theme: {
         color: "#E50914",
       },
-      handler: async function (response: any) {
+      handler: async function (response: {
+        razorpay_order_id: string;
+        razorpay_payment_id: string;
+        razorpay_signature: string;
+      }) {
         const verifyRes = await verifyPaymentSignatureAction({
           razorpayOrderId: response.razorpay_order_id,
           razorpayPaymentId: response.razorpay_payment_id,
@@ -172,7 +205,10 @@ export function RazorpayCheckout({ planId, planName, priceUSD, scheduleData }: R
         });
 
         if (verifyRes.success) {
-          router.push(`/checkout/success?plan=${planId}`);
+          const successUrl = `/checkout/success?plan=${planId}${
+            scheduleData?.martialArtsType ? `&type=${encodeURIComponent(scheduleData.martialArtsType)}` : ""
+          }`;
+          router.push(successUrl);
           router.refresh();
         } else {
           router.push(`/checkout/failed?plan=${planId}&reason=verification_failed`);
@@ -189,17 +225,31 @@ export function RazorpayCheckout({ planId, planName, priceUSD, scheduleData }: R
     rzp.open();
   };
 
-  const priceDisplay = `$${priceUSD}`;
+  const priceDisplay = `$${priceUSD.toFixed(2)}`;
 
   return (
     <div className="space-y-6 bg-[#14161D] border border-white/10 p-6 sm:p-8 rounded-3xl">
       {/* Plan Summary Box */}
       <div className="p-5 rounded-2xl bg-[#0F1117] border border-white/10 space-y-2">
         <div className="flex items-center justify-between">
-          <h4 className="text-sm font-bold text-white">{planName}</h4>
-          <span className="text-2xl font-black text-white font-[family-name:var(--font-outfit)]">
-            {priceDisplay}
-          </span>
+          <div>
+            <h4 className="text-sm font-bold text-white">{planName}</h4>
+            {couponCode && (
+              <span className="text-[11px] text-emerald-400 font-bold block mt-0.5">
+                ✓ Coupon {couponCode} applied
+              </span>
+            )}
+          </div>
+          <div className="text-right">
+            <span className="text-2xl font-black text-white font-[family-name:var(--font-outfit)]">
+              {priceDisplay}
+            </span>
+            {originalPriceUSD && originalPriceUSD > priceUSD && (
+              <span className="text-xs text-gray-400 line-through block">
+                ${originalPriceUSD.toFixed(2)}
+              </span>
+            )}
+          </div>
         </div>
         <p className="text-xs text-gray-400">
           Includes live Google Meet & Zoom class access, form evaluation, and program completion certificate.

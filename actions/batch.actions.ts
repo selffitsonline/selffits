@@ -133,6 +133,7 @@ export async function getAdminBatchesAction() {
           phone: bs.user.studentProfile?.phone || "Not provided",
           programTitle: b.program.title,
           levelName: getProgramLevelName(b.membershipPlan?.tierType, b.membershipPlan?.name),
+          martialArtsType: activeEnr?.martialArtsType || null,
           enrollmentStatus: activeEnr ? "ACTIVE" : "UNENROLLED",
           joinedTimestamp: `Joined: ${enrDate} • ${enrTime}`,
           assignedAt: bs.assignedAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
@@ -265,6 +266,7 @@ export async function getBatchFormDataAction() {
         activeProgramTitle: prg?.title || "Unenrolled",
         activePlanId: mp?.id || null,
         activeLevelName: getProgramLevelName(mp?.tierType, mp?.name),
+        martialArtsType: activeEnr?.martialArtsType || null,
         isEnrolled: !!activeEnr,
       };
     });

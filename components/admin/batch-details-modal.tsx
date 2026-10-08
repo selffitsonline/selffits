@@ -554,7 +554,14 @@ export function BatchDetailsModal({
                                 <p className="text-gray-500 text-[10px]">{std.phone}</p>
                               )}
                             </td>
-                            <td className="p-3 text-[#10B981] font-extrabold">{std.levelName}</td>
+                            <td className="p-3">
+                              <span className="text-[#10B981] font-extrabold block">{std.levelName}</span>
+                              {(std as any).martialArtsType && (
+                                <span className="inline-block mt-0.5 px-2 py-0.5 rounded bg-[#E50914]/15 text-[#E50914] border border-[#E50914]/30 text-[10px] font-extrabold">
+                                  Type: {(std as any).martialArtsType}
+                                </span>
+                              )}
+                            </td>
                             <td className="p-3 text-gray-300 text-[11px]">{std.joinedTimestamp}</td>
                             <td className="p-3 text-gray-400 text-[11px]">{std.assignedAt}</td>
                             <td className="p-3 text-right">

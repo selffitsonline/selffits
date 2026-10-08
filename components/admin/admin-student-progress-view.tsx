@@ -642,10 +642,15 @@ export function AdminStudentProgressView({
               {/* Modal Header */}
               <div className="flex items-start justify-between border-b border-white/10 pb-5">
                 <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-[#0080FF]/20 text-[#0080FF] border border-[#0080FF]/30">
                       Student Achievement Profile
                     </span>
+                    {(studentDetails as any)?.martialArtsType && (
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-[#E50914]/20 text-[#E50914] border border-[#E50914]/30 font-extrabold">
+                        Martial Arts Type: {(studentDetails as any).martialArtsType}
+                      </span>
+                    )}
                   </div>
                   <h2 className="text-xl sm:text-2xl font-black text-white mt-1 font-[family-name:var(--font-outfit)]">
                     {studentDetails?.name || "Loading Student..."}

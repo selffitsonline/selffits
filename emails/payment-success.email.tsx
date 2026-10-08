@@ -7,6 +7,7 @@ interface PaymentSuccessEmailProps {
   currency: string;
   orderId: string;
   dashboardUrl: string;
+  martialArtsType?: string | null;
 }
 
 export function PaymentSuccessEmail({
@@ -16,6 +17,7 @@ export function PaymentSuccessEmail({
   currency,
   orderId,
   dashboardUrl,
+  martialArtsType,
 }: PaymentSuccessEmailProps) {
   return (
     <div style={{ fontFamily: "Arial, sans-serif", backgroundColor: "#0A0B0E", color: "#FFFFFF", padding: "40px 20px" }}>
@@ -29,6 +31,9 @@ export function PaymentSuccessEmail({
 
         <div style={{ backgroundColor: "#0F1117", borderRadius: "8px", border: "1px solid rgba(255,255,255,0.1)", padding: "20px", marginBottom: "24px" }}>
           <p style={{ color: "#FFFFFF", margin: "0 0 8px 0", fontSize: "14px" }}><strong>Program:</strong> {planName}</p>
+          {martialArtsType && (
+            <p style={{ color: "#FFFFFF", margin: "0 0 8px 0", fontSize: "14px" }}><strong>Martial Arts Type:</strong> {martialArtsType}</p>
+          )}
           <p style={{ color: "#FFFFFF", margin: "0 0 8px 0", fontSize: "14px" }}><strong>Amount Paid:</strong> {currency === "INR" ? `₹${amount}` : `$${amount}`} ({currency})</p>
           <p style={{ color: "#9CA3AF", margin: "0", fontSize: "12px" }}><strong>Order ID:</strong> {orderId}</p>
         </div>

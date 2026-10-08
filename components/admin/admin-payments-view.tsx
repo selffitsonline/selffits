@@ -71,8 +71,34 @@ export function AdminPaymentsView({ initialPayments }: AdminPaymentsViewProps) {
                         <p className="font-bold text-white text-sm">{pay.studentName}</p>
                         <p className="text-gray-400 text-[11px]">{pay.studentEmail}</p>
                       </td>
-                      <td className="p-4 font-semibold text-[#0080FF]">{pay.courseName}</td>
-                      <td className="p-4 font-black text-white text-sm">{pay.amount}</td>
+                      <td className="p-4">
+                        <p className="font-semibold text-[#0080FF]">{pay.courseName}</p>
+                        {pay.martialArtsType && (
+                          <p className="text-[10px] text-[#E50914] font-bold mt-0.5">
+                            Type: {pay.martialArtsType}
+                          </p>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        <p className="font-black text-white text-sm">{pay.paidAmount || pay.amount}</p>
+                        {pay.couponCode && (
+                          <div className="mt-1 space-y-0.5 text-[11px]">
+                            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-bold text-[10px]">
+                              Coupon: {pay.couponCode}
+                            </span>
+                            {pay.discountAmount && (
+                              <p className="text-gray-400 text-[10px]">
+                                Discount: <span className="text-emerald-400 font-semibold">-{pay.discountAmount}</span>
+                              </p>
+                            )}
+                            {pay.originalAmount && (
+                              <p className="text-gray-500 text-[10px]">
+                                Orig: {pay.originalAmount}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </td>
                       <td className="p-4 font-mono text-[11px] text-gray-300">
                         <p className="text-white font-bold">{pay.paymentId}</p>
                         <p className="text-gray-500 text-[10px]">Order: {pay.razorpayOrderId}</p>

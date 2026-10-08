@@ -294,6 +294,7 @@ export async function getAdminHomepageManagementAction() {
       "homepage_banner",
       "homepage_stats",
       "homepage_programs",
+      "homepage_coupon_cta",
       "homepage_belt_syllabus",
       "homepage_fitness_journey",
       "homepage_about",
@@ -811,12 +812,123 @@ export async function getAdminHomepageManagementAction() {
     };
     const testimonialsSection = settingsMap["homepage_testimonials"] || defaultTestimonialsSection;
 
+    // 2.1 PROMOTIONAL COUPON CTA (Directly below Explore Our Programs)
+    const allCoupons = await db.coupon.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        code: true,
+        description: true,
+        discountType: true,
+        discountValue: true,
+        isActive: true,
+        startDate: true,
+        expiryDate: true,
+        maxUsageTotal: true,
+        usageCount: true,
+      },
+    });
+
+    const rawCouponCta = settingsMap["homepage_coupon_cta"] || null;
+    let resolvedCoupon: any = null;
+    let isCouponValid = false;
+
+    const now = new Date();
+    const isCouponActiveAndValid = (c: any) => {
+      if (!c || !c.isActive) return false;
+      const isNotStarted = c.startDate ? now < new Date(c.startDate) : false;
+      const isExpired = c.expiryDate ? now > new Date(c.expiryDate) : false;
+      const isLimitReached =
+        c.maxUsageTotal !== null &&
+        c.maxUsageTotal !== undefined &&
+        c.usageCount >= c.maxUsageTotal;
+      return !isNotStarted && !isExpired && !isLimitReached;
+    };
+
+    const targetId = rawCouponCta?.couponId ? String(rawCouponCta.couponId).trim() : null;
+    const targetCode = rawCouponCta?.couponCode ? String(rawCouponCta.couponCode).trim().toUpperCase() : null;
+
+    // 1. Look for specifically configured coupon if provided
+    let matched = (targetId || targetCode)
+      ? allCoupons.find(
+          (c) => (targetId && c.id === targetId) || (targetCode && c.code.toUpperCase() === targetCode)
+        )
+      : null;
+
+    // 2. If the specifically configured coupon was deleted or inactive,
+    // fallback to the most recent active and valid coupon in the database.
+    if (!matched || !isCouponActiveAndValid(matched)) {
+      const activeFallback = allCoupons.find(isCouponActiveAndValid) || null;
+      if (activeFallback) {
+        matched = activeFallback;
+      }
+    }
+
+    if (matched && isCouponActiveAndValid(matched)) {
+      isCouponValid = true;
+      resolvedCoupon = {
+        id: matched.id,
+        code: matched.code,
+        description: matched.description,
+        discountType: matched.discountType,
+        discountValue: Number(matched.discountValue),
+      };
+
+      // Keep settings in sync if they were pointing to a deleted or stale coupon reference
+      if (
+        rawCouponCta &&
+        (rawCouponCta.couponId !== resolvedCoupon.id || rawCouponCta.couponCode !== resolvedCoupon.code)
+      ) {
+        db.websiteSettings
+          .update({
+            where: { key: "homepage_coupon_cta" },
+            data: {
+              value: {
+                ...rawCouponCta,
+                couponId: resolvedCoupon.id,
+                couponCode: resolvedCoupon.code,
+              },
+            },
+          })
+          .catch((err) => console.error("Failed to sync homepage_coupon_cta with active coupon:", err));
+      }
+    }
+
+    const defaultCouponCtaSection = {
+      isEnabled: false,
+      badgeText: "SPECIAL PROMOTION",
+      heading: "Exclusive Academy Enrollment Offer",
+      description: "Claim an exclusive discount on your live virtual training membership. Enter the coupon code during checkout.",
+      couponId: "",
+      couponCode: "",
+      buttonText: "Explore Programs",
+      buttonLink: "/programs",
+      isCouponValid: false,
+      coupon: null,
+    };
+
+    const couponCtaSection = rawCouponCta
+      ? {
+          isEnabled: Boolean(rawCouponCta.isEnabled),
+          badgeText: rawCouponCta.badgeText || "SPECIAL PROMOTION",
+          heading: rawCouponCta.heading || "",
+          description: rawCouponCta.description || "",
+          couponId: rawCouponCta.couponId || (resolvedCoupon ? resolvedCoupon.id : ""),
+          couponCode: resolvedCoupon ? resolvedCoupon.code : (rawCouponCta.couponCode || ""),
+          buttonText: rawCouponCta.buttonText || "Explore Programs",
+          buttonLink: rawCouponCta.buttonLink || "/programs",
+          isCouponValid,
+          coupon: isCouponValid ? resolvedCoupon : null,
+        }
+      : defaultCouponCtaSection;
+
     return {
       success: true,
       homepageData: {
         banner: { slides: bannerSlides },
         stats: statsSection,
         programs: programsSection,
+        couponCta: couponCtaSection,
         beltSyllabus: beltSyllabusSection,
         fitnessJourney: fitnessJourneySection,
         about: aboutSection,
@@ -826,6 +938,17 @@ export async function getAdminHomepageManagementAction() {
         faqs: faqsSection,
         testimonials: testimonialsSection,
       },
+      availableCoupons: allCoupons.map((c) => ({
+        id: c.id,
+        code: c.code,
+        description: c.description,
+        discountType: c.discountType,
+        discountValue: Number(c.discountValue),
+        isActive: c.isActive,
+        isExpired: Boolean(c.expiryDate && new Date() > new Date(c.expiryDate)),
+        usageCount: c.usageCount,
+        maxUsageTotal: c.maxUsageTotal,
+      })),
     };
   } catch (err: any) {
     console.error("getAdminHomepageManagementAction error:", err);
@@ -844,6 +967,7 @@ export async function updateAdminHomepageSectionAction(sectionKey: string, data:
       "homepage_banner",
       "homepage_stats",
       "homepage_programs",
+      "homepage_coupon_cta",
       "homepage_belt_syllabus",
       "homepage_fitness_journey",
       "homepage_about",
@@ -1737,6 +1861,7 @@ export async function getAdminStudentsAction(params?: {
               endDate: true,
               remainingClasses: true,
               totalClassesGranted: true,
+              martialArtsType: true,
               classTiming: true,
               daysPerWeek: true,
               selectedDays: true,
@@ -1837,6 +1962,7 @@ export async function getAdminStudentsAction(params?: {
           totalClassesGranted: totalGranted,
           remainingClasses: remaining,
           completedClasses: completed,
+          martialArtsType: (e as any).martialArtsType || null,
           status: e.status,
         };
       });
@@ -1885,6 +2011,7 @@ export async function getAdminStudentsAction(params?: {
         activeCategory: activePrg?.category || null,
         activeCategoryLabel: activeEnrollment ? getProgramCategoryLabel(activePrg) : "None",
         activeCourseLevel: activeCourseLevel || "Standard Level",
+        activeMartialArtsType: (activeEnrollment as any)?.martialArtsType || null,
         activeClassTiming: activeClassTiming || "03:30 PM to 04:15 PM (GMT)",
         activeDaysPerWeek: activeEnrollment?.daysPerWeek || 3,
         activeSelectedDays: activeSelectedDays,
@@ -2015,6 +2142,7 @@ export async function getAdminStudentDetailsAction(studentId: string) {
         totalClassesGranted: totalGranted,
         remainingClasses: remaining,
         completedClasses: completed,
+        martialArtsType: (e as any).martialArtsType || null,
         status: e.status,
       };
     });
@@ -2082,6 +2210,7 @@ export async function getAdminStudentDetailsAction(studentId: string) {
         activeCategory: activePrg?.category || null,
         activeCategoryLabel: activeEnrollment ? getProgramCategoryLabel(activePrg) : "None",
         activeCourseLevel: activeCourseLevel || "Standard Level",
+        activeMartialArtsType: (activeEnrollment as any)?.martialArtsType || null,
         activeClassTiming: activeClassTiming || "03:30 PM to 04:15 PM (GMT)",
         activeDaysPerWeek: activeEnrollment?.daysPerWeek || 3,
         activeSelectedDays: activeSelectedDays,
@@ -2214,7 +2343,12 @@ export async function getAdminPaymentsAction() {
       studentName: p.user.name,
       studentEmail: p.user.email,
       courseName: p.enrollment?.membershipPlan?.name || "Martial Arts Enrollment",
+      martialArtsType: p.enrollment?.martialArtsType || null,
       amount: `${p.currency === "USD" ? "$" : "₹"}${p.amount}`,
+      paidAmount: `${p.currency === "USD" ? "$" : "₹"}${p.amount}`,
+      couponCode: p.couponCode || null,
+      discountAmount: p.discountAmount ? `${p.currency === "USD" ? "$" : "₹"}${p.discountAmount}` : null,
+      originalAmount: p.originalAmount ? `${p.currency === "USD" ? "$" : "₹"}${p.originalAmount}` : null,
       status: p.status,
       razorpayOrderId: p.razorpayOrderId,
       paymentId: p.razorpayPaymentId || "Direct Card Auth",

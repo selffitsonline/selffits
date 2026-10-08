@@ -111,6 +111,19 @@ export default function AdminHomepageManagementPage() {
     items: [],
   });
 
+  const [availableCoupons, setAvailableCoupons] = useState<any[]>([]);
+  const [couponCtaSection, setCouponCtaSection] = useState<any>({
+    isEnabled: false,
+    badgeText: "SPECIAL PROMOTION",
+    heading: "Exclusive Academy Enrollment Offer",
+    description:
+      "Claim an exclusive discount on your live virtual training membership. Enter the coupon code during checkout.",
+    couponId: "",
+    couponCode: "",
+    buttonText: "Explore Programs",
+    buttonLink: "/programs",
+  });
+
   // Image upload loading tracker
   const [uploadingTarget, setUploadingTarget] = useState<string | null>(null);
 
@@ -131,6 +144,8 @@ export default function AdminHomepageManagementPage() {
           if (d.coaches) setCoachesSection(d.coaches);
           if (d.faqs) setFaqsSection(d.faqs);
           if (d.testimonials) setTestimonialsSection(d.testimonials);
+          if (d.couponCta) setCouponCtaSection(d.couponCta);
+          if (res.availableCoupons) setAvailableCoupons(res.availableCoupons);
         }
       } catch (err) {
         console.error("Failed to load homepage data:", err);
@@ -288,6 +303,7 @@ export default function AdminHomepageManagementPage() {
     { id: 1, label: "1. Homepage Banner", icon: ImageIcon },
     { id: 2, label: "2. Academy Metrics", icon: Award },
     { id: 3, label: "3. Explore Programs", icon: BookOpen },
+    { id: 12, label: "3.1 Promo Coupon CTA", icon: Tag },
     { id: 10, label: "3.5 Belt Syllabus", icon: BookOpen },
     { id: 11, label: "3.6 Weight Management", icon: Flame },
     { id: 4, label: "4. About SELFFITS", icon: Info },
@@ -919,6 +935,324 @@ export default function AdminHomepageManagementPage() {
                   ))}
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* SECTION 3.1: HOMEPAGE PROMOTIONAL COUPON CTA */}
+        {/* ========================================================================= */}
+        {activeTab === 12 && (
+          <div className="space-y-6">
+            <div className="p-6 rounded-2xl bg-[#14161D] border border-white/10 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white/10">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Tag className="w-5 h-5 text-[#E50914]" />
+                    <h2 className="text-base font-extrabold text-white">
+                      Section 3.1: Promotional Coupon CTA
+                    </h2>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    Display an eye-catching coupon voucher CTA directly below the &quot;Explore Our Programs&quot; section on the homepage.
+                  </p>
+                </div>
+                {renderSaveButton("homepage_coupon_cta", couponCtaSection, "Publish Promo CTA Updates")}
+              </div>
+
+              {/* CRITICAL ARCHITECTURAL NOTICE */}
+              <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs text-blue-200 space-y-1">
+                <div className="flex items-center gap-2 font-bold text-blue-300">
+                  <Info className="w-4 h-4 shrink-0" />
+                  <span>Independent Visibility &amp; Coupon Validity</span>
+                </div>
+                <p className="leading-relaxed">
+                  Toggling this CTA to <strong>Hidden</strong> only removes the promotional banner from the homepage. It does <strong>NOT</strong> disable, delete, or invalidate the coupon code. Customers who received the coupon code via WhatsApp, email, or social campaigns can continue redeeming it at checkout.
+                </p>
+              </div>
+
+              {/* VISIBILITY TOGGLE */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl bg-[#0F1117] border border-white/10">
+                <div>
+                  <span className="text-xs font-bold uppercase tracking-wider text-white block">
+                    Homepage CTA Visibility Status
+                  </span>
+                  <span className="text-xs text-gray-400">
+                    Control whether this section appears on the live homepage.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCouponCtaSection((prev: any) => ({
+                      ...prev,
+                      isEnabled: !prev.isEnabled,
+                    }))
+                  }
+                  className={`px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 ${
+                    couponCtaSection.isEnabled
+                      ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-lg shadow-emerald-500/10"
+                      : "bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10"
+                  }`}
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      couponCtaSection.isEnabled ? "bg-emerald-400 animate-pulse" : "bg-gray-500"
+                    }`}
+                  />
+                  <span>
+                    {couponCtaSection.isEnabled
+                      ? "Status: Visible on Homepage"
+                      : "Status: Hidden from Homepage"}
+                  </span>
+                </button>
+              </div>
+
+              {/* COUPON SELECTION */}
+              <div className="space-y-3 p-4 rounded-xl bg-[#0F1117] border border-white/10">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-300">
+                    Select Associated Coupon from Coupon System
+                  </label>
+                  <a
+                    href="/admin/coupons"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[11px] text-[#0080FF] hover:underline flex items-center gap-1 font-semibold"
+                  >
+                    <span>Manage Coupons in Coupon Management &rarr;</span>
+                  </a>
+                </div>
+
+                <select
+                  value={couponCtaSection.couponId || ""}
+                  onChange={(e) => {
+                    const selectedId = e.target.value;
+                    const found = availableCoupons.find((c) => c.id === selectedId);
+                    setCouponCtaSection((prev: any) => ({
+                      ...prev,
+                      couponId: selectedId,
+                      couponCode: found ? found.code : "",
+                    }));
+                  }}
+                  className="w-full h-11 px-4 rounded-xl bg-[#14161D] border border-white/15 text-white font-bold text-xs focus:outline-none focus:border-[#0080FF]"
+                >
+                  <option value="">-- Select a Coupon from Database --</option>
+                  {availableCoupons.map((c) => {
+                    const discount =
+                      c.discountType === "PERCENTAGE"
+                        ? `${c.discountValue}% OFF`
+                        : `$${c.discountValue} OFF`;
+                    const statusText = !c.isActive
+                      ? " [INACTIVE]"
+                      : c.isExpired
+                      ? " [EXPIRED]"
+                      : " [ACTIVE]";
+                    return (
+                      <option key={c.id} value={c.id}>
+                        {c.code} — {discount} {statusText} {c.description ? `(${c.description})` : ""}
+                      </option>
+                    );
+                  })}
+                </select>
+
+                {/* Selected Coupon Validation Feedback */}
+                {(() => {
+                  const selectedCoupon = availableCoupons.find(
+                    (c) => c.id === couponCtaSection.couponId || c.code === couponCtaSection.couponCode
+                  );
+                  if (!couponCtaSection.couponId && !couponCtaSection.couponCode) {
+                    return (
+                      <p className="text-[11px] text-amber-400 font-medium">
+                        * Please select an active coupon code to associate with this CTA.
+                      </p>
+                    );
+                  }
+                  if (!selectedCoupon) {
+                    return (
+                      <p className="text-[11px] text-red-400 font-medium">
+                        * Selected coupon record was not found in the coupon database.
+                      </p>
+                    );
+                  }
+                  if (!selectedCoupon.isActive || selectedCoupon.isExpired) {
+                    return (
+                      <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/25 text-[11px] text-amber-300">
+                        <strong>Warning:</strong> This coupon is currently{" "}
+                        {!selectedCoupon.isActive ? "INACTIVE" : "EXPIRED"} in Coupon Management. If published, the homepage CTA will safely remain hidden from visitors until the coupon is activated or renewed.
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="flex items-center gap-2 text-[11px] text-emerald-400 font-medium">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>
+                        Active Coupon Linked: <strong>{selectedCoupon.code}</strong> (
+                        {selectedCoupon.discountType === "PERCENTAGE"
+                          ? `${selectedCoupon.discountValue}% OFF`
+                          : `$${selectedCoupon.discountValue} OFF`}
+                        )
+                      </span>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* PROMOTIONAL TEXT CONTENT */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                    Capsule Badge Text
+                  </label>
+                  <input
+                    type="text"
+                    value={couponCtaSection.badgeText || ""}
+                    onChange={(e) =>
+                      setCouponCtaSection((prev: any) => ({
+                        ...prev,
+                        badgeText: e.target.value,
+                      }))
+                    }
+                    placeholder="e.g. SPECIAL PROMOTION"
+                    className="w-full h-11 px-4 rounded-xl bg-[#0F1117] border border-white/10 text-white font-bold text-xs focus:outline-none focus:border-[#0080FF]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                    Promotional Heading
+                  </label>
+                  <input
+                    type="text"
+                    value={couponCtaSection.heading || ""}
+                    onChange={(e) =>
+                      setCouponCtaSection((prev: any) => ({
+                        ...prev,
+                        heading: e.target.value,
+                      }))
+                    }
+                    placeholder="e.g. Special Offer for New Members"
+                    className="w-full h-11 px-4 rounded-xl bg-[#0F1117] border border-white/10 text-white font-bold text-xs focus:outline-none focus:border-[#0080FF]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                  Promotional Description
+                </label>
+                <textarea
+                  rows={2}
+                  value={couponCtaSection.description || ""}
+                  onChange={(e) =>
+                    setCouponCtaSection((prev: any) => ({
+                      ...prev,
+                      description: e.target.value,
+                    }))
+                  }
+                  placeholder="e.g. Use the code below and get an exclusive discount on your membership."
+                  className="w-full p-4 rounded-xl bg-[#0F1117] border border-white/10 text-white font-bold text-xs focus:outline-none focus:border-[#0080FF]"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                    CTA Button Text
+                  </label>
+                  <input
+                    type="text"
+                    value={couponCtaSection.buttonText || ""}
+                    onChange={(e) =>
+                      setCouponCtaSection((prev: any) => ({
+                        ...prev,
+                        buttonText: e.target.value,
+                      }))
+                    }
+                    placeholder="e.g. Explore Programs"
+                    className="w-full h-11 px-4 rounded-xl bg-[#0F1117] border border-white/10 text-white font-bold text-xs focus:outline-none focus:border-[#0080FF]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-300 mb-1">
+                    CTA Button Link / Destination
+                  </label>
+                  <input
+                    type="text"
+                    value={couponCtaSection.buttonLink || ""}
+                    onChange={(e) =>
+                      setCouponCtaSection((prev: any) => ({
+                        ...prev,
+                        buttonLink: e.target.value,
+                      }))
+                    }
+                    placeholder="e.g. /programs"
+                    className="w-full h-11 px-4 rounded-xl bg-[#0F1117] border border-white/10 text-white font-bold text-xs focus:outline-none focus:border-[#0080FF]"
+                  />
+                </div>
+              </div>
+
+              {/* LIVE PREVIEW BOX */}
+              <div className="space-y-2 pt-2 border-t border-white/10">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-gray-400 block">
+                  Live Preview (As Rendered on Homepage Below &quot;Explore Our Programs&quot;):
+                </span>
+                <div className="p-6 rounded-2xl bg-gradient-to-r from-[#171A24] via-[#14161D] to-[#131620] border border-white/15 relative overflow-hidden">
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+                    <div className="lg:col-span-7 space-y-3">
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#E50914]/15 border border-[#E50914]/30 text-[#E50914] text-[10px] font-black uppercase tracking-wider">
+                        <span>{couponCtaSection.badgeText || "SPECIAL PROMOTION"}</span>
+                      </div>
+                      <h3 className="text-xl font-black text-white font-[family-name:var(--font-outfit)] leading-tight">
+                        {couponCtaSection.heading || "Special Offer for New Members"}
+                      </h3>
+                      <p className="text-gray-300 text-xs leading-relaxed">
+                        {couponCtaSection.description ||
+                          "Use the code below and get an exclusive discount on your membership."}
+                      </p>
+                      <div className="pt-1">
+                        <span className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#E50914] text-white text-xs font-bold uppercase tracking-wider">
+                          {couponCtaSection.buttonText || "Explore Programs"} &rarr;
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="lg:col-span-5 flex justify-end">
+                      <div className="w-full max-w-sm rounded-xl bg-[#0F1117] border-2 border-dashed border-[#E50914]/40 p-4 space-y-3">
+                        <div className="flex items-center justify-between pb-2 border-b border-white/10">
+                          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                            Official Promo Code
+                          </span>
+                          <span className="text-[11px] font-black text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
+                            {(() => {
+                              const found = availableCoupons.find(
+                                (c) => c.id === couponCtaSection.couponId || c.code === couponCtaSection.couponCode
+                              );
+                              if (found) {
+                                return found.discountType === "PERCENTAGE"
+                                  ? `${found.discountValue}% OFF`
+                                  : `$${found.discountValue} OFF`;
+                              }
+                              return "PROMO CODE";
+                            })()}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-[#14161D] border border-white/10">
+                          <span className="font-mono font-black text-base text-white tracking-widest pl-2">
+                            {couponCtaSection.couponCode || "SELECT_CODE"}
+                          </span>
+                          <span className="px-3 py-1.5 rounded bg-white/10 text-white font-bold text-[10px] uppercase tracking-wider">
+                            Copy Code
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {renderSaveButton("homepage_coupon_cta", couponCtaSection, "Publish Promo CTA Updates", true)}
             </div>
           </div>
         )}

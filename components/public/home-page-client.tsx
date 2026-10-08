@@ -22,6 +22,7 @@ import { FAQAccordion } from "@/components/public/faq-accordion";
 import { CoachesCarousel } from "@/components/public/coaches-carousel";
 import { ProgramsCarousel } from "@/components/public/programs-carousel";
 import { TestimonialsCarousel } from "@/components/public/testimonials-carousel";
+import { HomepageCouponCta } from "@/components/public/homepage-coupon-cta";
 
 const DEFAULT_HERO_SLIDES = [
   {
@@ -92,6 +93,7 @@ export function HomePageClient({ initialData }: HomePageClientProps) {
   const [coachesData, setCoachesData] = useState<any>(() => initialData?.coaches || null);
   const [faqsData, setFaqsData] = useState<any>(() => initialData?.faqs || null);
   const [testimonialsData, setTestimonialsData] = useState<any>(() => initialData?.testimonials || null);
+  const [couponCtaData, setCouponCtaData] = useState<any>(() => initialData?.couponCta || null);
 
   // Sync state if initialData props change
   useEffect(() => {
@@ -101,6 +103,7 @@ export function HomePageClient({ initialData }: HomePageClientProps) {
       }
       if (initialData.stats) setStatsData(initialData.stats);
       if (initialData.programs) setProgramsData(initialData.programs);
+      if (initialData.couponCta !== undefined) setCouponCtaData(initialData.couponCta);
       if (initialData.beltSyllabus) setBeltSyllabusData(initialData.beltSyllabus);
       if (initialData.fitnessJourney) setFitnessJourneyData(initialData.fitnessJourney);
       if (initialData.about) setAboutData(initialData.about);
@@ -421,7 +424,7 @@ export function HomePageClient({ initialData }: HomePageClientProps) {
         </section>
 
         {/* 2. EXPLORE OUR PROGRAMS */}
-        <section className="py-16 sm:py-24 bg-[#0E1015] border-y-[0.5px] border-white/10 px-4">
+        <section className="py-16 sm:py-24 bg-[#0E1015] border-t-[0.5px] border-white/10 px-4">
           <div className="max-w-7xl mx-auto space-y-12">
             <div className="text-center max-w-2xl mx-auto space-y-3">
               <span className="text-xs font-bold uppercase tracking-widest text-[#E50914]">
@@ -439,6 +442,9 @@ export function HomePageClient({ initialData }: HomePageClientProps) {
             <ProgramsCarousel items={programs} />
           </div>
         </section>
+
+        {/* 2.1 PROMOTIONAL COUPON CTA */}
+        <HomepageCouponCta config={couponCtaData} />
 
         {/* 2.5 & 2.6. MARTIAL ARTS & WEIGHT MANAGEMENT LEARNING JOURNEYS */}
         {(() => {

@@ -163,6 +163,11 @@ export function AssignStudentModal({
                     <p className="text-[10px] text-emerald-400 font-semibold mt-0.5">
                       Enrolled: {std.activeProgramTitle} ({std.activeLevelName})
                     </p>
+                    {(std as any).martialArtsType && (
+                      <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded bg-[#E50914]/15 text-[#E50914] border border-[#E50914]/30 text-[10px] font-extrabold">
+                        Type: {(std as any).martialArtsType}
+                      </span>
+                    )}
                   </div>
 
                   {isAlreadyAssigned ? (

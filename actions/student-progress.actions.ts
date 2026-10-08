@@ -351,6 +351,7 @@ export async function getStudentProgressDetailsAction(studentId: string, targetB
         beltAwardedAt: safeFormatDate(student.studentProfile?.beltAwardedAt) || "Initial Assignment",
         activeProgramTitle: activeProgram?.title || assignedBatch?.program?.title || "Martial Arts Program",
         activeProgramId: activeProgram?.id || assignedBatch?.programId || null,
+        martialArtsType: activeEnrollment?.martialArtsType || null,
         batchInfo: assignedBatch
           ? {
               id: assignedBatch.id,

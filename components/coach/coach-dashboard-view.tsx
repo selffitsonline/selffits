@@ -259,6 +259,11 @@ export function CoachDashboardView({ initialData }: CoachDashboardViewProps) {
                           <td className="px-5 py-4">
                             <span className="font-bold text-white block">{b.name}</span>
                             <span className="text-[10px] text-gray-400">{b.programTitle}</span>
+                            {st.martialArtsType && (
+                              <span className="inline-block mt-1 px-2 py-0.5 rounded bg-[#E50914]/15 text-[#E50914] border border-[#E50914]/30 text-[10px] font-extrabold">
+                                Type: {st.martialArtsType}
+                              </span>
+                            )}
                           </td>
                           <td className="px-5 py-4">
                             <span className="text-gray-300 block">{b.dayCombination}</span>

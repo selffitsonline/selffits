@@ -162,6 +162,14 @@ export function StudentDashboardView({
                 <h2 className="text-xl sm:text-2xl font-extrabold text-white font-[family-name:var(--font-outfit)] mt-2">
                   {batchInfo?.programTitle || activeStudentData.programName}
                 </h2>
+                {activeStudentData.martialArtsType && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-xs font-semibold text-gray-400">Martial Arts Type:</span>
+                    <span className="px-2.5 py-0.5 rounded-md bg-[#E50914]/15 text-[#E50914] border border-[#E50914]/30 font-extrabold text-xs">
+                      {activeStudentData.martialArtsType}
+                    </span>
+                  </div>
+                )}
               </div>
 
               <Link

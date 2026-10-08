@@ -23,6 +23,7 @@ import {
   Sparkles,
   Layers,
   Award,
+  Tag,
 } from "lucide-react";
 
 interface AdminShellProps {
@@ -47,6 +48,7 @@ export function AdminShell({ children }: AdminShellProps) {
     { label: "Batch Management", href: "/admin/batches", icon: Layers },
     { label: "Student Progress & Certification", href: "/admin/student-progress", icon: Award },
     { label: "Payments & Revenue", href: "/admin/payments", icon: CreditCard },
+    { label: "Coupons & Discounts", href: "/admin/coupons", icon: Tag },
     { label: "Active Coaches", href: "/admin/coaches", icon: UserCheck },
     { label: "Coach Leads & Resumes", href: "/admin/coach-applications", icon: FileText },
     { label: "Website Settings", href: "/admin/settings", icon: Settings },

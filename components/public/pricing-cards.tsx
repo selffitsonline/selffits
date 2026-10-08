@@ -17,6 +17,9 @@ export function PricingCards() {
     params.set("currency", "USD");
     params.set("price", String(state.monthlyPriceUSD));
     params.set("plan", `plan-${state.daysPerWeek}-day`);
+    if (state.martialArtsType) {
+      params.set("type", state.martialArtsType);
+    }
 
     router.push(`/checkout?${params.toString()}`);
   };

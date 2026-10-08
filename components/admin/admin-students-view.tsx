@@ -507,6 +507,14 @@ export function AdminStudentsView({
                             <p className="font-extrabold text-[#0080FF] text-xs leading-tight">
                               {std.activeProgram}
                             </p>
+                            {(std as any).activeMartialArtsType && (
+                              <div className="flex items-center gap-1 pt-0.5">
+                                <span className="text-[10px] text-gray-400 font-semibold">Type:</span>
+                                <span className="px-1.5 py-0.5 rounded bg-[#E50914]/15 text-[#E50914] border border-[#E50914]/30 font-black text-[10px]">
+                                  {(std as any).activeMartialArtsType}
+                                </span>
+                              </div>
+                            )}
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <span className="px-2 py-0.5 rounded-md bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30 font-black text-[10px]">
                                 {std.activeCourseLevel}
