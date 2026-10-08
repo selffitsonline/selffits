@@ -875,10 +875,10 @@ export async function getAdminHomepageManagementAction() {
         discountValue: Number(matched.discountValue),
       };
 
-      // Keep settings in sync if they were pointing to a deleted or stale coupon reference
+      // Keep settings in sync if they were pointing to a deleted or stale coupon reference, or had isEnabled false
       if (
         rawCouponCta &&
-        (rawCouponCta.couponId !== resolvedCoupon.id || rawCouponCta.couponCode !== resolvedCoupon.code)
+        (rawCouponCta.couponId !== resolvedCoupon.id || rawCouponCta.couponCode !== resolvedCoupon.code || rawCouponCta.isEnabled !== true)
       ) {
         db.websiteSettings
           .update({
@@ -886,6 +886,7 @@ export async function getAdminHomepageManagementAction() {
             data: {
               value: {
                 ...rawCouponCta,
+                isEnabled: true,
                 couponId: resolvedCoupon.id,
                 couponCode: resolvedCoupon.code,
               },
@@ -908,20 +909,20 @@ export async function getAdminHomepageManagementAction() {
       coupon: null,
     };
 
-    const couponCtaSection = rawCouponCta
-      ? {
-          isEnabled: Boolean(rawCouponCta.isEnabled),
-          badgeText: rawCouponCta.badgeText || "SPECIAL PROMOTION",
-          heading: rawCouponCta.heading || "",
-          description: rawCouponCta.description || "",
-          couponId: rawCouponCta.couponId || (resolvedCoupon ? resolvedCoupon.id : ""),
-          couponCode: resolvedCoupon ? resolvedCoupon.code : (rawCouponCta.couponCode || ""),
-          buttonText: rawCouponCta.buttonText || "Explore Programs",
-          buttonLink: rawCouponCta.buttonLink || "/programs",
-          isCouponValid,
-          coupon: isCouponValid ? resolvedCoupon : null,
-        }
-      : defaultCouponCtaSection;
+    const couponCtaSection = {
+      isEnabled: isCouponValid && !!resolvedCoupon,
+      badgeText: rawCouponCta?.badgeText || "SPECIAL PROMOTION",
+      heading: rawCouponCta?.heading || "Exclusive Academy Enrollment Offer",
+      description:
+        rawCouponCta?.description ||
+        "Claim an exclusive discount on your live virtual training membership. Enter the coupon code during checkout.",
+      couponId: resolvedCoupon ? resolvedCoupon.id : (rawCouponCta?.couponId || ""),
+      couponCode: resolvedCoupon ? resolvedCoupon.code : (rawCouponCta?.couponCode || ""),
+      buttonText: rawCouponCta?.buttonText || "Explore Programs",
+      buttonLink: rawCouponCta?.buttonLink || "/programs",
+      isCouponValid,
+      coupon: isCouponValid ? resolvedCoupon : null,
+    };
 
     return {
       success: true,
@@ -981,6 +982,10 @@ export async function updateAdminHomepageSectionAction(sectionKey: string, data:
 
     if (!validKeys.includes(sectionKey)) {
       return { success: false, error: `Invalid homepage section key: ${sectionKey}` };
+    }
+
+    if (sectionKey === "homepage_coupon_cta" && data) {
+      data.isEnabled = true;
     }
 
     await db.websiteSettings.upsert({

@@ -113,7 +113,7 @@ export default function AdminHomepageManagementPage() {
 
   const [availableCoupons, setAvailableCoupons] = useState<any[]>([]);
   const [couponCtaSection, setCouponCtaSection] = useState<any>({
-    isEnabled: false,
+    isEnabled: true,
     badgeText: "SPECIAL PROMOTION",
     heading: "Exclusive Academy Enrollment Offer",
     description:
@@ -144,7 +144,7 @@ export default function AdminHomepageManagementPage() {
           if (d.coaches) setCoachesSection(d.coaches);
           if (d.faqs) setFaqsSection(d.faqs);
           if (d.testimonials) setTestimonialsSection(d.testimonials);
-          if (d.couponCta) setCouponCtaSection(d.couponCta);
+          if (d.couponCta) setCouponCtaSection({ ...d.couponCta, isEnabled: true });
           if (res.availableCoupons) setAvailableCoupons(res.availableCoupons);
         }
       } catch (err) {

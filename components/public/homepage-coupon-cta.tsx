@@ -27,10 +27,9 @@ interface HomepageCouponCtaProps {
 export function HomepageCouponCta({ config }: HomepageCouponCtaProps) {
   const [copied, setCopied] = useState(false);
 
-  // Safe guard: Do not display if CTA is hidden, not configured, or if coupon is not active/valid
+  // Safe guard: Do not display if coupon is not active/valid
   if (
     !config ||
-    !config.isEnabled ||
     !config.isCouponValid ||
     !config.coupon ||
     !config.coupon.code
