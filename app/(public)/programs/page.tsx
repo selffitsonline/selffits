@@ -21,13 +21,17 @@ export const metadata: Metadata = {
   },
 };
 
-import { getAdminMenuItemsAction } from "@/actions/admin.actions";
+import { getAdminMenuItemsAction, getAdminHomepageManagementAction } from "@/actions/admin.actions";
 
 export default async function ProgramsPage() {
-  const menuRes = await getAdminMenuItemsAction();
+  const [menuRes, homepageRes] = await Promise.all([
+    getAdminMenuItemsAction(),
+    getAdminHomepageManagementAction(),
+  ]);
   const initialNavItems = menuRes && menuRes.success && Array.isArray(menuRes.headerMenu)
     ? menuRes.headerMenu.filter((i: any) => i.isEnabled).map((i: any) => ({ name: i.label, href: i.href }))
     : undefined;
+  const initialHomepageData = homepageRes && homepageRes.success ? homepageRes.homepageData : null;
 
   const breadcrumbSchema = generateBreadcrumbSchema([
     { name: "Home", url: "/" },
@@ -92,7 +96,7 @@ export default async function ProgramsPage() {
   return (
     <>
       <JsonLd data={[breadcrumbSchema, courseListSchema]} />
-      <ProgramsPageClient initialNavItems={initialNavItems} />
+      <ProgramsPageClient initialNavItems={initialNavItems} initialHomepageData={initialHomepageData} />
     </>
   );
 }

@@ -7,6 +7,9 @@ import { Footer } from "@/components/public/footer";
 import { StudentScheduleSelector, StudentScheduleSelectionState } from "@/components/public/student-schedule-selector";
 import { MARTIAL_ARTS_TYPES } from "@/lib/schedule-config";
 import { ShieldCheck, Flame, Sparkles } from "lucide-react";
+import { LearningJourneys } from "@/components/public/learning-journeys";
+import { HomepageCouponCta } from "@/components/public/homepage-coupon-cta";
+import { getAdminHomepageManagementAction } from "@/actions/admin.actions";
 
 type MainTab = "mma" | "hiit";
 type MmaCategory = "kids" | "adults" | "ladies";
@@ -35,11 +38,40 @@ function getCategoryContextTitle(mainTab: MainTab, audience: MmaCategory) {
 
 interface ProgramsPageClientProps {
   initialNavItems?: any[];
+  initialHomepageData?: any;
 }
 
-function ProgramsContent({ initialNavItems }: ProgramsPageClientProps) {
+function ProgramsContent({ initialNavItems, initialHomepageData }: ProgramsPageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  const [beltSyllabusData, setBeltSyllabusData] = useState<any>(
+    () => initialHomepageData?.beltSyllabus || null
+  );
+  const [fitnessJourneyData, setFitnessJourneyData] = useState<any>(
+    () => initialHomepageData?.fitnessJourney || null
+  );
+  const [couponCtaData, setCouponCtaData] = useState<any>(
+    () => initialHomepageData?.couponCta || null
+  );
+
+  useEffect(() => {
+    if (initialHomepageData) {
+      if (initialHomepageData.beltSyllabus) setBeltSyllabusData(initialHomepageData.beltSyllabus);
+      if (initialHomepageData.fitnessJourney) setFitnessJourneyData(initialHomepageData.fitnessJourney);
+      if (initialHomepageData.couponCta !== undefined) setCouponCtaData(initialHomepageData.couponCta);
+    } else {
+      getAdminHomepageManagementAction()
+        .then((res) => {
+          if (res?.success && res.homepageData) {
+            if (res.homepageData.beltSyllabus) setBeltSyllabusData(res.homepageData.beltSyllabus);
+            if (res.homepageData.fitnessJourney) setFitnessJourneyData(res.homepageData.fitnessJourney);
+            if (res.homepageData.couponCta !== undefined) setCouponCtaData(res.homepageData.couponCta);
+          }
+        })
+        .catch((err) => console.error("Failed to load fallback homepage data on programs page:", err));
+    }
+  }, [initialHomepageData]);
 
   const urlCat = searchParams.get("cat");
   const urlAudience = searchParams.get("audience");
@@ -94,7 +126,7 @@ function ProgramsContent({ initialNavItems }: ProgramsPageClientProps) {
     <div className="min-h-screen bg-[#0A0B0E] text-white flex flex-col selection:bg-[#E50914] selection:text-white">
       <Header initialNavItems={initialNavItems} />
 
-      <main className="flex-grow pt-28 pb-20">
+      <main className="flex-grow pt-28 pb-0 sm:pb-0">
         {/* Page Header Banner */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4 mb-10">
           <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#E50914]/15 border border-[#E50914]/40 text-xs sm:text-sm font-extrabold uppercase tracking-widest text-[#E50914]">
@@ -230,6 +262,17 @@ function ProgramsContent({ initialNavItems }: ProgramsPageClientProps) {
             onCheckoutSubmit={handleScheduleCheckout}
           />
         </section>
+
+        {/* SHARED ADMIN-MANAGED HOMEPAGE SECTIONS */}
+        {/* 1. Martial Arts Learning Journey & 2. Weight Management Journey */}
+        <LearningJourneys
+          beltSyllabusData={beltSyllabusData}
+          fitnessJourneyData={fitnessJourneyData}
+          className="py-16 sm:py-24 bg-[#0A0B0E] border-t border-white/10 px-4 relative overflow-hidden space-y-16 sm:space-y-20 mt-16 sm:mt-24"
+        />
+
+        {/* 3. Coupon / Special Promotion (MUST APPEAR LAST) */}
+        <HomepageCouponCta config={couponCtaData} />
       </main>
 
       <Footer />
@@ -237,10 +280,10 @@ function ProgramsContent({ initialNavItems }: ProgramsPageClientProps) {
   );
 }
 
-export function ProgramsPageClient({ initialNavItems }: ProgramsPageClientProps = {}) {
+export function ProgramsPageClient({ initialNavItems, initialHomepageData }: ProgramsPageClientProps = {}) {
   return (
     <Suspense fallback={<div className="min-h-screen bg-[#0A0B0E] text-white flex items-center justify-center">Loading programs...</div>}>
-      <ProgramsContent initialNavItems={initialNavItems} />
+      <ProgramsContent initialNavItems={initialNavItems} initialHomepageData={initialHomepageData} />
     </Suspense>
   );
 }
