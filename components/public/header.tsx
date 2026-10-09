@@ -79,6 +79,14 @@ export function Header({ initialNavItems }: HeaderProps = {}) {
   const pathname = usePathname();
 
   useEffect(() => {
+    if (initialNavItems && initialNavItems.length > 0) {
+      cachedHeaderNav = initialNavItems;
+      return;
+    }
+    if (cachedHeaderNav && cachedHeaderNav.length > 0) {
+      return;
+    }
+
     let isMounted = true;
     async function loadDynamicNav() {
       try {

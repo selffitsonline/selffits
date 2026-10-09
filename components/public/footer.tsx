@@ -7,10 +7,14 @@ import { Mail, Phone, MapPin, ShieldCheck } from "lucide-react";
 
 import { getAdminMenuItemsAction } from "@/actions/admin.actions";
 
+let cachedFooterLinks: any[] | null = null;
+
 export function Footer() {
-  const [dynamicFooterLinks, setDynamicFooterLinks] = useState<any[] | null>(null);
+  const [dynamicFooterLinks, setDynamicFooterLinks] = useState<any[] | null>(() => cachedFooterLinks);
 
   useEffect(() => {
+    if (cachedFooterLinks && cachedFooterLinks.length > 0) return;
+
     async function loadFooterNav() {
       try {
         const res = await getAdminMenuItemsAction();
@@ -18,6 +22,7 @@ export function Footer() {
           const activeItems = res.footerMenu
             .filter((item: any) => item.isEnabled)
             .map((item: any) => ({ label: item.label, href: item.href }));
+          cachedFooterLinks = activeItems;
           setDynamicFooterLinks(activeItems);
         }
       } catch (err) {

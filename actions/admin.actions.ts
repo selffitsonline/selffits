@@ -2,7 +2,8 @@
 
 import { db, ensureDatabaseEnums, ensureCouponTables } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
+import { optimizeMediaUrls } from "@/lib/media-helper";
 import bcrypt from "bcryptjs";
 
 export async function getAdminDashboardStatsAction() {
@@ -110,45 +111,55 @@ export async function getAdminDashboardStatsAction() {
 }
 
 // 2. MENU MANAGEMENT SERVER ACTIONS (HEADER & FOOTER)
+async function fetchMenuItemsInternal() {
+  const [headerSetting, footerSetting] = await Promise.all([
+    db.websiteSettings.findUnique({ where: { key: "header_menu" } }),
+    db.websiteSettings.findUnique({ where: { key: "footer_menu" } }),
+  ]);
+
+  const defaultHeaderMenu = [
+    { id: "h1", label: "Home", href: "/", order: 1, isEnabled: true },
+    { id: "h2", label: "Programs", href: "/programs", order: 2, isEnabled: true },
+    { id: "h3", label: "Coaches", href: "/coaches", order: 3, isEnabled: true },
+    { id: "h4", label: "About", href: "/about", order: 4, isEnabled: true },
+  ];
+
+  const defaultFooterMenu = [
+    { id: "f1", label: "Home", href: "/", order: 1, isEnabled: true },
+    { id: "f2", label: "All Programs", href: "/programs", order: 2, isEnabled: true },
+    { id: "f3", label: "Master Coaches", href: "/coaches", order: 3, isEnabled: true },
+    { id: "f4", label: "About Academy", href: "/about", order: 4, isEnabled: true },
+    { id: "f5", label: "Success Stories", href: "/success-stories", order: 5, isEnabled: true },
+    { id: "f6", label: "FAQ", href: "/faq", order: 6, isEnabled: true },
+    { id: "f7", label: "Become a Coach", href: "/become-coach", order: 7, isEnabled: true },
+    { id: "f8", label: "Contact Support", href: "/contact", order: 8, isEnabled: true },
+  ];
+
+  const rawHeader = headerSetting?.value;
+  const isHeaderValid = Array.isArray(rawHeader) && rawHeader.length > 0;
+
+  const rawFooter = footerSetting?.value;
+  const isFooterValid = Array.isArray(rawFooter) && rawFooter.length > 0;
+
+  return {
+    success: true as const,
+    headerMenu: isHeaderValid ? (rawHeader as any[]) : defaultHeaderMenu,
+    footerMenu: isFooterValid ? (rawFooter as any[]) : defaultFooterMenu,
+  };
+}
+
+const getCachedMenuItems = unstable_cache(
+  fetchMenuItemsInternal,
+  ["menu_items_cache_key"],
+  { tags: ["menu_settings"], revalidate: 3600 }
+);
+
 export async function getAdminMenuItemsAction() {
   try {
-    const [headerSetting, footerSetting] = await Promise.all([
-      db.websiteSettings.findUnique({ where: { key: "header_menu" } }),
-      db.websiteSettings.findUnique({ where: { key: "footer_menu" } }),
-    ]);
-
-    const defaultHeaderMenu = [
-      { id: "h1", label: "Home", href: "/", order: 1, isEnabled: true },
-      { id: "h2", label: "Programs", href: "/programs", order: 2, isEnabled: true },
-      { id: "h3", label: "Coaches", href: "/coaches", order: 3, isEnabled: true },
-      { id: "h4", label: "About", href: "/about", order: 4, isEnabled: true },
-    ];
-
-    const defaultFooterMenu = [
-      { id: "f1", label: "Home", href: "/", order: 1, isEnabled: true },
-      { id: "f2", label: "All Programs", href: "/programs", order: 2, isEnabled: true },
-      { id: "f3", label: "Master Coaches", href: "/coaches", order: 3, isEnabled: true },
-      { id: "f4", label: "About Academy", href: "/about", order: 4, isEnabled: true },
-      { id: "f5", label: "Success Stories", href: "/success-stories", order: 5, isEnabled: true },
-      { id: "f6", label: "FAQ", href: "/faq", order: 6, isEnabled: true },
-      { id: "f7", label: "Become a Coach", href: "/become-coach", order: 7, isEnabled: true },
-      { id: "f8", label: "Contact Support", href: "/contact", order: 8, isEnabled: true },
-    ];
-
-    const rawHeader = headerSetting?.value;
-    const isHeaderValid = Array.isArray(rawHeader) && rawHeader.length > 0;
-
-    const rawFooter = footerSetting?.value;
-    const isFooterValid = Array.isArray(rawFooter) && rawFooter.length > 0;
-
-    return {
-      success: true,
-      headerMenu: isHeaderValid ? (rawHeader as any[]) : defaultHeaderMenu,
-      footerMenu: isFooterValid ? (rawFooter as any[]) : defaultFooterMenu,
-    };
+    return await getCachedMenuItems();
   } catch (err: any) {
     console.error("getAdminMenuItemsAction error:", err);
-    return { success: false, error: "Failed to load header and footer menus." };
+    return { success: false as const, error: "Failed to load header and footer menus." };
   }
 }
 
@@ -172,6 +183,7 @@ export async function updateAdminMenuItemsAction(headerMenu: any[], footerMenu: 
       }),
     ]);
 
+    revalidateTag("menu_settings", { expire: 0 });
     revalidatePath("/", "layout");
     revalidatePath("/admin/menu");
     return { success: true, message: "Header & Footer navigation menus saved successfully!" };
@@ -262,6 +274,7 @@ export async function updateAdminBannerContentAction(slides: any[]) {
       create: { key: "homepage_banner", value: { slides } },
     });
 
+    revalidateTag("homepage_settings", { expire: 0 });
     revalidatePath("/");
     return { success: true, message: "Homepage banner slides updated successfully!" };
   } catch (err: any) {
@@ -294,7 +307,7 @@ export async function uploadBannerImageAction(formData: FormData) {
 }
 
 // 3.5. COMPLETE HOMEPAGE MANAGEMENT SERVER ACTIONS (ALL 8 SECTIONS)
-export async function getAdminHomepageManagementAction() {
+async function fetchHomepageDataInternal() {
   try {
     const keys = [
       "homepage_banner",
@@ -317,7 +330,7 @@ export async function getAdminHomepageManagementAction() {
 
     const settingsMap: Record<string, any> = {};
     settings.forEach((s) => {
-      settingsMap[s.key] = s.value;
+      settingsMap[s.key] = optimizeMediaUrls(s.value, s.key);
     });
 
     // 1. BANNER SLIDES
@@ -819,22 +832,42 @@ export async function getAdminHomepageManagementAction() {
     const testimonialsSection = settingsMap["homepage_testimonials"] || defaultTestimonialsSection;
 
     // 2.1 PROMOTIONAL COUPON CTA (Directly below Explore Our Programs)
-    await ensureCouponTables();
-    const allCoupons = await db.coupon.findMany({
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        code: true,
-        description: true,
-        discountType: true,
-        discountValue: true,
-        isActive: true,
-        startDate: true,
-        expiryDate: true,
-        maxUsageTotal: true,
-        usageCount: true,
-      },
-    });
+    let allCoupons: any[] = [];
+    try {
+      allCoupons = await db.coupon.findMany({
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          code: true,
+          description: true,
+          discountType: true,
+          discountValue: true,
+          isActive: true,
+          startDate: true,
+          expiryDate: true,
+          maxUsageTotal: true,
+          usageCount: true,
+        },
+      });
+    } catch (couponErr) {
+      console.warn("Could not query coupons, ensuring tables fallback:", couponErr);
+      await ensureCouponTables();
+      allCoupons = await db.coupon.findMany({
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          code: true,
+          description: true,
+          discountType: true,
+          discountValue: true,
+          isActive: true,
+          startDate: true,
+          expiryDate: true,
+          maxUsageTotal: true,
+          usageCount: true,
+        },
+      });
+    }
 
     const rawCouponCta = settingsMap["homepage_coupon_cta"] || null;
     let resolvedCoupon: any = null;
@@ -959,6 +992,21 @@ export async function getAdminHomepageManagementAction() {
       })),
     };
   } catch (err: any) {
+    console.error("fetchHomepageDataInternal error:", err);
+    return { success: false, error: "Failed to load homepage settings." };
+  }
+}
+
+const getCachedHomepageData = unstable_cache(
+  fetchHomepageDataInternal,
+  ["homepage_management_cache_key"],
+  { tags: ["homepage_settings"], revalidate: 3600 }
+);
+
+export async function getAdminHomepageManagementAction() {
+  try {
+    return await getCachedHomepageData();
+  } catch (err: any) {
     console.error("getAdminHomepageManagementAction error:", err);
     return { success: false, error: "Failed to load homepage settings." };
   }
@@ -1000,6 +1048,7 @@ export async function updateAdminHomepageSectionAction(sectionKey: string, data:
       create: { key: sectionKey, value: data },
     });
 
+    revalidateTag("homepage_settings", { expire: 0 });
     revalidatePath("/");
     revalidatePath("/coaches");
     revalidatePath("/programs");
@@ -1670,21 +1719,31 @@ function sanitizeCatalogData(cat: any) {
   return cleaned;
 }
 
+async function fetchProgramsCatalogInternal() {
+  const setting = await db.websiteSettings.findUnique({
+    where: { key: "programs_catalog" },
+  });
+
+  if (setting && setting.value) {
+    const sanitized = sanitizeCatalogData(setting.value);
+    return { success: true as const, catalog: sanitized };
+  }
+
+  return { success: true as const, catalog: null };
+}
+
+const getCachedProgramsCatalog = unstable_cache(
+  fetchProgramsCatalogInternal,
+  ["programs_catalog_cache_key"],
+  { tags: ["programs_catalog"], revalidate: 3600 }
+);
+
 export async function getAdminProgramsCatalogAction() {
   try {
-    const setting = await db.websiteSettings.findUnique({
-      where: { key: "programs_catalog" },
-    });
-
-    if (setting && setting.value) {
-      const sanitized = sanitizeCatalogData(setting.value);
-      return { success: true, catalog: sanitized };
-    }
-
-    return { success: true, catalog: null };
+    return await getCachedProgramsCatalog();
   } catch (err: any) {
     console.error("getAdminProgramsCatalogAction error:", err);
-    return { success: false, error: "Failed to fetch programs catalog." };
+    return { success: false as const, error: "Failed to fetch programs catalog." };
   }
 }
 
@@ -1701,6 +1760,7 @@ export async function updateAdminProgramsCatalogAction(catalogData: any) {
       create: { key: "programs_catalog", value: catalogData },
     });
 
+    revalidateTag("programs_catalog", { expire: 0 });
     revalidatePath("/programs");
     revalidatePath("/admin/programs");
     return { success: true, message: "Course catalog updated successfully!" };

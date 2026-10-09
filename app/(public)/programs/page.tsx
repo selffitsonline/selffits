@@ -31,7 +31,13 @@ export default async function ProgramsPage() {
   const initialNavItems = menuRes && menuRes.success && Array.isArray(menuRes.headerMenu)
     ? menuRes.headerMenu.filter((i: any) => i.isEnabled).map((i: any) => ({ name: i.label, href: i.href }))
     : undefined;
-  const initialHomepageData = homepageRes && homepageRes.success ? homepageRes.homepageData : null;
+  const initialHomepageData = homepageRes && homepageRes.success
+    ? {
+        beltSyllabus: homepageRes.homepageData?.beltSyllabus,
+        fitnessJourney: homepageRes.homepageData?.fitnessJourney,
+        couponCta: homepageRes.homepageData?.couponCta,
+      }
+    : null;
 
   const breadcrumbSchema = generateBreadcrumbSchema([
     { name: "Home", url: "/" },

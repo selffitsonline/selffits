@@ -77,18 +77,64 @@ export async function getAdminBatchesAction() {
 
     const batches = await db.batch.findMany({
       orderBy: { createdAt: "desc" },
-      include: {
-        program: true,
-        membershipPlan: true,
-        coach: true,
+      select: {
+        id: true,
+        batchId: true,
+        name: true,
+        programId: true,
+        membershipPlanId: true,
+        beltLevel: true,
+        coachId: true,
+        dayCombination: true,
+        timeSlot: true,
+        clockTiming: true,
+        meetingUrl: true,
+        examDate: true,
+        maxCapacity: true,
+        status: true,
+        createdAt: true,
+        program: {
+          select: {
+            title: true,
+            category: true,
+            targetAudience: true,
+          },
+        },
+        membershipPlan: {
+          select: {
+            tierType: true,
+            name: true,
+          },
+        },
+        coach: {
+          select: {
+            fullName: true,
+            email: true,
+            phone: true,
+            highestRank: true,
+            disciplines: true,
+          },
+        },
         students: {
-          include: {
+          select: {
+            id: true,
+            assignedAt: true,
             user: {
-              include: {
-                studentProfile: true,
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                createdAt: true,
+                studentProfile: {
+                  select: { phone: true },
+                },
                 enrollments: {
                   where: { status: "ACTIVE" },
-                  include: { membershipPlan: true },
+                  take: 1,
+                  select: {
+                    martialArtsType: true,
+                    createdAt: true,
+                  },
                 },
               },
             },
@@ -197,26 +243,58 @@ export async function getBatchFormDataAction() {
     const [programs, membershipPlans, activeCoaches, activeStudents] = await Promise.all([
       db.program.findMany({
         where: { isActive: true },
+        select: {
+          id: true,
+          title: true,
+          category: true,
+          targetAudience: true,
+        },
         orderBy: { title: "asc" },
       }),
       db.membershipPlan.findMany({
         where: { isActive: true },
-        include: { program: true },
+        select: {
+          id: true,
+          programId: true,
+          name: true,
+          tierType: true,
+        },
         orderBy: { priceINR: "asc" },
       }),
       db.coachApplication.findMany({
         where: { status: "APPROVED" },
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          highestRank: true,
+          disciplines: true,
+        },
         orderBy: { fullName: "asc" },
       }),
       db.user.findMany({
         where: { role: "STUDENT" },
-        include: {
-          studentProfile: true,
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          studentProfile: {
+            select: { phone: true },
+          },
           enrollments: {
             where: { status: "ACTIVE" },
-            include: {
+            take: 1,
+            select: {
+              martialArtsType: true,
               membershipPlan: {
-                include: { program: true },
+                select: {
+                  id: true,
+                  name: true,
+                  tierType: true,
+                  program: {
+                    select: { id: true, title: true },
+                  },
+                },
               },
             },
           },
