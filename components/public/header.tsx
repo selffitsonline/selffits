@@ -47,31 +47,18 @@ const FacebookIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-import { getAdminMenuItemsAction } from "@/actions/admin.actions";
+export const HEADER_NAV_LINKS = [
+  { name: "Home", href: "/" },
+  { name: "Programs", href: "/programs" },
+  { name: "Coaches", href: "/coaches" },
+  { name: "About", href: "/about" },
+] as const;
 
 export function Header() {
   const { data: session } = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
-  const [dynamicHeaderNav, setDynamicHeaderNav] = useState<any[] | null>(null);
   const pathname = usePathname();
-
-  useEffect(() => {
-    async function loadDynamicNav() {
-      try {
-        const res = await getAdminMenuItemsAction();
-        if (res && res.success && Array.isArray(res.headerMenu)) {
-          const activeItems = res.headerMenu
-            .filter((item: any) => item.isEnabled)
-            .map((item: any) => ({ name: item.label, href: item.href }));
-          setDynamicHeaderNav(activeItems);
-        }
-      } catch (err) {
-        console.error("Header menu load error:", err);
-      }
-    }
-    loadDynamicNav();
-  }, []);
 
   // Lock body scroll when full-screen mobile menu is active
   useEffect(() => {
@@ -85,13 +72,7 @@ export function Header() {
     };
   }, [mobileMenuOpen]);
 
-  const defaultNavLinks = [
-    { name: "Home", href: "/" },
-    { name: "Programs", href: "/programs" },
-    { name: "Coaches", href: "/coaches" },
-  ];
-
-  const navLinks = dynamicHeaderNav !== null ? dynamicHeaderNav : defaultNavLinks;
+  const navLinks = HEADER_NAV_LINKS;
 
   const socialLinks = [
     {

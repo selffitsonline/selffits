@@ -121,8 +121,7 @@ export async function getAdminMenuItemsAction() {
       { id: "h1", label: "Home", href: "/", order: 1, isEnabled: true },
       { id: "h2", label: "Programs", href: "/programs", order: 2, isEnabled: true },
       { id: "h3", label: "Coaches", href: "/coaches", order: 3, isEnabled: true },
-      { id: "h4", label: "About Us", href: "/about", order: 4, isEnabled: true },
-      { id: "h5", label: "Success Stories", href: "/success-stories", order: 5, isEnabled: true },
+      { id: "h4", label: "About", href: "/about", order: 4, isEnabled: true },
     ];
 
     const defaultFooterMenu = [
