@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Header } from "@/components/public/header";
 import { Footer } from "@/components/public/footer";
 import { CoachesCarousel } from "@/components/public/coaches-carousel";
-import { getAdminHomepageManagementAction } from "@/actions/admin.actions";
+import { getAdminHomepageManagementAction, getAdminMenuItemsAction } from "@/actions/admin.actions";
 import { Award, Sparkles, ArrowRight } from "lucide-react";
 import { JsonLd } from "@/components/seo/json-ld";
 import { generateBreadcrumbSchema } from "@/lib/seo";
@@ -27,8 +27,14 @@ export const metadata: Metadata = {
 };
 
 export default async function CoachesPage() {
-  const res = await getAdminHomepageManagementAction();
+  const [res, menuRes] = await Promise.all([
+    getAdminHomepageManagementAction(),
+    getAdminMenuItemsAction(),
+  ]);
   const coachesItems = res && res.success ? res.homepageData?.coaches?.items : undefined;
+  const initialNavItems = menuRes && menuRes.success && Array.isArray(menuRes.headerMenu)
+    ? menuRes.headerMenu.filter((i: any) => i.isEnabled).map((i: any) => ({ name: i.label, href: i.href }))
+    : undefined;
 
   const breadcrumbSchema = generateBreadcrumbSchema([
     { name: "Home", url: "/" },
@@ -38,7 +44,7 @@ export default async function CoachesPage() {
   return (
     <div className="min-h-screen bg-[#0A0B0E] text-white flex flex-col selection:bg-[#E50914] selection:text-white">
       <JsonLd data={breadcrumbSchema} />
-      <Header />
+      <Header initialNavItems={initialNavItems} />
 
       <main className="flex-grow pt-28 pb-20 space-y-16">
         {/* Header Title Section */}

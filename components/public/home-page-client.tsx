@@ -71,9 +71,10 @@ const DEFAULT_HERO_SLIDES = [
 
 interface HomePageClientProps {
   initialData?: any;
+  initialNavItems?: any[];
 }
 
-export function HomePageClient({ initialData }: HomePageClientProps) {
+export function HomePageClient({ initialData, initialNavItems }: HomePageClientProps) {
   // Synchronously initialize state with server-fetched DB data on 1st render
   const [heroSlides, setHeroSlides] = useState<any[]>(
     () => initialData?.banner?.slides && initialData.banner.slides.length > 0
@@ -269,7 +270,7 @@ export function HomePageClient({ initialData }: HomePageClientProps) {
 
   return (
     <div className="min-h-screen bg-[#0A0B0E] text-white flex flex-col selection:bg-[#E50914] selection:text-white">
-      <Header />
+      <Header initialNavItems={initialNavItems} />
 
       <main className="flex-grow pt-16 sm:pt-20">
         {/* 1. HERO BANNER SECTION */}

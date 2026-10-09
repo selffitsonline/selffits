@@ -47,18 +47,70 @@ const FacebookIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-export const HEADER_NAV_LINKS = [
+import { getAdminMenuItemsAction } from "@/actions/admin.actions";
+
+export interface HeaderNavItem {
+  name: string;
+  href: string;
+}
+
+export const defaultNavLinks: HeaderNavItem[] = [
   { name: "Home", href: "/" },
   { name: "Programs", href: "/programs" },
   { name: "Coaches", href: "/coaches" },
   { name: "About", href: "/about" },
-] as const;
+];
 
-export function Header() {
+let cachedHeaderNav: HeaderNavItem[] | null = null;
+
+export interface HeaderProps {
+  initialNavItems?: HeaderNavItem[];
+}
+
+export function Header({ initialNavItems }: HeaderProps = {}) {
   const { data: session } = useSession();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [dynamicHeaderNav, setDynamicHeaderNav] = useState<HeaderNavItem[] | null>(() => {
+    if (initialNavItems && initialNavItems.length > 0) return initialNavItems;
+    if (cachedHeaderNav && cachedHeaderNav.length > 0) return cachedHeaderNav;
+    return null;
+  });
   const pathname = usePathname();
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadDynamicNav() {
+      try {
+        const res = await getAdminMenuItemsAction();
+        if (res && res.success && Array.isArray(res.headerMenu)) {
+          const activeItems: HeaderNavItem[] = res.headerMenu
+            .filter((item: any) => item.isEnabled)
+            .map((item: any) => ({ name: item.label, href: item.href }));
+
+          if (activeItems.length > 0 && isMounted) {
+            cachedHeaderNav = activeItems;
+            setDynamicHeaderNav((prev) => {
+              if (
+                prev &&
+                prev.length === activeItems.length &&
+                prev.every((p, idx) => p.name === activeItems[idx]?.name && p.href === activeItems[idx]?.href)
+              ) {
+                return prev;
+              }
+              return activeItems;
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Header menu load error:", err);
+      }
+    }
+    loadDynamicNav();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Lock body scroll when full-screen mobile menu is active
   useEffect(() => {
@@ -72,7 +124,7 @@ export function Header() {
     };
   }, [mobileMenuOpen]);
 
-  const navLinks = HEADER_NAV_LINKS;
+  const navLinks = dynamicHeaderNav && dynamicHeaderNav.length > 0 ? dynamicHeaderNav : defaultNavLinks;
 
   const socialLinks = [
     {

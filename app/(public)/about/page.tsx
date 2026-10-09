@@ -23,7 +23,14 @@ export const metadata: Metadata = {
   },
 };
 
-export default function AboutPage() {
+import { getAdminMenuItemsAction } from "@/actions/admin.actions";
+
+export default async function AboutPage() {
+  const menuRes = await getAdminMenuItemsAction();
+  const initialNavItems = menuRes && menuRes.success && Array.isArray(menuRes.headerMenu)
+    ? menuRes.headerMenu.filter((i: any) => i.isEnabled).map((i: any) => ({ name: i.label, href: i.href }))
+    : undefined;
+
   const breadcrumbSchema = generateBreadcrumbSchema([
     { name: "Home", url: "/" },
     { name: "About Us", url: "/about" },
@@ -32,7 +39,7 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen bg-[#0A0B0E] text-white flex flex-col selection:bg-[#E50914] selection:text-white">
       <JsonLd data={breadcrumbSchema} />
-      <Header />
+      <Header initialNavItems={initialNavItems} />
 
       <main className="flex-grow pt-28 pb-20">
         {/* Page Hero */}

@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import React from "react";
 import type { Metadata } from "next";
-import { getAdminHomepageManagementAction } from "@/actions/admin.actions";
+import { getAdminHomepageManagementAction, getAdminMenuItemsAction } from "@/actions/admin.actions";
 import { HomePageClient } from "@/components/public/home-page-client";
 import { JsonLd } from "@/components/seo/json-ld";
 import { SITE_CONFIG } from "@/lib/seo";
@@ -23,8 +23,14 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const res = await getAdminHomepageManagementAction();
+  const [res, menuRes] = await Promise.all([
+    getAdminHomepageManagementAction(),
+    getAdminMenuItemsAction(),
+  ]);
   const homepageData = res && res.success ? res.homepageData : null;
+  const initialNavItems = menuRes && menuRes.success && Array.isArray(menuRes.headerMenu)
+    ? menuRes.headerMenu.filter((i: any) => i.isEnabled).map((i: any) => ({ name: i.label, href: i.href }))
+    : undefined;
 
   const localBusinessSchema = {
     "@context": "https://schema.org",
@@ -50,7 +56,7 @@ export default async function HomePage() {
   return (
     <>
       <JsonLd data={localBusinessSchema} />
-      <HomePageClient initialData={homepageData} />
+      <HomePageClient initialData={homepageData} initialNavItems={initialNavItems} />
     </>
   );
 }

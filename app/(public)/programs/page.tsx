@@ -21,7 +21,14 @@ export const metadata: Metadata = {
   },
 };
 
-export default function ProgramsPage() {
+import { getAdminMenuItemsAction } from "@/actions/admin.actions";
+
+export default async function ProgramsPage() {
+  const menuRes = await getAdminMenuItemsAction();
+  const initialNavItems = menuRes && menuRes.success && Array.isArray(menuRes.headerMenu)
+    ? menuRes.headerMenu.filter((i: any) => i.isEnabled).map((i: any) => ({ name: i.label, href: i.href }))
+    : undefined;
+
   const breadcrumbSchema = generateBreadcrumbSchema([
     { name: "Home", url: "/" },
     { name: "Programs", url: "/programs" },
@@ -85,7 +92,7 @@ export default function ProgramsPage() {
   return (
     <>
       <JsonLd data={[breadcrumbSchema, courseListSchema]} />
-      <ProgramsPageClient />
+      <ProgramsPageClient initialNavItems={initialNavItems} />
     </>
   );
 }

@@ -135,10 +135,16 @@ export async function getAdminMenuItemsAction() {
       { id: "f8", label: "Contact Support", href: "/contact", order: 8, isEnabled: true },
     ];
 
+    const rawHeader = headerSetting?.value;
+    const isHeaderValid = Array.isArray(rawHeader) && rawHeader.length > 0;
+
+    const rawFooter = footerSetting?.value;
+    const isFooterValid = Array.isArray(rawFooter) && rawFooter.length > 0;
+
     return {
       success: true,
-      headerMenu: (headerSetting?.value as any[]) || defaultHeaderMenu,
-      footerMenu: (footerSetting?.value as any[]) || defaultFooterMenu,
+      headerMenu: isHeaderValid ? (rawHeader as any[]) : defaultHeaderMenu,
+      footerMenu: isFooterValid ? (rawFooter as any[]) : defaultFooterMenu,
     };
   } catch (err: any) {
     console.error("getAdminMenuItemsAction error:", err);
@@ -167,6 +173,7 @@ export async function updateAdminMenuItemsAction(headerMenu: any[], footerMenu: 
     ]);
 
     revalidatePath("/", "layout");
+    revalidatePath("/admin/menu");
     return { success: true, message: "Header & Footer navigation menus saved successfully!" };
   } catch (err: any) {
     console.error("updateAdminMenuItemsAction error:", err);

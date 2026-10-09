@@ -33,7 +33,11 @@ function getCategoryContextTitle(mainTab: MainTab, audience: MmaCategory) {
   }
 }
 
-function ProgramsContent() {
+interface ProgramsPageClientProps {
+  initialNavItems?: any[];
+}
+
+function ProgramsContent({ initialNavItems }: ProgramsPageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -88,7 +92,7 @@ function ProgramsContent() {
 
   return (
     <div className="min-h-screen bg-[#0A0B0E] text-white flex flex-col selection:bg-[#E50914] selection:text-white">
-      <Header />
+      <Header initialNavItems={initialNavItems} />
 
       <main className="flex-grow pt-28 pb-20">
         {/* Page Header Banner */}
@@ -233,10 +237,10 @@ function ProgramsContent() {
   );
 }
 
-export function ProgramsPageClient() {
+export function ProgramsPageClient({ initialNavItems }: ProgramsPageClientProps = {}) {
   return (
     <Suspense fallback={<div className="min-h-screen bg-[#0A0B0E] text-white flex items-center justify-center">Loading programs...</div>}>
-      <ProgramsContent />
+      <ProgramsContent initialNavItems={initialNavItems} />
     </Suspense>
   );
 }
