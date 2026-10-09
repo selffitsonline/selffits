@@ -177,6 +177,7 @@ export function CoachesCarousel({ items }: { items?: Coach[] }) {
                     src={coach.image || "/images/adults_martial_arts.png"}
                     alt={coach.name ? `${coach.name} - SELFFITS Master Coach` : "SELFFITS Master Martial Arts Coach"}
                     fill
+                    unoptimized
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                   <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-[#0A0B0E]/85 backdrop-blur-md text-[10px] sm:text-[11px] font-extrabold uppercase tracking-wider text-[#0080FF] border border-white/15">
