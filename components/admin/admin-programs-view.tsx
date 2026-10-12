@@ -42,9 +42,16 @@ import {
   TrainingDayConfig,
   BatchTimingConfig,
   MembershipPlanConfig,
+  MartialArtsTypeItem,
+  DEFAULT_MARTIAL_ARTS_TYPE_ITEMS,
+  normalizeMartialArtsTypeItems,
 } from "@/lib/schedule-config";
 import { getScheduleConfigAction, updateScheduleConfigAction } from "@/actions/schedule-config.actions";
-import { getAdminProgramsCatalogAction, updateAdminProgramsCatalogAction } from "@/actions/admin.actions";
+import {
+  getAdminProgramsCatalogAction,
+  updateAdminProgramsCatalogAction,
+  updateSingleMartialArtsTypeAction,
+} from "@/actions/admin.actions";
 import {
   getDietNutritionConfigAction,
   updateDietNutritionConfigAction,
@@ -72,8 +79,77 @@ export function AdminProgramsView() {
   const [activeCategory, setActiveCategory] = useState<MainTab>("mma");
   const [activeSubCat, setActiveSubCat] = useState<SubCat>("kids");
 
-  // Admin Management Section Tabs: "schedule_builder" | "category_metadata"
-  const [managementSection, setManagementSection] = useState<"schedule_builder" | "category_metadata">("schedule_builder");
+  // Admin Management Section Tabs: "schedule_builder" | "category_metadata" | "martial_arts_types"
+  const [managementSection, setManagementSection] = useState<"schedule_builder" | "category_metadata" | "martial_arts_types">("schedule_builder");
+
+  // Martial Arts Type Selector Labels State (Mixed Martial Arts)
+  const [martialArtsTypes, setMartialArtsTypes] = useState<MartialArtsTypeItem[]>(() =>
+    DEFAULT_MARTIAL_ARTS_TYPE_ITEMS.map((item) => ({ ...item }))
+  );
+  const [individualSavingId, setIndividualSavingId] = useState<string | null>(null);
+  const [individualSavedId, setIndividualSavedId] = useState<string | null>(null);
+  const [individualError, setIndividualError] = useState<{ id: string; message: string } | null>(null);
+  const [isSavingAllTypes, setIsSavingAllTypes] = useState(false);
+  const [isSavedAllTypes, setIsSavedAllTypes] = useState(false);
+
+  const handleUpdateMartialArtsTypeLabel = (id: string, newLabel: string) => {
+    setMartialArtsTypes((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, label: newLabel } : item))
+    );
+  };
+
+  const handleResetMartialArtsType = (id: string) => {
+    setMartialArtsTypes((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, label: item.defaultLabel } : item))
+    );
+  };
+
+  const handleSaveIndividualMartialArtsType = async (item: MartialArtsTypeItem) => {
+    const trimmed = item.label.trim();
+    if (!trimmed) {
+      setIndividualError({ id: item.id, message: "Label cannot be empty." });
+      return;
+    }
+    setIndividualSavingId(item.id);
+    setIndividualError(null);
+    try {
+      const res = await updateSingleMartialArtsTypeAction(item.id, trimmed);
+      if (res.success) {
+        setIndividualSavedId(item.id);
+        setTimeout(() => setIndividualSavedId(null), 2500);
+        if (res.types) {
+          setMartialArtsTypes(res.types);
+        }
+      } else {
+        setIndividualError({ id: item.id, message: res.error || "Failed to save label." });
+      }
+    } catch (err: any) {
+      setIndividualError({ id: item.id, message: err?.message || "Failed to save label." });
+    } finally {
+      setIndividualSavingId(null);
+    }
+  };
+
+  const handleSaveAllMartialArtsTypes = async () => {
+    setIsSavingAllTypes(true);
+    setIndividualError(null);
+    try {
+      const res = await updateAdminProgramsCatalogAction({
+        categoryTitles,
+        martialArtsTypes,
+      });
+      if (res.success) {
+        setIsSavedAllTypes(true);
+        setTimeout(() => setIsSavedAllTypes(false), 2500);
+      } else {
+        setIndividualError({ id: "all", message: res.error || "Failed to save all labels." });
+      }
+    } catch (err: any) {
+      setIndividualError({ id: "all", message: err?.message || "Failed to save labels." });
+    } finally {
+      setIsSavingAllTypes(false);
+    }
+  };
 
   // 1. Central Schedule & Pricing Configuration State per (Category x Audience Group)
   const [scheduleConfigs, setScheduleConfigs] = useState<Record<string, CentralScheduleConfig>>({
@@ -177,6 +253,9 @@ export function AdminProgramsView() {
           if (cat.categoryTitles) {
             setCategoryTitles((prev) => ({ ...prev, ...cat.categoryTitles }));
           }
+          if (cat.martialArtsTypes) {
+            setMartialArtsTypes(normalizeMartialArtsTypeItems(cat.martialArtsTypes));
+          }
         }
 
         if (dietRes && dietRes.success && dietRes.config) {
@@ -205,7 +284,10 @@ export function AdminProgramsView() {
         updateScheduleConfigAction("fitness-weight-management", "kids", scheduleConfigs["hiit-kids"]),
         updateScheduleConfigAction("fitness-weight-management", "adults", scheduleConfigs["hiit-adults"]),
         updateScheduleConfigAction("fitness-weight-management", "ladies", scheduleConfigs["hiit-ladies"]),
-        updateAdminProgramsCatalogAction({ categoryTitles }),
+        updateAdminProgramsCatalogAction({
+          categoryTitles,
+          martialArtsTypes,
+        }),
         updateDietNutritionConfigAction(dietConfig),
       ]);
 
@@ -544,6 +626,17 @@ export function AdminProgramsView() {
             }`}
           >
             <BookOpen className="w-4 h-4" /> Category Titles & Descriptions
+          </button>
+          <button
+            type="button"
+            onClick={() => setManagementSection("martial_arts_types")}
+            className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all flex items-center gap-2 cursor-pointer ${
+              managementSection === "martial_arts_types"
+                ? "bg-[#E50914] text-white shadow-md shadow-[#E50914]/25"
+                : "text-gray-400 hover:text-white"
+            }`}
+          >
+            <ShieldCheck className="w-4 h-4" /> Martial Arts Types
           </button>
         </div>
 
@@ -1013,6 +1106,173 @@ export function AdminProgramsView() {
                   placeholder="Enter program description..."
                 />
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* SECTION 3: MARTIAL ARTS TYPES */}
+        {(managementSection === "martial_arts_types" || (managementSection === "category_metadata" && activeCategory === "mma")) && (
+          <div className="bg-[#14161D] border border-white/10 rounded-2xl p-6 space-y-6 shadow-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-5 h-5 text-[#E50914]" />
+                  <h3 className="text-sm font-extrabold uppercase tracking-wider text-white font-[family-name:var(--font-outfit)]">
+                    Martial Arts Type Selector Labels
+                  </h3>
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[#E50914]/15 text-[#E50914] border border-[#E50914]/30">
+                    Mixed Martial Arts
+                  </span>
+                </div>
+                <p className="text-xs text-gray-400 mt-1 max-w-2xl leading-relaxed">
+                  Customize the text labels for the 5 martial arts type options displayed under Mixed Martial Arts.
+                  Editing and saving a label automatically synchronizes it across the Programs page selector, schedule builder, checkout, payment receipts, and student dashboard timetables.
+                </p>
+              </div>
+              <span className="text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-xl shrink-0 self-start sm:self-auto flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5" /> Single Source of Truth
+              </span>
+            </div>
+
+            {activeCategory !== "mma" && managementSection === "martial_arts_types" && (
+              <div className="p-4 rounded-xl bg-[#0080FF]/10 border border-[#0080FF]/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-xs text-blue-200">
+                  <AlertCircle className="w-4 h-4 text-[#0080FF] shrink-0" />
+                  <span>
+                    Martial Arts Types apply specifically to the <strong>Mixed Martial Arts</strong> category.
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveCategory("mma")}
+                  className="px-3 py-1.5 rounded-lg bg-[#0080FF] hover:bg-[#0070E0] text-white text-xs font-bold transition-all cursor-pointer whitespace-nowrap"
+                >
+                  Switch to Mixed Martial Arts
+                </button>
+              </div>
+            )}
+
+            {individualError && (
+              <div className="p-3.5 rounded-xl bg-[#E50914]/10 border border-[#E50914]/30 text-xs text-red-400 font-semibold flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{individualError.message}</span>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 gap-4">
+              {martialArtsTypes.map((item, idx) => {
+                const isSavingThis = individualSavingId === item.id;
+                const isSavedThis = individualSavedId === item.id;
+                const isModified = item.label !== item.defaultLabel;
+
+                return (
+                  <div
+                    key={item.id}
+                    className="bg-[#0F1117] border border-white/10 hover:border-white/20 transition-all rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4"
+                  >
+                    <div className="space-y-1.5 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 px-2 py-0.5 rounded bg-white/5 border border-white/10">
+                          Option {idx + 1}
+                        </span>
+                        <span className="text-xs text-gray-400">
+                          Default identifier: <span className="text-gray-300 font-bold">&quot;{item.defaultLabel}&quot;</span>
+                        </span>
+                        {isModified && (
+                          <span className="text-[10px] font-extrabold text-[#0080FF] bg-[#0080FF]/10 px-2 py-0.5 rounded-full border border-[#0080FF]/25">
+                            Customized
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="relative pt-1">
+                        <input
+                          type="text"
+                          value={item.label}
+                          onChange={(e) => handleUpdateMartialArtsTypeLabel(item.id, e.target.value)}
+                          className="w-full h-11 px-4 rounded-xl bg-[#14161D] border border-white/15 text-white font-bold text-sm focus:outline-none focus:border-[#E50914] focus:ring-1 focus:ring-[#E50914] transition-all"
+                          placeholder={`Enter label for ${item.defaultLabel}...`}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0 self-end md:self-center pt-1 md:pt-0">
+                      {isModified && (
+                        <button
+                          type="button"
+                          onClick={() => handleResetMartialArtsType(item.id)}
+                          title="Reset to default label"
+                          className="h-10 px-3 rounded-xl border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          <span>Reset</span>
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => handleSaveIndividualMartialArtsType(item)}
+                        disabled={isSavingThis}
+                        className={`h-10 px-4 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer shadow-md disabled:opacity-50 ${
+                          isSavedThis
+                            ? "bg-emerald-600 text-white shadow-emerald-600/30 ring-2 ring-emerald-500/50"
+                            : "bg-[#E50914] hover:bg-[#D00812] text-white shadow-[#E50914]/25 hover:shadow-[#E50914]/40"
+                        }`}
+                      >
+                        {isSavingThis ? (
+                          <>
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            <span>Saving...</span>
+                          </>
+                        ) : isSavedThis ? (
+                          <>
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Saved!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Save className="w-3.5 h-3.5" />
+                            <span>Save Label</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="pt-4 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <span className="text-xs text-gray-400">
+                You can save each label individually using the button next to it, or save all labels together.
+              </span>
+              <button
+                type="button"
+                onClick={handleSaveAllMartialArtsTypes}
+                disabled={isSavingAllTypes}
+                className={`h-10 px-5 rounded-xl text-xs font-black transition-all flex items-center gap-2 cursor-pointer shadow-md disabled:opacity-50 ${
+                  isSavedAllTypes
+                    ? "bg-emerald-600 text-white shadow-emerald-600/30 ring-2 ring-emerald-500/50"
+                    : "bg-[#0080FF] hover:bg-[#0070E0] text-white shadow-[#0080FF]/25 hover:shadow-[#0080FF]/40"
+                }`}
+              >
+                {isSavingAllTypes ? (
+                  <>
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <span>Saving All...</span>
+                  </>
+                ) : isSavedAllTypes ? (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>All Labels Saved!</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-3.5 h-3.5" />
+                    <span>Save All Martial Arts Types</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         )}

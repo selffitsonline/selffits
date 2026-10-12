@@ -5,6 +5,11 @@ import { auth } from "@/lib/auth";
 import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import { optimizeMediaUrls } from "@/lib/media-helper";
 import bcrypt from "bcryptjs";
+import {
+  MartialArtsTypeItem,
+  DEFAULT_MARTIAL_ARTS_TYPE_ITEMS,
+  normalizeMartialArtsTypeItems,
+} from "@/lib/schedule-config";
 
 export async function getAdminDashboardStatsAction() {
   try {
@@ -1716,6 +1721,16 @@ function sanitizeCatalogData(cat: any) {
     }
   }
 
+  if (cat.categoryTitles) {
+    cleaned.categoryTitles = cat.categoryTitles;
+  }
+
+  if (cat.martialArtsTypes) {
+    cleaned.martialArtsTypes = normalizeMartialArtsTypeItems(cat.martialArtsTypes);
+  } else {
+    cleaned.martialArtsTypes = DEFAULT_MARTIAL_ARTS_TYPE_ITEMS.map((item) => ({ ...item }));
+  }
+
   return cleaned;
 }
 
@@ -1729,18 +1744,18 @@ async function fetchProgramsCatalogInternal() {
     return { success: true as const, catalog: sanitized };
   }
 
-  return { success: true as const, catalog: null };
+  return {
+    success: true as const,
+    catalog: {
+      categoryTitles: {},
+      martialArtsTypes: DEFAULT_MARTIAL_ARTS_TYPE_ITEMS.map((item) => ({ ...item })),
+    },
+  };
 }
-
-const getCachedProgramsCatalog = unstable_cache(
-  fetchProgramsCatalogInternal,
-  ["programs_catalog_cache_key"],
-  { tags: ["programs_catalog"], revalidate: 3600 }
-);
 
 export async function getAdminProgramsCatalogAction() {
   try {
-    return await getCachedProgramsCatalog();
+    return await fetchProgramsCatalogInternal();
   } catch (err: any) {
     console.error("getAdminProgramsCatalogAction error:", err);
     return { success: false as const, error: "Failed to fetch programs catalog." };
@@ -1754,19 +1769,168 @@ export async function updateAdminProgramsCatalogAction(catalogData: any) {
       return { success: false, error: "Unauthorized access." };
     }
 
+    const currentSetting = await db.websiteSettings.findUnique({
+      where: { key: "programs_catalog" },
+    });
+    const currentCatalog = currentSetting?.value ? sanitizeCatalogData(currentSetting.value) : null;
+    const currentTypes: MartialArtsTypeItem[] = currentCatalog?.martialArtsTypes || DEFAULT_MARTIAL_ARTS_TYPE_ITEMS;
+
+    const mergedValue: any = {
+      ...(currentSetting?.value && typeof currentSetting.value === "object" ? currentSetting.value : {}),
+      ...catalogData,
+    };
+
+    if (catalogData.martialArtsTypes) {
+      mergedValue.martialArtsTypes = normalizeMartialArtsTypeItems(catalogData.martialArtsTypes);
+
+      // Synchronize changed martial arts type labels across active student enrollment records
+      const newTypes = mergedValue.martialArtsTypes as MartialArtsTypeItem[];
+      for (const newItem of newTypes) {
+        const prevItem = currentTypes.find((t) => t.id === newItem.id);
+        const oldLabel = prevItem?.label;
+        const newLabel = newItem.label.trim();
+        if (oldLabel && oldLabel !== newLabel) {
+          try {
+            await db.enrollment.updateMany({
+              where: { martialArtsType: oldLabel },
+              data: { martialArtsType: newLabel },
+            });
+            if (newItem.defaultLabel && newItem.defaultLabel !== newLabel) {
+              await db.enrollment.updateMany({
+                where: { martialArtsType: newItem.defaultLabel },
+                data: { martialArtsType: newLabel },
+              });
+            }
+          } catch (e) {
+            console.warn("Failed to sync enrollment records for changed martial arts type label:", e);
+          }
+        }
+      }
+    }
+
     await db.websiteSettings.upsert({
       where: { key: "programs_catalog" },
-      update: { value: catalogData },
-      create: { key: "programs_catalog", value: catalogData },
+      update: { value: mergedValue },
+      create: { key: "programs_catalog", value: mergedValue },
     });
 
     revalidateTag("programs_catalog", { expire: 0 });
     revalidatePath("/programs");
+    revalidatePath("/checkout");
     revalidatePath("/admin/programs");
+    revalidatePath("/admin/students");
+    revalidatePath("/dashboard");
     return { success: true, message: "Course catalog updated successfully!" };
   } catch (err: any) {
     console.error("updateAdminProgramsCatalogAction error:", err);
     return { success: false, error: "Failed to update course catalog." };
+  }
+}
+
+export async function getMartialArtsTypesAction(): Promise<{
+  success: boolean;
+  types: MartialArtsTypeItem[];
+}> {
+  try {
+    const catRes = await getAdminProgramsCatalogAction();
+    if (catRes && catRes.success && catRes.catalog && (catRes.catalog as any).martialArtsTypes) {
+      return {
+        success: true,
+        types: normalizeMartialArtsTypeItems((catRes.catalog as any).martialArtsTypes),
+      };
+    }
+    return {
+      success: true,
+      types: DEFAULT_MARTIAL_ARTS_TYPE_ITEMS.map((item) => ({ ...item })),
+    };
+  } catch (err: any) {
+    console.error("getMartialArtsTypesAction error:", err);
+    return {
+      success: true,
+      types: DEFAULT_MARTIAL_ARTS_TYPE_ITEMS.map((item) => ({ ...item })),
+    };
+  }
+}
+
+export async function updateSingleMartialArtsTypeAction(
+  id: string,
+  newLabel: string
+): Promise<{
+  success: boolean;
+  message?: string;
+  error?: string;
+  types?: MartialArtsTypeItem[];
+}> {
+  try {
+    const session = await auth();
+    if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
+      return { success: false, error: "Unauthorized access." };
+    }
+
+    const trimmed = (newLabel || "").trim();
+    if (!trimmed) {
+      return { success: false, error: "Label cannot be empty." };
+    }
+
+    const currentSetting = await db.websiteSettings.findUnique({
+      where: { key: "programs_catalog" },
+    });
+    const currentCatalog = currentSetting?.value ? sanitizeCatalogData(currentSetting.value) : null;
+    const currentTypes: MartialArtsTypeItem[] = currentCatalog?.martialArtsTypes
+      ? normalizeMartialArtsTypeItems(currentCatalog.martialArtsTypes)
+      : DEFAULT_MARTIAL_ARTS_TYPE_ITEMS.map((item) => ({ ...item }));
+
+    const targetItem = currentTypes.find((item) => item.id === id);
+    if (!targetItem) {
+      return { success: false, error: `Martial arts type option "${id}" not found.` };
+    }
+
+    const oldLabel = targetItem.label;
+    targetItem.label = trimmed;
+
+    const mergedValue: any = {
+      ...(currentSetting?.value && typeof currentSetting.value === "object" ? currentSetting.value : {}),
+      martialArtsTypes: currentTypes,
+    };
+
+    await db.websiteSettings.upsert({
+      where: { key: "programs_catalog" },
+      update: { value: mergedValue },
+      create: { key: "programs_catalog", value: mergedValue },
+    });
+
+    if (oldLabel !== trimmed) {
+      try {
+        await db.enrollment.updateMany({
+          where: { martialArtsType: oldLabel },
+          data: { martialArtsType: trimmed },
+        });
+        if (targetItem.defaultLabel && targetItem.defaultLabel !== trimmed) {
+          await db.enrollment.updateMany({
+            where: { martialArtsType: targetItem.defaultLabel },
+            data: { martialArtsType: trimmed },
+          });
+        }
+      } catch (dbErr) {
+        console.warn("Could not sync enrollment records:", dbErr);
+      }
+    }
+
+    revalidateTag("programs_catalog", { expire: 0 });
+    revalidatePath("/programs");
+    revalidatePath("/checkout");
+    revalidatePath("/admin/programs");
+    revalidatePath("/admin/students");
+    revalidatePath("/dashboard");
+
+    return {
+      success: true,
+      message: `Updated martial arts type label to "${trimmed}"!`,
+      types: currentTypes,
+    };
+  } catch (err: any) {
+    console.error("updateSingleMartialArtsTypeAction error:", err);
+    return { success: false, error: "Failed to update martial arts type label." };
   }
 }
 

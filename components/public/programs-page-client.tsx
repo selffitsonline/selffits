@@ -5,11 +5,16 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/public/header";
 import { Footer } from "@/components/public/footer";
 import { StudentScheduleSelector, StudentScheduleSelectionState } from "@/components/public/student-schedule-selector";
-import { MARTIAL_ARTS_TYPES } from "@/lib/schedule-config";
+import {
+  MARTIAL_ARTS_TYPES,
+  MartialArtsTypeItem,
+  DEFAULT_MARTIAL_ARTS_TYPE_ITEMS,
+  resolveMartialArtsTypeLabel,
+} from "@/lib/schedule-config";
 import { ShieldCheck, Flame, Sparkles } from "lucide-react";
 import { LearningJourneys } from "@/components/public/learning-journeys";
 import { HomepageCouponCta } from "@/components/public/homepage-coupon-cta";
-import { getAdminHomepageManagementAction } from "@/actions/admin.actions";
+import { getAdminHomepageManagementAction, getMartialArtsTypesAction } from "@/actions/admin.actions";
 
 type MainTab = "mma" | "hiit";
 type MmaCategory = "kids" | "adults" | "ladies";
@@ -39,9 +44,14 @@ function getCategoryContextTitle(mainTab: MainTab, audience: MmaCategory) {
 interface ProgramsPageClientProps {
   initialNavItems?: any[];
   initialHomepageData?: any;
+  initialMartialArtsTypes?: MartialArtsTypeItem[];
 }
 
-function ProgramsContent({ initialNavItems, initialHomepageData }: ProgramsPageClientProps) {
+function ProgramsContent({
+  initialNavItems,
+  initialHomepageData,
+  initialMartialArtsTypes,
+}: ProgramsPageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -53,6 +63,13 @@ function ProgramsContent({ initialNavItems, initialHomepageData }: ProgramsPageC
   );
   const [couponCtaData, setCouponCtaData] = useState<any>(
     () => initialHomepageData?.couponCta || null
+  );
+
+  const [martialArtsTypesList, setMartialArtsTypesList] = useState<MartialArtsTypeItem[]>(
+    () =>
+      initialMartialArtsTypes && initialMartialArtsTypes.length > 0
+        ? initialMartialArtsTypes
+        : DEFAULT_MARTIAL_ARTS_TYPE_ITEMS.map((item) => ({ ...item }))
   );
 
   useEffect(() => {
@@ -71,6 +88,15 @@ function ProgramsContent({ initialNavItems, initialHomepageData }: ProgramsPageC
         })
         .catch((err) => console.error("Failed to load fallback homepage data on programs page:", err));
     }
+
+    // Refresh martial arts types client-side for dynamic freshness
+    getMartialArtsTypesAction()
+      .then((res) => {
+        if (res?.success && Array.isArray(res.types) && res.types.length > 0) {
+          setMartialArtsTypesList(res.types);
+        }
+      })
+      .catch((err) => console.error("Failed to load fresh martial arts types:", err));
   }, [initialHomepageData]);
 
   const urlCat = searchParams.get("cat");
@@ -84,10 +110,15 @@ function ProgramsContent({ initialNavItems, initialHomepageData }: ProgramsPageC
     urlAudience === "adults" ? "adults" : urlAudience === "ladies" ? "ladies" : "kids"
   );
   const [martialArtsType, setMartialArtsType] = useState<string>(() => {
-    if (urlType && (MARTIAL_ARTS_TYPES as readonly string[]).includes(urlType)) {
-      return urlType;
+    const types =
+      initialMartialArtsTypes && initialMartialArtsTypes.length > 0
+        ? initialMartialArtsTypes
+        : DEFAULT_MARTIAL_ARTS_TYPE_ITEMS;
+    if (urlType) {
+      const matched = resolveMartialArtsTypeLabel(urlType, types);
+      if (matched) return matched;
     }
-    return "Karate";
+    return types[0]?.label || "Karate";
   });
 
   useEffect(() => {
@@ -97,10 +128,13 @@ function ProgramsContent({ initialNavItems, initialHomepageData }: ProgramsPageC
     if (urlAudience === "adults" || urlAudience === "ladies" || urlAudience === "kids") {
       setAudienceCategory(urlAudience);
     }
-    if (urlType && (MARTIAL_ARTS_TYPES as readonly string[]).includes(urlType)) {
-      setMartialArtsType(urlType);
+    if (urlType) {
+      const matched = resolveMartialArtsTypeLabel(urlType, martialArtsTypesList);
+      if (matched) {
+        setMartialArtsType(matched);
+      }
     }
-  }, [urlCat, urlAudience, urlType]);
+  }, [urlCat, urlAudience, urlType, martialArtsTypesList]);
 
   const handleScheduleCheckout = (state: StudentScheduleSelectionState) => {
     const params = new URLSearchParams();
@@ -187,27 +221,27 @@ function ProgramsContent({ initialNavItems, initialHomepageData }: ProgramsPageC
                   </span>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 px-0.5">
-                  {MARTIAL_ARTS_TYPES.map((type) => {
-                    const isSelected = martialArtsType === type;
+                  {martialArtsTypesList.map((item, index) => {
+                    const isSelected = martialArtsType === item.label;
                     return (
                       <label
-                        key={type}
+                        key={item.id}
                         className={`flex items-center gap-2 cursor-pointer text-xs sm:text-sm font-bold py-2 px-2.5 sm:px-3 rounded-xl transition-all select-none border whitespace-nowrap ${
                           isSelected
                             ? "bg-white/10 text-white border-white/20 shadow-sm"
                             : "text-gray-300 hover:text-white hover:bg-white/5 border-transparent"
-                        } ${type === "Weapons Only" ? "col-span-2 sm:col-span-1 md:col-span-1" : ""}`}
+                        } ${index === 4 ? "col-span-2 sm:col-span-1 md:col-span-1" : ""}`}
                       >
                         <input
                           type="radio"
                           name="martialArtsType"
-                          value={type}
+                          value={item.label}
                           checked={isSelected}
-                          onChange={() => setMartialArtsType(type)}
+                          onChange={() => setMartialArtsType(item.label)}
                           className="w-4 h-4 shrink-0 text-[#E50914] bg-[#0F1117] border-white/20 focus:ring-[#E50914] focus:ring-1 cursor-pointer accent-[#E50914]"
                         />
                         <span className={`whitespace-nowrap tracking-tight ${isSelected ? "text-white font-extrabold" : "text-gray-300"}`}>
-                          {type}
+                          {item.label}
                         </span>
                       </label>
                     );
@@ -280,10 +314,18 @@ function ProgramsContent({ initialNavItems, initialHomepageData }: ProgramsPageC
   );
 }
 
-export function ProgramsPageClient({ initialNavItems, initialHomepageData }: ProgramsPageClientProps = {}) {
+export function ProgramsPageClient({
+  initialNavItems,
+  initialHomepageData,
+  initialMartialArtsTypes,
+}: ProgramsPageClientProps = {}) {
   return (
     <Suspense fallback={<div className="min-h-screen bg-[#0A0B0E] text-white flex items-center justify-center">Loading programs...</div>}>
-      <ProgramsContent initialNavItems={initialNavItems} initialHomepageData={initialHomepageData} />
+      <ProgramsContent
+        initialNavItems={initialNavItems}
+        initialHomepageData={initialHomepageData}
+        initialMartialArtsTypes={initialMartialArtsTypes}
+      />
     </Suspense>
   );
 }

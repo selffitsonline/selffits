@@ -6,12 +6,35 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Header } from "@/components/public/header";
 import { Footer } from "@/components/public/footer";
 import { CheckCircle2, ArrowRight, Sparkles, ShieldCheck, Video, Award } from "lucide-react";
+import { getMartialArtsTypesAction } from "@/actions/admin.actions";
+import {
+  MartialArtsTypeItem,
+  DEFAULT_MARTIAL_ARTS_TYPE_ITEMS,
+  resolveMartialArtsTypeLabel,
+} from "@/lib/schedule-config";
 
 export default function CheckoutSuccessPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const planId = searchParams.get("plan") || "plan-3-day";
-  const martialArtsType = searchParams.get("type");
+  const rawMartialArtsType = searchParams.get("type");
+  const [martialArtsTypesList, setMartialArtsTypesList] = useState<MartialArtsTypeItem[]>(() =>
+    DEFAULT_MARTIAL_ARTS_TYPE_ITEMS.map((item) => ({ ...item }))
+  );
+
+  useEffect(() => {
+    getMartialArtsTypesAction()
+      .then((res) => {
+        if (res?.success && Array.isArray(res.types) && res.types.length > 0) {
+          setMartialArtsTypesList(res.types);
+        }
+      })
+      .catch((e) => console.error("Failed to load martial arts types on checkout success:", e));
+  }, []);
+
+  const martialArtsType = rawMartialArtsType
+    ? resolveMartialArtsTypeLabel(rawMartialArtsType, martialArtsTypesList) || rawMartialArtsType
+    : null;
   const [countdown, setCountdown] = useState(10);
 
   const plansData: Record<string, any> = {

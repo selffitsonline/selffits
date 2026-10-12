@@ -31,7 +31,13 @@ export interface CentralScheduleConfig {
   membershipPlans: MembershipPlanConfig[];
 }
 
-export const MARTIAL_ARTS_TYPES = [
+export interface MartialArtsTypeItem {
+  id: string;
+  defaultLabel: string;
+  label: string;
+}
+
+export const DEFAULT_MARTIAL_ARTS_TYPES = [
   "Karate",
   "Kick Boxing",
   "Yoga",
@@ -39,7 +45,73 @@ export const MARTIAL_ARTS_TYPES = [
   "Weapons Only",
 ] as const;
 
-export type MartialArtsType = (typeof MARTIAL_ARTS_TYPES)[number];
+export const DEFAULT_MARTIAL_ARTS_TYPE_ITEMS: MartialArtsTypeItem[] = [
+  { id: "karate", defaultLabel: "Karate", label: "Karate" },
+  { id: "kick-boxing", defaultLabel: "Kick Boxing", label: "Kick Boxing" },
+  { id: "yoga", defaultLabel: "Yoga", label: "Yoga" },
+  { id: "tai-chi", defaultLabel: "Tai Chi", label: "Tai Chi" },
+  { id: "weapons-only", defaultLabel: "Weapons Only", label: "Weapons Only" },
+];
+
+export const MARTIAL_ARTS_TYPES = DEFAULT_MARTIAL_ARTS_TYPES;
+
+export type MartialArtsType = string;
+
+export function normalizeMartialArtsTypeItems(raw: any): MartialArtsTypeItem[] {
+  if (!Array.isArray(raw) || raw.length === 0) {
+    return DEFAULT_MARTIAL_ARTS_TYPE_ITEMS.map((item) => ({ ...item }));
+  }
+
+  return DEFAULT_MARTIAL_ARTS_TYPE_ITEMS.map((defaultItem, index) => {
+    const found = raw.find((r: any) => {
+      if (!r) return false;
+      if (typeof r === "string") return r === defaultItem.defaultLabel || index === raw.indexOf(r);
+      if (typeof r === "object") {
+        return r.id === defaultItem.id || r.defaultLabel === defaultItem.defaultLabel;
+      }
+      return false;
+    });
+
+    if (found) {
+      if (typeof found === "string") {
+        return {
+          id: defaultItem.id,
+          defaultLabel: defaultItem.defaultLabel,
+          label: found.trim() || defaultItem.defaultLabel,
+        };
+      }
+      return {
+        id: defaultItem.id,
+        defaultLabel: defaultItem.defaultLabel,
+        label: (found.label || found.defaultLabel || defaultItem.defaultLabel).trim(),
+      };
+    }
+
+    if (typeof raw[index] === "string" && raw[index].trim()) {
+      return {
+        id: defaultItem.id,
+        defaultLabel: defaultItem.defaultLabel,
+        label: raw[index].trim(),
+      };
+    }
+
+    return { ...defaultItem };
+  });
+}
+
+export function resolveMartialArtsTypeLabel(
+  rawType: string | null | undefined,
+  configuredTypes: MartialArtsTypeItem[] = DEFAULT_MARTIAL_ARTS_TYPE_ITEMS
+): string | undefined {
+  if (!rawType) return undefined;
+  const match = configuredTypes.find(
+    (t) =>
+      t.label.toLowerCase() === rawType.toLowerCase() ||
+      t.defaultLabel.toLowerCase() === rawType.toLowerCase() ||
+      t.id.toLowerCase() === rawType.toLowerCase()
+  );
+  return match ? match.label : rawType;
+}
 
 // 1. MMA - KIDS
 export const DEFAULT_MMA_KIDS_SCHEDULE_CONFIG: CentralScheduleConfig = {

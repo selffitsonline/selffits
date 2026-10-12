@@ -21,12 +21,22 @@ export const metadata: Metadata = {
   },
 };
 
-import { getAdminMenuItemsAction, getAdminHomepageManagementAction } from "@/actions/admin.actions";
+import {
+  getAdminMenuItemsAction,
+  getAdminHomepageManagementAction,
+  getAdminProgramsCatalogAction,
+} from "@/actions/admin.actions";
+import {
+  MartialArtsTypeItem,
+  DEFAULT_MARTIAL_ARTS_TYPE_ITEMS,
+  normalizeMartialArtsTypeItems,
+} from "@/lib/schedule-config";
 
 export default async function ProgramsPage() {
-  const [menuRes, homepageRes] = await Promise.all([
+  const [menuRes, homepageRes, catalogRes] = await Promise.all([
     getAdminMenuItemsAction(),
     getAdminHomepageManagementAction(),
+    getAdminProgramsCatalogAction(),
   ]);
   const initialNavItems = menuRes && menuRes.success && Array.isArray(menuRes.headerMenu)
     ? menuRes.headerMenu.filter((i: any) => i.isEnabled).map((i: any) => ({ name: i.label, href: i.href }))
@@ -38,6 +48,10 @@ export default async function ProgramsPage() {
         couponCta: homepageRes.homepageData?.couponCta,
       }
     : null;
+  const initialMartialArtsTypes: MartialArtsTypeItem[] =
+    catalogRes && catalogRes.success && (catalogRes.catalog as any)?.martialArtsTypes
+      ? normalizeMartialArtsTypeItems((catalogRes.catalog as any).martialArtsTypes)
+      : DEFAULT_MARTIAL_ARTS_TYPE_ITEMS.map((item) => ({ ...item }));
 
   const breadcrumbSchema = generateBreadcrumbSchema([
     { name: "Home", url: "/" },
@@ -102,7 +116,11 @@ export default async function ProgramsPage() {
   return (
     <>
       <JsonLd data={[breadcrumbSchema, courseListSchema]} />
-      <ProgramsPageClient initialNavItems={initialNavItems} initialHomepageData={initialHomepageData} />
+      <ProgramsPageClient
+        initialNavItems={initialNavItems}
+        initialHomepageData={initialHomepageData}
+        initialMartialArtsTypes={initialMartialArtsTypes}
+      />
     </>
   );
 }

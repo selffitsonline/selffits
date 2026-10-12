@@ -7,6 +7,12 @@ import { Footer } from "@/components/public/footer";
 import { RazorpayCheckout } from "@/components/public/razorpay-checkout";
 import { Check, Calendar, Clock, Sparkles, Tag } from "lucide-react";
 import { validateCouponAction } from "@/actions/coupons.actions";
+import { getMartialArtsTypesAction } from "@/actions/admin.actions";
+import {
+  MartialArtsTypeItem,
+  DEFAULT_MARTIAL_ARTS_TYPE_ITEMS,
+  resolveMartialArtsTypeLabel,
+} from "@/lib/schedule-config";
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
@@ -15,7 +21,25 @@ function CheckoutContent() {
   const daysParam = searchParams.get("days") || "Sunday,Wednesday,Saturday";
   const batchParam = searchParams.get("batch") || "2nd Batch — 02:30 PM to 03:30 PM (GMT)";
   const priceParam = searchParams.get("price") || "55";
-  const martialArtsTypeParam = searchParams.get("type") || searchParams.get("martialArtsType") || "";
+  const rawMartialArtsType = searchParams.get("type") || searchParams.get("martialArtsType") || "";
+
+  const [martialArtsTypesList, setMartialArtsTypesList] = useState<MartialArtsTypeItem[]>(() =>
+    DEFAULT_MARTIAL_ARTS_TYPE_ITEMS.map((item) => ({ ...item }))
+  );
+
+  React.useEffect(() => {
+    getMartialArtsTypesAction()
+      .then((res) => {
+        if (res?.success && Array.isArray(res.types) && res.types.length > 0) {
+          setMartialArtsTypesList(res.types);
+        }
+      })
+      .catch((e) => console.error("Failed to load martial arts types on checkout:", e));
+  }, []);
+
+  const martialArtsTypeParam = rawMartialArtsType
+    ? resolveMartialArtsTypeLabel(rawMartialArtsType, martialArtsTypesList) || rawMartialArtsType
+    : "";
 
   const dietAddonParam = searchParams.get("dietAddon") === "true";
   const dietPriceParam = parseFloat(searchParams.get("dietPrice") || "10") || 10;

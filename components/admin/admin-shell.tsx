@@ -24,6 +24,7 @@ import {
   Layers,
   Award,
   Tag,
+  Info,
 } from "lucide-react";
 
 interface AdminShellProps {
@@ -43,6 +44,7 @@ export function AdminShell({ children }: AdminShellProps) {
     { label: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
     { label: "Menu Management", href: "/admin/menu", icon: MenuIcon },
     { label: "Homepage Management", href: "/admin/banner", icon: ImageIcon },
+    { label: "About Us Page", href: "/admin/about", icon: Info },
     { label: "Programs & Pricing", href: "/admin/programs", icon: BookOpen },
     { label: "Registered Students", href: "/admin/students", icon: Users },
     { label: "Batch Management", href: "/admin/batches", icon: Layers },
