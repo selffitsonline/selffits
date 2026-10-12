@@ -28,13 +28,19 @@ async function fetchAboutPageConfigInternal(): Promise<AboutPageConfig> {
   }
 }
 
+const getCachedAboutPageConfig = unstable_cache(
+  fetchAboutPageConfigInternal,
+  ["about_page_config_cache_key"],
+  { tags: ["about_page_config"], revalidate: 3600 }
+);
+
 export async function getAboutPageConfigAction(): Promise<{
   success: boolean;
   config: AboutPageConfig;
   error?: string;
 }> {
   try {
-    const config = await fetchAboutPageConfigInternal();
+    const config = await getCachedAboutPageConfig();
     return { success: true, config };
   } catch (err: any) {
     console.error("getAboutPageConfigAction error:", err);

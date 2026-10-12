@@ -12,6 +12,7 @@ import {
   DEFAULT_MARTIAL_ARTS_TYPE_ITEMS,
   resolveMartialArtsTypeLabel,
 } from "@/lib/schedule-config";
+import { cachedClientMartialArtsTypes } from "@/components/public/programs-page-client";
 
 export default function CheckoutSuccessPage() {
   const router = useRouter();
@@ -19,10 +20,13 @@ export default function CheckoutSuccessPage() {
   const planId = searchParams.get("plan") || "plan-3-day";
   const rawMartialArtsType = searchParams.get("type");
   const [martialArtsTypesList, setMartialArtsTypesList] = useState<MartialArtsTypeItem[]>(() =>
-    DEFAULT_MARTIAL_ARTS_TYPE_ITEMS.map((item) => ({ ...item }))
+    cachedClientMartialArtsTypes && cachedClientMartialArtsTypes.length > 0
+      ? cachedClientMartialArtsTypes
+      : DEFAULT_MARTIAL_ARTS_TYPE_ITEMS.map((item) => ({ ...item }))
   );
 
   useEffect(() => {
+    if (cachedClientMartialArtsTypes && cachedClientMartialArtsTypes.length > 0) return;
     getMartialArtsTypesAction()
       .then((res) => {
         if (res?.success && Array.isArray(res.types) && res.types.length > 0) {

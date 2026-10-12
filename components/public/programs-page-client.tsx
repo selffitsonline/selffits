@@ -47,6 +47,8 @@ interface ProgramsPageClientProps {
   initialMartialArtsTypes?: MartialArtsTypeItem[];
 }
 
+export let cachedClientMartialArtsTypes: MartialArtsTypeItem[] | null = null;
+
 function ProgramsContent({
   initialNavItems,
   initialHomepageData,
@@ -54,6 +56,10 @@ function ProgramsContent({
 }: ProgramsPageClientProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+
+  if (initialMartialArtsTypes && initialMartialArtsTypes.length > 0) {
+    cachedClientMartialArtsTypes = initialMartialArtsTypes;
+  }
 
   const [beltSyllabusData, setBeltSyllabusData] = useState<any>(
     () => initialHomepageData?.beltSyllabus || null
@@ -69,6 +75,8 @@ function ProgramsContent({
     () =>
       initialMartialArtsTypes && initialMartialArtsTypes.length > 0
         ? initialMartialArtsTypes
+        : cachedClientMartialArtsTypes && cachedClientMartialArtsTypes.length > 0
+        ? cachedClientMartialArtsTypes
         : DEFAULT_MARTIAL_ARTS_TYPE_ITEMS.map((item) => ({ ...item }))
   );
 
@@ -89,15 +97,18 @@ function ProgramsContent({
         .catch((err) => console.error("Failed to load fallback homepage data on programs page:", err));
     }
 
-    // Refresh martial arts types client-side for dynamic freshness
-    getMartialArtsTypesAction()
-      .then((res) => {
-        if (res?.success && Array.isArray(res.types) && res.types.length > 0) {
-          setMartialArtsTypesList(res.types);
-        }
-      })
-      .catch((err) => console.error("Failed to load fresh martial arts types:", err));
-  }, [initialHomepageData]);
+    // Only fallback-fetch if server initial props were omitted
+    if (!initialMartialArtsTypes || initialMartialArtsTypes.length === 0) {
+      getMartialArtsTypesAction()
+        .then((res) => {
+          if (res?.success && Array.isArray(res.types) && res.types.length > 0) {
+            cachedClientMartialArtsTypes = res.types;
+            setMartialArtsTypesList(res.types);
+          }
+        })
+        .catch((err) => console.error("Failed to load fallback martial arts types:", err));
+    }
+  }, [initialHomepageData, initialMartialArtsTypes]);
 
   const urlCat = searchParams.get("cat");
   const urlAudience = searchParams.get("audience");
@@ -134,7 +145,7 @@ function ProgramsContent({
         setMartialArtsType(matched);
       }
     }
-  }, [urlCat, urlAudience, urlType, martialArtsTypesList]);
+  }, [urlCat, urlAudience, urlType]);
 
   const handleScheduleCheckout = (state: StudentScheduleSelectionState) => {
     const params = new URLSearchParams();

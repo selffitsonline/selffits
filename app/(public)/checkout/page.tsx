@@ -13,6 +13,7 @@ import {
   DEFAULT_MARTIAL_ARTS_TYPE_ITEMS,
   resolveMartialArtsTypeLabel,
 } from "@/lib/schedule-config";
+import { cachedClientMartialArtsTypes } from "@/components/public/programs-page-client";
 
 function CheckoutContent() {
   const searchParams = useSearchParams();
@@ -24,10 +25,13 @@ function CheckoutContent() {
   const rawMartialArtsType = searchParams.get("type") || searchParams.get("martialArtsType") || "";
 
   const [martialArtsTypesList, setMartialArtsTypesList] = useState<MartialArtsTypeItem[]>(() =>
-    DEFAULT_MARTIAL_ARTS_TYPE_ITEMS.map((item) => ({ ...item }))
+    cachedClientMartialArtsTypes && cachedClientMartialArtsTypes.length > 0
+      ? cachedClientMartialArtsTypes
+      : DEFAULT_MARTIAL_ARTS_TYPE_ITEMS.map((item) => ({ ...item }))
   );
 
   React.useEffect(() => {
+    if (cachedClientMartialArtsTypes && cachedClientMartialArtsTypes.length > 0) return;
     getMartialArtsTypesAction()
       .then((res) => {
         if (res?.success && Array.isArray(res.types) && res.types.length > 0) {

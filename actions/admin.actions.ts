@@ -1753,9 +1753,15 @@ async function fetchProgramsCatalogInternal() {
   };
 }
 
+const getCachedProgramsCatalog = unstable_cache(
+  fetchProgramsCatalogInternal,
+  ["programs_catalog_cache_key"],
+  { tags: ["programs_catalog"], revalidate: 3600 }
+);
+
 export async function getAdminProgramsCatalogAction() {
   try {
-    return await fetchProgramsCatalogInternal();
+    return await getCachedProgramsCatalog();
   } catch (err: any) {
     console.error("getAdminProgramsCatalogAction error:", err);
     return { success: false as const, error: "Failed to fetch programs catalog." };

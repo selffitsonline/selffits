@@ -1,4 +1,4 @@
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 import React from "react";
 import type { Metadata } from "next";
@@ -165,6 +165,7 @@ export default async function AboutPage() {
               }
               width={600}
               height={450}
+              priority
               unoptimized={isExternalImage}
               className="w-full h-[400px] object-cover"
             />
