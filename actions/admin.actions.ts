@@ -1058,6 +1058,7 @@ export async function updateAdminHomepageSectionAction(sectionKey: string, data:
     revalidatePath("/");
     revalidatePath("/coaches");
     revalidatePath("/programs");
+    revalidatePath("/api/v1/public/catalog");
     return { success: true, message: "Section published successfully!" };
   } catch (err: any) {
     console.error("updateAdminHomepageSectionAction error:", err);
@@ -1827,6 +1828,7 @@ export async function updateAdminProgramsCatalogAction(catalogData: any) {
     revalidatePath("/admin/programs");
     revalidatePath("/admin/students");
     revalidatePath("/dashboard");
+    revalidatePath("/api/v1/public/catalog");
     return { success: true, message: "Course catalog updated successfully!" };
   } catch (err: any) {
     console.error("updateAdminProgramsCatalogAction error:", err);
@@ -1929,6 +1931,7 @@ export async function updateSingleMartialArtsTypeAction(
     revalidatePath("/admin/programs");
     revalidatePath("/admin/students");
     revalidatePath("/dashboard");
+    revalidatePath("/api/v1/public/catalog");
 
     return {
       success: true,

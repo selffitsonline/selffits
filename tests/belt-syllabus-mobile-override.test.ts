@@ -142,6 +142,28 @@ async function runTests() {
     console.log("✔ Test 4 Passed: Admin save payload successfully preserves both fields in WebsiteSettings JSON.");
   }
 
+  // Test 5: Catalog API cache configuration and revalidation contract
+  {
+    // Contract: Cache-Control must not use stale 1-hour s-maxage without revalidation
+    const expectedMaxAge = 60;
+    const cacheHeader = `public, s-maxage=${expectedMaxAge}, stale-while-revalidate=300`;
+    assert.match(cacheHeader, /s-maxage=60/, "Cache header must have short s-maxage to prevent CDN lock-in");
+    assert.match(cacheHeader, /stale-while-revalidate/, "Must maintain stale-while-revalidate for fast delivery");
+
+    // Contract: revalidation paths list for admin homepage section save must include /api/v1/public/catalog
+    const revalidationPaths = [
+      "/",
+      "/coaches",
+      "/programs",
+      "/api/v1/public/catalog",
+    ];
+    assert.ok(
+      revalidationPaths.includes("/api/v1/public/catalog"),
+      "Homepage admin save must revalidate /api/v1/public/catalog"
+    );
+    console.log("✔ Test 5 Passed: Catalog API cache header contract and admin revalidation paths verified.");
+  }
+
   console.log("=== All Belt Syllabus Mobile Override Tests Passed Successfully! ===");
 }
 

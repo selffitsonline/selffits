@@ -418,7 +418,7 @@ export async function GET(): Promise<NextResponse<ApiResponse<PublicCatalogRespo
       {
         status: 200,
         headers: {
-          "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
         },
       }
     );

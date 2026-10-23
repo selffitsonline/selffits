@@ -604,5 +604,54 @@ void main() {
         expect(find.text('\$29'), findsWidgets);
       },
     );
+
+    test('CatalogRepository forceRefresh sends cache-busting query and headers', () async {
+      final storage = InMemorySecureStorageService();
+      http.BaseRequest? capturedRequest;
+
+      final mockClient = MockHttpClient((request) async {
+        capturedRequest = request;
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': createSampleCatalogJson(),
+          }),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final repository = CatalogRepository(
+        apiClient: ApiClient(httpClient: mockClient),
+        storage: storage,
+      );
+
+      // 1. Normal request (forceRefresh = false)
+      final normalResult = await repository.getCatalog(forceRefresh: false);
+      expect(normalResult.data, isNotNull);
+      expect(normalResult.isFromCache, isFalse);
+      expect(capturedRequest?.url.queryParameters.containsKey('t'), isFalse);
+      expect(capturedRequest?.headers.containsKey('cache-control'), isFalse);
+
+      // 2. Force refresh (forceRefresh = true)
+      final refreshResult = await repository.getCatalog(forceRefresh: true);
+      expect(refreshResult.data, isNotNull);
+      expect(refreshResult.isFromCache, isFalse);
+      expect(capturedRequest?.url.queryParameters.containsKey('t'), isTrue);
+      expect(capturedRequest?.headers['cache-control'], contains('no-cache'));
+      expect(capturedRequest?.headers['pragma'], equals('no-cache'));
+
+      // 3. Force refresh offline fallback
+      final offlineClient = MockHttpClient((request) async {
+        return http.Response('Offline Error', 503);
+      });
+      final offlineRepo = CatalogRepository(
+        apiClient: ApiClient(httpClient: offlineClient),
+        storage: storage,
+      );
+      final offlineResult = await offlineRepo.getCatalog(forceRefresh: true);
+      expect(offlineResult.isFromCache, isTrue);
+      expect(offlineResult.data, isNotNull);
+    });
   });
 }
