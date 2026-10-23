@@ -459,6 +459,7 @@ async function fetchHomepageDataInternal() {
       headingBadge: "BELT PROGRESSION SYLLABUS",
       headingTitle: "Your Martial Arts Learning Journey",
       headingSubtitle: "Explore the skills, techniques, and syllabus covered at each belt progression rank from White Belt to Black Belt.",
+      headingSubtitleMobile: "",
       belts: [
         {
           id: "white_belt",

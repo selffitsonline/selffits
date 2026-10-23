@@ -225,14 +225,31 @@ export async function GET(): Promise<NextResponse<ApiResponse<PublicCatalogRespo
       const rawBelts = Array.isArray(hpData.beltSyllabus.belts)
         ? hpData.beltSyllabus.belts
         : [];
+      // Resolve mobile subtitle: non-empty headingSubtitleMobile -> existing headingSubtitle -> default
+      const mobileOverride =
+        typeof hpData.beltSyllabus.headingSubtitleMobile === "string"
+          ? hpData.beltSyllabus.headingSubtitleMobile.trim()
+          : "";
+      const websiteSubtitle =
+        typeof hpData.beltSyllabus.headingSubtitle === "string"
+          ? hpData.beltSyllabus.headingSubtitle.trim()
+          : "";
+      const defaultSubtitle =
+        "Explore the skills, techniques, and syllabus covered at each belt progression rank from White Belt to Black Belt.";
+
+      const resolvedSubtitle =
+        mobileOverride.length > 0
+          ? mobileOverride
+          : websiteSubtitle.length > 0
+          ? websiteSubtitle
+          : defaultSubtitle;
+
       beltSyllabusSection = {
         headingBadge:
           hpData.beltSyllabus.headingBadge || "BELT PROGRESSION SYLLABUS",
         headingTitle:
           hpData.beltSyllabus.headingTitle || "Your Martial Arts Learning Journey",
-        headingSubtitle:
-          hpData.beltSyllabus.headingSubtitle ||
-          "Explore the skills, techniques, and syllabus covered at each belt progression rank from White Belt to Black Belt.",
+        headingSubtitle: resolvedSubtitle,
         belts: rawBelts
           .filter((b: any) => b.isEnabled !== false)
           .map((b: any) => ({

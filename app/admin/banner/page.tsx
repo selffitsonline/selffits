@@ -58,6 +58,7 @@ export default function AdminHomepageManagementPage() {
     headingBadge: "",
     headingTitle: "",
     headingSubtitle: "",
+    headingSubtitleMobile: "",
     belts: [],
   });
 
@@ -1297,14 +1298,32 @@ export default function AdminHomepageManagementPage() {
 
               <div>
                 <label className="block text-xs font-bold uppercase text-gray-300 mb-1">
-                  Subheading Description
+                  Website Subheading Description
                 </label>
                 <input
                   type="text"
                   value={beltSyllabusSection.headingSubtitle || ""}
                   onChange={(e) => setBeltSyllabusSection({ ...beltSyllabusSection, headingSubtitle: e.target.value })}
                   className="w-full h-11 px-4 rounded-xl bg-[#0F1117] border border-white/10 text-white text-xs font-medium"
-                  placeholder="Subheading description..."
+                  placeholder="Website subheading description..."
+                />
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold uppercase text-gray-300">
+                    Mobile Subheading Description (Optional)
+                  </label>
+                  <span className="text-[10px] text-gray-400 font-medium">
+                    Used only by Flutter mobile app • Falls back to website description if blank
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  value={beltSyllabusSection.headingSubtitleMobile || ""}
+                  onChange={(e) => setBeltSyllabusSection({ ...beltSyllabusSection, headingSubtitleMobile: e.target.value })}
+                  className="w-full h-11 px-4 rounded-xl bg-[#0F1117] border border-white/10 text-white text-xs font-medium"
+                  placeholder="Short description for mobile app (optional)..."
                 />
               </div>
 
