@@ -96,7 +96,10 @@ export function RazorpayCheckout({
     e.preventDefault();
 
     if (!session) {
-      router.push(`/login?callbackUrl=/checkout?plan=${planId}`);
+      const currentUrl = typeof window !== "undefined"
+        ? `${window.location.pathname}${window.location.search}`
+        : `/checkout?plan=${planId}`;
+      router.push(`/login?callbackUrl=${encodeURIComponent(currentUrl)}`);
       return;
     }
 
@@ -140,7 +143,10 @@ export function RazorpayCheckout({
   // Modal Fallback Checkout
   const handleModalCheckout = async () => {
     if (!session) {
-      router.push(`/login?callbackUrl=/checkout?plan=${planId}`);
+      const currentUrl = typeof window !== "undefined"
+        ? `${window.location.pathname}${window.location.search}`
+        : `/checkout?plan=${planId}`;
+      router.push(`/login?callbackUrl=${encodeURIComponent(currentUrl)}`);
       return;
     }
 

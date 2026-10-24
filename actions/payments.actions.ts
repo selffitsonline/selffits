@@ -517,31 +517,13 @@ export async function getStudentEnrollmentAction() {
       };
     });
 
-    const sampleExpiredCourse = {
-      id: "sample-expired-course-demo",
-      programName: "Sample Expired Martial Arts Course (Demo)",
-      title: "Sample Expired Martial Arts Course (Demo)",
-      category: "MARTIAL ARTS",
-      image: "/images/adults_martial_arts.png",
-      beltLevel: "1 Day / Week",
-      remainingClasses: 0,
-      totalClasses: 8,
-      duration: "8 Classes (Completed)",
-      daysRemaining: 0,
-      membershipStatus: "EXPIRED",
-      status: "EXPIRED",
-      expiryDate: "Aug 1, 2026",
-      nextClassTime: "Course Expired",
-      instructor: "Sensei Rahul Sharma",
-    };
-
-    const finalEnrollments = [...formattedEnrollments, sampleExpiredCourse];
+    const finalEnrollments = formattedEnrollments;
     const activeEnrollment = finalEnrollments.find((item) => item.status === "ACTIVE");
 
     return {
       success: true,
       isEnrolled: !!activeEnrollment,
-      enrollment: activeEnrollment || finalEnrollments[0],
+      enrollment: activeEnrollment || finalEnrollments[0] || null,
       enrollments: finalEnrollments,
     };
   } catch (err: any) {

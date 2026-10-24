@@ -25,7 +25,12 @@ export default function StudentLiveClassesPage() {
     loadStudentBatch();
   }, []);
 
-  const isMeetingActive = !!(batchInfo && batchInfo.meetingUrl && batchInfo.status !== "INACTIVE");
+  const isMeetingActive = !!(
+    batchInfo &&
+    batchInfo.isReady &&
+    batchInfo.meetingUrl &&
+    batchInfo.status !== "INACTIVE"
+  );
 
   return (
     <StudentShell>

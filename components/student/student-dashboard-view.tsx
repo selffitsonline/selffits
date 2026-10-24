@@ -34,18 +34,8 @@ export function StudentDashboardView({
   initialEnrollment,
 }: StudentDashboardViewProps) {
   const [isEnrolled, setIsEnrolled] = useState<boolean>(initialIsEnrolled);
-  const [activeStudentData, setActiveStudentData] = useState(
-    initialEnrollment || {
-      programName: "Adults Martial Arts - 3 Days / Week",
-      beltLevel: "3 Days / Week",
-      remainingClasses: 18,
-      totalClasses: 24,
-      daysRemaining: 42,
-      membershipStatus: "ACTIVE",
-      expiryDate: "October 15, 2026",
-      nextClassTime: "Today at 7:00 PM IST",
-      instructor: "Sensei Rahul Sharma",
-    }
+  const [activeStudentData, setActiveStudentData] = useState<any | null>(
+    initialEnrollment || null
   );
 
   const [batchInfo, setBatchInfo] = useState<any | null>(null);
@@ -67,14 +57,26 @@ export function StudentDashboardView({
     loadBatchData();
   }, []);
 
-  const completedClasses = activeStudentData.totalClasses - activeStudentData.remainingClasses;
-  const progressPercentage = Math.min(
-    100,
-    Math.round((completedClasses / (activeStudentData.totalClasses || 24)) * 100)
-  );
+  const completedClasses = activeStudentData
+    ? activeStudentData.totalClasses - activeStudentData.remainingClasses
+    : 0;
+  const progressPercentage =
+    activeStudentData && activeStudentData.totalClasses > 0
+      ? Math.min(
+          100,
+          Math.round(
+            (completedClasses / activeStudentData.totalClasses) * 100
+          )
+        )
+      : 0;
 
-  // Check if batch is ready with an active admin-assigned meeting URL
-  const isMeetingActive = !!(batchInfo && batchInfo.meetingUrl && batchInfo.status !== "INACTIVE");
+  // Check if batch is ready with an active admin-assigned meeting URL and confirmed backend readiness
+  const isMeetingActive = !!(
+    batchInfo &&
+    batchInfo.isReady &&
+    batchInfo.meetingUrl &&
+    batchInfo.status !== "INACTIVE"
+  );
 
   return (
     <StudentShell>
@@ -92,8 +94,8 @@ export function StudentDashboardView({
                 Welcome Back, <span className="text-[#0080FF]">{userName}</span> 👋
               </h1>
               <p className="text-xs sm:text-sm text-gray-300 max-w-xl">
-                {isEnrolled
-                  ? `Your live virtual training membership is active. You have ${activeStudentData.remainingClasses} classes remaining in your ${activeStudentData.beltLevel} plan.`
+                {isEnrolled && activeStudentData
+                  ? `Your live virtual training membership is active. You have ${activeStudentData?.remainingClasses ?? 0} classes remaining in your ${activeStudentData?.beltLevel || "selected"} plan.`
                   : "Explore certified live martial arts & virtual fitness programs. Enroll today to start your journey."}
               </p>
             </div>
@@ -110,14 +112,14 @@ export function StudentDashboardView({
           </div>
 
           {/* Quick Metrics Bar */}
-          {isEnrolled && (
+          {isEnrolled && activeStudentData && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-6 mt-6 border-t border-white/10 relative z-10">
               <div className="bg-[#0F1117]/80 backdrop-blur-md p-3.5 rounded-2xl border border-white/10">
                 <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">
                   Membership Level
                 </span>
                 <span className="text-sm font-extrabold text-[#0080FF] flex items-center gap-1.5 mt-0.5">
-                  <Award className="w-4 h-4 text-[#0080FF]" /> {batchInfo?.levelName || activeStudentData.beltLevel}
+                  <Award className="w-4 h-4 text-[#0080FF]" /> {batchInfo?.levelName || activeStudentData?.beltLevel || "Active Plan"}
                 </span>
               </div>
 
@@ -126,7 +128,7 @@ export function StudentDashboardView({
                   Classes Remaining
                 </span>
                 <span className="text-sm font-extrabold text-white flex items-center gap-1.5 mt-0.5">
-                  <BookOpen className="w-4 h-4 text-[#10B981]" /> {activeStudentData.remainingClasses} / {activeStudentData.totalClasses}
+                  <BookOpen className="w-4 h-4 text-[#10B981]" /> {activeStudentData?.remainingClasses ?? 0} / {activeStudentData?.totalClasses ?? 0}
                 </span>
               </div>
 
@@ -135,7 +137,7 @@ export function StudentDashboardView({
                   Membership Validity
                 </span>
                 <span className="text-sm font-extrabold text-white flex items-center gap-1.5 mt-0.5">
-                  <Calendar className="w-4 h-4 text-[#F59E0B]" /> {activeStudentData.daysRemaining} Days
+                  <Calendar className="w-4 h-4 text-[#F59E0B]" /> {activeStudentData?.daysRemaining ?? 0} Days
                 </span>
               </div>
 
@@ -160,9 +162,9 @@ export function StudentDashboardView({
                   Enrolled Active Program
                 </span>
                 <h2 className="text-xl sm:text-2xl font-extrabold text-white font-[family-name:var(--font-outfit)] mt-2">
-                  {batchInfo?.programTitle || activeStudentData.programName}
+                  {batchInfo?.programTitle || activeStudentData?.programName || "Active Training Program"}
                 </h2>
-                {activeStudentData.martialArtsType && (
+                {activeStudentData?.martialArtsType && (
                   <div className="flex items-center gap-2 mt-2">
                     <span className="text-xs font-semibold text-gray-400">Martial Arts Type:</span>
                     <span className="px-2.5 py-0.5 rounded-md bg-[#E50914]/15 text-[#E50914] border border-[#E50914]/30 font-extrabold text-xs">
@@ -199,10 +201,10 @@ export function StudentDashboardView({
                 <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Weekly Training Schedule</span>
                 <p className="text-xs font-extrabold text-[#0080FF] flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-[#0080FF]" />{" "}
-                  {activeStudentData.selectedDays && Array.isArray(activeStudentData.selectedDays)
+                  {activeStudentData?.selectedDays && Array.isArray(activeStudentData.selectedDays)
                     ? activeStudentData.selectedDays.join(", ")
                     : "Sun, Wed, Sat"}{" "}
-                  ({activeStudentData.daysPerWeek || 3} Days/Wk)
+                  ({activeStudentData?.daysPerWeek || 3} Days/Wk)
                 </p>
               </div>
 
@@ -214,7 +216,7 @@ export function StudentDashboardView({
                   <Clock className="w-4 h-4 text-[#10B981]" />{" "}
                   {batchInfo
                     ? `${batchInfo.nextSession?.nextClassFullDate || batchInfo.dayCombination} • ${batchInfo.clockTiming}`
-                    : activeStudentData.selectedBatch || activeStudentData.nextClassTime}
+                    : activeStudentData?.selectedBatch || activeStudentData?.nextClassTime || "Standard Timing"}
                 </p>
               </div>
 
@@ -222,7 +224,7 @@ export function StudentDashboardView({
                 <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Assigned Instructor</span>
                 <p className="text-xs font-extrabold text-white flex items-center gap-2">
                   <User className="w-4 h-4 text-[#E50914]" />{" "}
-                  {batchInfo?.coachName || activeStudentData.instructor}
+                  {batchInfo?.coachName || activeStudentData?.instructor || "Assigned Instructor"}
                 </p>
               </div>
             </div>

@@ -388,6 +388,9 @@ export const MobileEnrollmentSchema = z.object({
   couponCode: z.string().optional(),
   paymentMethod: z.enum(["card", "test_card", "razorpay"]).default("card"),
   currency: z.enum(["USD", "INR"]).default("USD"),
+  razorpayOrderId: z.string().optional(),
+  razorpayPaymentId: z.string().optional(),
+  razorpaySignature: z.string().optional(),
 });
 
 export type MobileEnrollmentInput = z.infer<typeof MobileEnrollmentSchema>;

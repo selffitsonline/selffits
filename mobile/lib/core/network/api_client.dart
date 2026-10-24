@@ -174,6 +174,12 @@ class ApiClient {
       if (response.statusCode >= 500) {
         throw const ServerException();
       }
+      if (response.statusCode == 404) {
+        throw const ApiException(
+          message: 'Server endpoint unavailable (HTTP 404).',
+          statusCode: 404,
+        );
+      }
       throw ApiException(
         message: 'Invalid response from server.',
         statusCode: response.statusCode,

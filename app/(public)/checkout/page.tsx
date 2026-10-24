@@ -56,7 +56,8 @@ function CheckoutContent() {
   const planName = `${daysPerWeek} ${daysPerWeek === 1 ? "Day" : "Days"} / Week Membership Plan`;
 
   // Coupon state
-  const [couponCodeInput, setCouponCodeInput] = useState("");
+  const couponParam = searchParams.get("coupon") || "";
+  const [couponCodeInput, setCouponCodeInput] = useState(couponParam);
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState<{
     code: string;
@@ -66,6 +67,27 @@ function CheckoutContent() {
     finalAmount: number;
   } | null>(null);
   const [couponError, setCouponError] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (couponParam) {
+      validateCouponAction({
+        code: couponParam.trim(),
+        currentAmount: priceNum,
+      })
+        .then((res) => {
+          if (res?.success && res.coupon) {
+            setAppliedCoupon({
+              code: res.coupon.code,
+              discountType: res.coupon.discountType,
+              discountValue: res.coupon.discountValue,
+              discountAmount: res.discountAmount || 0,
+              finalAmount: res.finalAmount !== undefined ? res.finalAmount : priceNum,
+            });
+          }
+        })
+        .catch(() => {});
+    }
+  }, [couponParam, priceNum]);
 
   const handleApplyCoupon = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();

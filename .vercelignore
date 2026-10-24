@@ -1,0 +1,6 @@
+# Vercel Deployment Exclusions
+# Prevent Flutter mobile app directory, tests, and scratch scripts from being traced or uploaded during website deployments
+mobile/
+tests/
+scratch/
+*.md
