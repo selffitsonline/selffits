@@ -111,6 +111,7 @@ export interface StudentDashboardResponseDto {
   user: MobileUserSummaryDto;
   isEnrolled: boolean;
   enrollment: StudentActiveEnrollmentSummaryDto | null;
+  enrollments?: StudentActiveEnrollmentSummaryDto[];
   classReadiness: StudentClassReadinessDto;
   unreadNotificationsCount: number;
 }

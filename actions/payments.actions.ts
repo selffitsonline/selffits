@@ -273,6 +273,28 @@ export async function verifyPaymentSignatureAction(payload: {
     const membershipPlan = await getOrCreateMembershipPlan(plan);
     const classTimingLabel = selectedBatch ? selectedBatch : "02:30 PM to 03:30 PM (GMT)";
 
+    // Prevent duplicate active enrollment
+    const now = new Date();
+    const existingActiveEnrollment = await db.enrollment.findFirst({
+      where: {
+        userId: user.id,
+        membershipPlan: {
+          programId: membershipPlan.programId,
+        },
+        ...(martialArtsType ? { martialArtsType } : {}),
+        status: "ACTIVE",
+        endDate: { gt: now },
+        remainingClasses: { gt: 0 },
+      },
+    });
+
+    if (existingActiveEnrollment) {
+      return {
+        success: false,
+        error: "You already have an active enrollment for this program. Please view your active schedule from the dashboard or renew after completing your classes.",
+      };
+    }
+
     const finalPaidPrice = existingPayment?.amount ? Number(existingPayment.amount) : (monthlyPrice || plan.priceUSD);
     const finalOriginalPrice = existingPayment?.originalAmount ? Number(existingPayment.originalAmount) : (monthlyPrice || plan.priceUSD);
     const finalDiscountAmount = existingPayment?.discountAmount ? Number(existingPayment.discountAmount) : 0;
@@ -419,14 +441,33 @@ export async function getStudentEnrollmentAction() {
       return { success: false, isEnrolled: false, enrollments: [] };
     }
 
-    const readiness = await getCentralClassReadinessForUser(session.user.id);
+    // Resolve user ID reliably from db.user by id or email
+    let userId = session.user.id;
+    const dbUser = await db.user.findFirst({
+      where: {
+        OR: [
+          { id: session.user.id },
+          ...(session.user.email ? [{ email: session.user.email.toLowerCase().trim() }] : []),
+        ],
+      },
+      select: { id: true },
+    });
+    if (dbUser) {
+      userId = dbUser.id;
+    }
+
+    const readiness = await getCentralClassReadinessForUser(userId);
 
     const rawEnrollments = await db.enrollment.findMany({
       where: {
-        userId: session.user.id,
+        userId: userId,
       },
       include: {
-        membershipPlan: true,
+        membershipPlan: {
+          include: {
+            program: true,
+          },
+        },
       },
       orderBy: {
         createdAt: "desc",
@@ -593,6 +634,28 @@ export async function createDirectCardEnrollmentAction(
 
     const membershipPlan = await getOrCreateMembershipPlan(plan);
     const classTimingLabel = scheduleData?.selectedBatch ? scheduleData.selectedBatch : "02:30 PM to 03:30 PM (GMT)";
+
+    // Prevent duplicate active enrollment
+    const now = new Date();
+    const existingActiveEnrollment = await db.enrollment.findFirst({
+      where: {
+        userId: user.id,
+        membershipPlan: {
+          programId: membershipPlan.programId,
+        },
+        ...(scheduleData?.martialArtsType ? { martialArtsType: scheduleData.martialArtsType } : {}),
+        status: "ACTIVE",
+        endDate: { gt: now },
+        remainingClasses: { gt: 0 },
+      },
+    });
+
+    if (existingActiveEnrollment) {
+      return {
+        success: false,
+        error: "You already have an active enrollment for this program. Please view your active schedule from the dashboard or renew after completing your classes.",
+      };
+    }
 
     const uniqueNonce = Math.random().toString(36).substring(2, 7);
     const orderId = `card_order_${Date.now()}_${uniqueNonce}`;

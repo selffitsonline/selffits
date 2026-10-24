@@ -108,18 +108,16 @@ export async function GET(
 
     const userId = liveUser.id;
 
-    // 3. Fetch active enrollment details enforcing non-expired status and remaining classes > 0
+    // 3. Fetch all enrollment details for student
     let activeEnrollmentSummary: StudentActiveEnrollmentSummaryDto | null = null;
+    let allEnrollmentsSummary: StudentActiveEnrollmentSummaryDto[] = [];
     let isEnrolled = false;
 
     try {
       const now = new Date();
-      const enrollment = await db.enrollment.findFirst({
+      const allDbEnrollments = await db.enrollment.findMany({
         where: {
           userId,
-          status: "ACTIVE",
-          endDate: { gt: now },
-          remainingClasses: { gt: 0 },
         },
         include: {
           membershipPlan: {
@@ -133,12 +131,11 @@ export async function GET(
         },
       });
 
-      if (enrollment) {
-        isEnrolled = true;
+      allEnrollmentsSummary = allDbEnrollments.map((enrollment) => {
         const diffTime = new Date(enrollment.endDate).getTime() - now.getTime();
         const daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
 
-        activeEnrollmentSummary = {
+        return {
           id: enrollment.id,
           programTitle:
             enrollment.membershipPlan?.program?.title ||
@@ -157,6 +154,38 @@ export async function GET(
           includeDietNutrition: !!enrollment.includeDietNutrition,
           status: enrollment.status,
         };
+      });
+
+      const activeEnrollment = allDbEnrollments.find(
+        (e) => e.status === "ACTIVE" && new Date(e.endDate) > now && e.remainingClasses > 0
+      );
+
+      if (activeEnrollment) {
+        isEnrolled = true;
+        const diffTime = new Date(activeEnrollment.endDate).getTime() - now.getTime();
+        const daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+
+        activeEnrollmentSummary = {
+          id: activeEnrollment.id,
+          programTitle:
+            activeEnrollment.membershipPlan?.program?.title ||
+            activeEnrollment.membershipPlan?.name ||
+            "Martial Arts Academy",
+          tierName: activeEnrollment.membershipPlan?.name || null,
+          remainingClasses: activeEnrollment.remainingClasses,
+          totalClasses: activeEnrollment.totalClassesGranted,
+          expiryDate: activeEnrollment.endDate.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          }),
+          daysRemaining,
+          martialArtsType: activeEnrollment.martialArtsType || null,
+          includeDietNutrition: !!activeEnrollment.includeDietNutrition,
+          status: activeEnrollment.status,
+        };
+      } else if (allEnrollmentsSummary.length > 0) {
+        activeEnrollmentSummary = allEnrollmentsSummary[0];
       }
     } catch (enrErr) {
       console.warn("Enrollment lookup warning:", enrErr);
@@ -227,6 +256,7 @@ export async function GET(
           },
           isEnrolled,
           enrollment: activeEnrollmentSummary,
+          enrollments: allEnrollmentsSummary,
           classReadiness: {
             hasBatch: readiness.hasBatch,
             isReady,

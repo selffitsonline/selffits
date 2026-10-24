@@ -151,6 +151,9 @@ export async function POST(req: Request): Promise<NextResponse<ApiResponse<Mobil
 
     if (user) {
       if (user.isBlocked) {
+        if (process.env.NODE_ENV !== "production") {
+          console.warn(`[AUTH-DEV] Login rejected: Account for "${email}" is marked as blocked.`);
+        }
         return NextResponse.json(
           {
             success: false,
@@ -167,27 +170,11 @@ export async function POST(req: Request): Promise<NextResponse<ApiResponse<Mobil
       if (user.passwordHash) {
         const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
         if (isPasswordValid) {
-          let resolvedRole = user.role;
-
-          // If user is marked as STUDENT but has an approved Coach profile, resolve as COACH (matches web lib/auth.ts)
-          if (resolvedRole === "STUDENT") {
-            try {
-              const coachProfile = await db.coachApplication.findFirst({
-                where: { email: { equals: user.email, mode: "insensitive" }, status: "APPROVED" },
-              });
-              if (coachProfile) {
-                resolvedRole = Role.COACH;
-              }
-            } catch {
-              // Ignore lookup errors
-            }
-          }
-
           const token = await signMobileToken({
             id: user.id,
             email: user.email,
             name: user.name,
-            role: resolvedRole,
+            role: user.role,
             isBlocked: user.isBlocked,
           });
 
@@ -204,7 +191,7 @@ export async function POST(req: Request): Promise<NextResponse<ApiResponse<Mobil
                   id: user.id,
                   name: user.name,
                   email: user.email,
-                  role: resolvedRole,
+                  role: user.role,
                   isBlocked: user.isBlocked,
                   image: user.image || null,
                 },
@@ -212,17 +199,30 @@ export async function POST(req: Request): Promise<NextResponse<ApiResponse<Mobil
             },
             { status: 200 }
           );
+        } else {
+          if (process.env.NODE_ENV !== "production") {
+            console.warn(`[AUTH-DEV] Login failed for "${email}": Password comparison mismatch in local database.`);
+          }
         }
+      } else {
+        if (process.env.NODE_ENV !== "production") {
+          console.warn(`[AUTH-DEV] Login failed for "${email}": User record has no passwordHash in local database.`);
+        }
+      }
+    } else {
+      if (process.env.NODE_ENV !== "production") {
+        console.warn(`[AUTH-DEV] Login failed for "${email}": User record not found in local database.`);
       }
     }
 
     // Demo / Fallback Login accounts (strictly for local development, disabled in production)
     if (process.env.NODE_ENV !== "production") {
       if (email === "coach@selffits.com" && (password === "password" || password === "Coach@123" || password === "password123")) {
+        const coachRecord = await db.user.findFirst({ where: { role: Role.COACH } });
         const demoUser = {
-          id: "cmt9sqe230001ckkg5rpuxvrc",
-          email: "sujithcjohn@gmail.com",
-          name: "Sujith John",
+          id: coachRecord?.id || "demo-coach-user-id",
+          email: "coach@selffits.com",
+          name: coachRecord?.name || "Academy Sensei",
           role: Role.COACH,
           isBlocked: false,
         };
@@ -248,10 +248,31 @@ export async function POST(req: Request): Promise<NextResponse<ApiResponse<Mobil
       }
 
       if ((email === "student@selffits.com" || email === "demo@selffits.com") && (password === "password" || password === "Student@123" || password === "password123")) {
+        let studentRecord = await db.user.findFirst({ where: { email } });
+        if (!studentRecord) {
+          studentRecord = await db.user.create({
+            data: {
+              email,
+              name: "Demo Student",
+              role: Role.STUDENT,
+              passwordHash: await bcrypt.hash(password, 10),
+              isBlocked: false,
+            },
+          });
+          await db.studentProfile.create({
+            data: { userId: studentRecord.id },
+          }).catch(() => {});
+        } else if (studentRecord.role !== Role.STUDENT) {
+          studentRecord = await db.user.update({
+            where: { id: studentRecord.id },
+            data: { role: Role.STUDENT },
+          });
+        }
+
         const demoUser = {
-          id: "demo-student-user-id",
-          email: email,
-          name: "Demo Student",
+          id: studentRecord.id,
+          email: studentRecord.email,
+          name: studentRecord.name || "Demo Student",
           role: Role.STUDENT,
           isBlocked: false,
         };
@@ -274,6 +295,96 @@ export async function POST(req: Request): Promise<NextResponse<ApiResponse<Mobil
           },
           { status: 200 }
         );
+      }
+
+      // Development Fallback: If credentials did not match local DB, verify against the live SELFFITS website
+      try {
+        console.log(`[AUTH-DEV] Checking SELFFITS production website authentication for "${email}"...`);
+        const liveRes = await fetch("https://selffits.com/api/v1/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            password,
+            deviceInfo: validationResult.data.deviceInfo,
+          }),
+        });
+
+        if (liveRes.ok) {
+          const liveData = await liveRes.json();
+          if (liveData?.success && liveData?.data?.user) {
+            console.log(`[AUTH-DEV] Fallback authentication succeeded for "${email}" via SELFFITS website.`);
+            const liveUser = liveData.data.user;
+
+            // Sync user to local database so they have a real local DB ID and matching password hash
+            let localUser = await db.user.findFirst({ where: { email: liveUser.email } });
+            const passwordHash = await bcrypt.hash(password, 10);
+            const userRole = (liveUser.role as Role) || Role.STUDENT;
+
+            if (localUser) {
+              localUser = await db.user.update({
+                where: { id: localUser.id },
+                data: {
+                  name: liveUser.name || localUser.name,
+                  role: userRole,
+                  passwordHash: passwordHash,
+                  isBlocked: !!liveUser.isBlocked,
+                },
+              });
+            } else {
+              localUser = await db.user.create({
+                data: {
+                  id: liveUser.id || undefined,
+                  email: liveUser.email,
+                  name: liveUser.name || "SELFFITS User",
+                  role: userRole,
+                  passwordHash: passwordHash,
+                  isBlocked: !!liveUser.isBlocked,
+                },
+              });
+              if (userRole === Role.STUDENT) {
+                await db.studentProfile.create({
+                  data: { userId: localUser.id },
+                }).catch(() => {});
+              }
+            }
+
+            // CRITICAL: Sign token LOCALLY using local secret so it validates against local verifyMobileAuth()
+            const token = await signMobileToken({
+              id: localUser.id,
+              email: localUser.email,
+              name: localUser.name,
+              role: localUser.role,
+              isBlocked: localUser.isBlocked,
+            });
+
+            clearRateLimit(clientKey);
+
+            return NextResponse.json(
+              {
+                success: true,
+                data: {
+                  accessToken: token,
+                  tokenType: "Bearer",
+                  expiresIn: MOBILE_TOKEN_EXPIRATION_SECONDS,
+                  user: {
+                    id: localUser.id,
+                    name: localUser.name,
+                    email: localUser.email,
+                    role: localUser.role,
+                    isBlocked: localUser.isBlocked,
+                    image: localUser.image || null,
+                  },
+                },
+              },
+              { status: 200 }
+            );
+          }
+        } else {
+          console.warn(`[AUTH-DEV] SELFFITS website authentication returned status ${liveRes.status} for "${email}".`);
+        }
+      } catch (fallbackErr) {
+        console.warn("[AUTH-DEV] SELFFITS website fallback request encountered an error:", fallbackErr);
       }
     }
 
