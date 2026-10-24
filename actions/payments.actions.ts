@@ -500,21 +500,36 @@ export async function getStudentEnrollmentAction() {
         year: "numeric",
       });
 
-      const planName = item.membershipPlan?.name || "Martial Arts & Fitness Program";
+      const planName = item.membershipPlan?.name || "1 Day / Week Membership Plan";
+      const programTitle =
+        item.membershipPlan?.program?.title ||
+        item.membershipPlan?.name ||
+        "Martial Arts Academy";
+
       const totalClasses = item.membershipPlan?.totalClasses || item.totalClassesGranted || 24;
       const remainingClasses = item.remainingClasses;
-      const isChallenge =
-        planName.toLowerCase().includes("challenge") ||
-        planName.toLowerCase().includes("transformation") ||
-        planName.toLowerCase().includes("fitness");
 
-      const image = isChallenge
+      // Derive category directly from program.category, falling back to keywords only if missing
+      const rawCategory = item.membershipPlan?.program?.category;
+      const isFitness =
+        rawCategory === "FITNESS_WEIGHT_LOSS" ||
+        rawCategory === "FITNESS_HIIT" ||
+        (!rawCategory && (
+          programTitle.toLowerCase().includes("fitness") ||
+          programTitle.toLowerCase().includes("weight") ||
+          programTitle.toLowerCase().includes("hiit") ||
+          planName.toLowerCase().includes("challenge") ||
+          planName.toLowerCase().includes("transformation") ||
+          planName.toLowerCase().includes("fitness")
+        ));
+
+      const image = isFitness
         ? "/images/weight_loss_hiit.png"
-        : planName.toLowerCase().includes("kids")
+        : (programTitle.toLowerCase().includes("kids") || planName.toLowerCase().includes("kids"))
         ? "/images/kids_martial_arts.png"
         : "/images/adults_martial_arts.png";
 
-      const category = isChallenge ? "FITNESS & WEIGHT MANAGEMENT" : "MARTIAL ARTS";
+      const category = isFitness ? "FITNESS & WEIGHT MANAGEMENT" : "MARTIAL ARTS";
       const planLevel = item.daysPerWeek ? `${item.daysPerWeek} Days / Week` : (readiness.levelName || planName);
 
       const selectedDaysList = Array.isArray(item.selectedDays)
@@ -523,8 +538,11 @@ export async function getStudentEnrollmentAction() {
 
       return {
         id: item.id,
-        programName: planName,
-        title: planName,
+        programName: programTitle,
+        programTitle: programTitle,
+        tierName: planName,
+        planName: planName,
+        title: programTitle,
         category: category,
         image: image,
         beltLevel: planLevel,
