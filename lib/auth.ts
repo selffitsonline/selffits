@@ -35,7 +35,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error("Invalid email or password");
+          return null;
         }
 
         const email = (credentials.email as string).toLowerCase().trim();
@@ -184,7 +184,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           }
         }
 
-        throw new Error("Invalid email or password");
+        return null;
       },
     }),
     ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
