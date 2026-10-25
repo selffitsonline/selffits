@@ -19,28 +19,37 @@ export async function middleware(req: NextRequest) {
 
   const secureCookie = req.url.startsWith("https://") || process.env.NODE_ENV === "production";
 
-  // Check NextAuth v5 and NextAuth v4 cookie names for Vercel HTTPS deployment
-  let token = await getToken({
-    req,
-    secret: process.env.NEXTAUTH_SECRET,
-    cookieName: secureCookie ? "__Secure-authjs.session-token" : "authjs.session-token",
-    secureCookie,
-  });
+  // Check NextAuth v5 and NextAuth v4 cookie names across all supported secret keys
+  const secrets = Array.from(
+    new Set([process.env.AUTH_SECRET, process.env.NEXTAUTH_SECRET].filter(Boolean) as string[])
+  );
 
-  if (!token) {
+  let token = null;
+  for (const secret of secrets) {
+    if (token) break;
     token = await getToken({
       req,
-      secret: process.env.NEXTAUTH_SECRET,
-      cookieName: secureCookie ? "__Secure-next-auth.session-token" : "next-auth.session-token",
+      secret,
+      cookieName: secureCookie ? "__Secure-authjs.session-token" : "authjs.session-token",
+      salt: secureCookie ? "__Secure-authjs.session-token" : "authjs.session-token",
       secureCookie,
     });
-  }
 
-  if (!token) {
-    token = await getToken({
-      req,
-      secret: process.env.NEXTAUTH_SECRET,
-    });
+    if (!token) {
+      token = await getToken({
+        req,
+        secret,
+        cookieName: secureCookie ? "__Secure-next-auth.session-token" : "next-auth.session-token",
+        secureCookie,
+      });
+    }
+
+    if (!token) {
+      token = await getToken({
+        req,
+        secret,
+      });
+    }
   }
 
   const isAdminRoute = pathname.startsWith("/admin");
