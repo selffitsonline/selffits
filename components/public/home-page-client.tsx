@@ -635,34 +635,37 @@ export function HomePageClient({ initialData, initialNavItems }: HomePageClientP
         </section>
 
         {/* 9. BECOME A SELFFITS COACH CTA */}
-        <section className="py-16 sm:py-20 px-4">
-          <div className="max-w-5xl mx-auto rounded-3xl bg-[#14161D] border border-white/15 p-8 sm:p-12 lg:p-14 text-center space-y-6 shadow-2xl relative overflow-hidden group hover:border-[#E50914]/40 transition-all">
-            <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-tr from-[#E50914]/15 to-[#0080FF]/15 rounded-full blur-[100px] pointer-events-none" />
+        {coachesData?.recruitmentCta?.isEnabled !== false && (
+          <section className="py-16 sm:py-20 px-4">
+            <div className="max-w-5xl mx-auto rounded-3xl bg-[#14161D] border border-white/15 p-8 sm:p-12 lg:p-14 text-center space-y-6 shadow-2xl relative overflow-hidden group hover:border-[#E50914]/40 transition-all">
+              <div className="absolute top-0 right-0 w-80 h-80 bg-gradient-to-tr from-[#E50914]/15 to-[#0080FF]/15 rounded-full blur-[100px] pointer-events-none" />
 
-            <div className="relative z-10 space-y-3">
-              <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#E50914]/10 text-[#E50914] text-xs font-bold border border-[#E50914]/30 uppercase tracking-widest">
-                <Award className="w-3.5 h-3.5" />
-                Instructor Recruitment
-              </span>
-              <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white font-[family-name:var(--font-outfit)] tracking-tight uppercase">
-                BECOME A SELFFITS COACH
-              </h2>
+              <div className="relative z-10 space-y-3">
+                <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#E50914]/10 text-[#E50914] text-xs font-bold border border-[#E50914]/30 uppercase tracking-widest">
+                  <Award className="w-3.5 h-3.5" />
+                  {coachesData?.recruitmentCta?.badgeText || "Instructor Recruitment"}
+                </span>
+                <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white font-[family-name:var(--font-outfit)] tracking-tight uppercase">
+                  {coachesData?.recruitmentCta?.heading || "BECOME A SELFFITS COACH"}
+                </h2>
+              </div>
+
+              <p className="relative z-10 text-gray-300 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed font-medium">
+                {coachesData?.recruitmentCta?.description ||
+                  "Are you a qualified fitness or martial arts instructor? Join SELFFITS and share your expertise with students from around the world."}
+              </p>
+
+              <div className="relative z-10 pt-2">
+                <Link
+                  href={coachesData?.recruitmentCta?.buttonLink || "/become-coach"}
+                  className="px-8 py-4 rounded-2xl bg-gradient-to-r from-[#E50914] to-[#FF1E27] text-white font-black text-sm sm:text-base uppercase tracking-wider hover:opacity-95 transition-all shadow-xl shadow-[#E50914]/30 inline-flex items-center gap-2"
+                >
+                  {coachesData?.recruitmentCta?.buttonText || "BECOME A COACH"} <ArrowRight className="w-5 h-5" />
+                </Link>
+              </div>
             </div>
-
-            <p className="relative z-10 text-gray-300 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed font-medium">
-              Are you a qualified fitness or martial arts instructor? Join SELFFITS and share your expertise with students from around the world.
-            </p>
-
-            <div className="relative z-10 pt-2">
-              <Link
-                href="/become-coach"
-                className="px-8 py-4 rounded-2xl bg-gradient-to-r from-[#E50914] to-[#FF1E27] text-white font-black text-sm sm:text-base uppercase tracking-wider hover:opacity-95 transition-all shadow-xl shadow-[#E50914]/30 inline-flex items-center gap-2"
-              >
-                BECOME A COACH <ArrowRight className="w-5 h-5" />
-              </Link>
-            </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* 10. SUCCESS STORIES & TESTIMONIALS */}
         <section className="py-16 sm:py-24 bg-[#0E1015] border-y-[0.5px] border-white/10 px-4">

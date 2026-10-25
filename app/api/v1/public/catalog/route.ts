@@ -17,6 +17,7 @@ import {
   PublicBeltSyllabusSectionDto,
   PublicFitnessJourneySectionDto,
   PublicCoachesSectionDto,
+  PublicBecomeCoachSectionDto,
 } from "@/types/mobile-api.dto";
 
 // Authoritative Categories to expose for mobile public catalog
@@ -306,6 +307,20 @@ export async function GET(): Promise<NextResponse<ApiResponse<PublicCatalogRespo
       };
     }
 
+    // 1.5.1 Become a SELFFITS Coach CTA (Instructor Recruitment)
+    let becomeCoachSection: PublicBecomeCoachSectionDto | null = null;
+    const rawRecruitment = hpData?.coaches?.recruitmentCta;
+    becomeCoachSection = {
+      isEnabled: rawRecruitment?.isEnabled !== false,
+      badgeText: rawRecruitment?.badgeText || "Instructor Recruitment",
+      heading: rawRecruitment?.heading || "BECOME A SELFFITS COACH",
+      description:
+        rawRecruitment?.description ||
+        "Are you a qualified fitness or martial arts instructor? Join SELFFITS and share your expertise with students from around the world.",
+      buttonText: rawRecruitment?.buttonText || "BECOME A COACH",
+      buttonLink: rawRecruitment?.buttonLink || "/become-coach",
+    };
+
     // 2. Resolve Martial Arts Types
     let martialArtsTypes = DEFAULT_MARTIAL_ARTS_TYPE_ITEMS.map((item) => ({
       id: item.id,
@@ -404,6 +419,7 @@ export async function GET(): Promise<NextResponse<ApiResponse<PublicCatalogRespo
       beltSyllabusSection,
       fitnessJourneySection,
       coachesSection,
+      becomeCoachSection,
       currencyNotice:
         "Prices in USD ($) and INR (₹) synchronized with live academy administration.",
       checkoutBaseUrl: "https://selffits.com/checkout",

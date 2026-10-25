@@ -772,7 +772,32 @@ async function fetchHomepageDataInternal() {
         },
       ],
     };
-    const coachesSection = settingsMap["homepage_coaches"] || defaultCoachesSection;
+    const defaultRecruitmentCta = {
+      isEnabled: true,
+      badgeText: "Instructor Recruitment",
+      heading: "BECOME A SELFFITS COACH",
+      description:
+        "Are you a qualified fitness or martial arts instructor? Join SELFFITS and share your expertise with students from around the world.",
+      buttonText: "BECOME A COACH",
+      buttonLink: "/become-coach",
+    };
+
+    const rawCoaches = settingsMap["homepage_coaches"] || defaultCoachesSection;
+    const coachesSection = {
+      ...rawCoaches,
+      headingBadge: rawCoaches.headingBadge || defaultCoachesSection.headingBadge,
+      headingTitle: rawCoaches.headingTitle || defaultCoachesSection.headingTitle,
+      headingSubtitle: rawCoaches.headingSubtitle || defaultCoachesSection.headingSubtitle,
+      items: Array.isArray(rawCoaches.items) ? rawCoaches.items : defaultCoachesSection.items,
+      recruitmentCta: {
+        isEnabled: rawCoaches.recruitmentCta?.isEnabled ?? defaultRecruitmentCta.isEnabled,
+        badgeText: rawCoaches.recruitmentCta?.badgeText || defaultRecruitmentCta.badgeText,
+        heading: rawCoaches.recruitmentCta?.heading || defaultRecruitmentCta.heading,
+        description: rawCoaches.recruitmentCta?.description || defaultRecruitmentCta.description,
+        buttonText: rawCoaches.recruitmentCta?.buttonText || defaultRecruitmentCta.buttonText,
+        buttonLink: rawCoaches.recruitmentCta?.buttonLink || defaultRecruitmentCta.buttonLink,
+      },
+    };
 
     // 7. FREQUENTLY ASKED QUESTIONS
     const defaultFaqsSection = {

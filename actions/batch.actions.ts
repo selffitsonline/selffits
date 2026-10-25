@@ -781,9 +781,53 @@ export async function deactivateOrDeleteBatchAction(batchId: string, deletePerma
     return { success: false, error: "Failed to update batch." };
   }
 }
+// Helper to calculate exact upcoming session epoch timestamp for class sorting
+function getNextClassTimestamp(
+  dayCombination: string,
+  clockTiming?: string | null,
+  timeSlot?: string | null,
+  referenceDate: Date = new Date()
+): number {
+  const session = calculateNextClassSession(dayCombination, clockTiming, timeSlot, referenceDate);
+  let offset = 0;
+  if (session.relativeLabel === "Today") {
+    offset = 0;
+  } else if (session.relativeLabel === "Tomorrow") {
+    offset = 1;
+  } else {
+    const match = session.relativeLabel.match(/In (\d+) days/);
+    if (match) {
+      offset = parseInt(match[1], 10);
+    } else {
+      offset = 7;
+    }
+  }
+
+  let hour = 17;
+  let minute = 0;
+  if (clockTiming) {
+    const timeMatch = clockTiming.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+    if (timeMatch) {
+      let h = parseInt(timeMatch[1], 10);
+      const m = parseInt(timeMatch[2], 10);
+      const period = timeMatch[3].toUpperCase();
+      if (period === "PM" && h < 12) h += 12;
+      if (period === "AM" && h === 12) h = 0;
+      hour = h;
+      minute = m;
+    }
+  }
+
+  const sessionDate = new Date(referenceDate);
+  sessionDate.setDate(referenceDate.getDate() + offset);
+  sessionDate.setHours(hour, minute, 0, 0);
+
+  return sessionDate.getTime();
+}
+
 // Centralized Server-Side Batch & Meeting Readiness Calculator
 export async function getCentralClassReadinessForUser(userId: string) {
-  const assignment = await db.batchStudent.findFirst({
+  const assignments = await db.batchStudent.findMany({
     where: { userId },
     include: {
       batch: {
@@ -797,28 +841,90 @@ export async function getCentralClassReadinessForUser(userId: string) {
     },
   });
 
-  if (!assignment || !assignment.batch) {
+  if (!assignments || assignments.length === 0) {
+    let activeEnrollment = null;
+    try {
+      activeEnrollment = await db.enrollment.findFirst({
+        where: {
+          userId,
+          status: "ACTIVE",
+        },
+        include: {
+          membershipPlan: {
+            include: {
+              program: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+    } catch {
+      // Graceful fallback if enrollment lookup fails
+    }
+
+    const programTitle =
+      activeEnrollment?.membershipPlan?.program?.title ||
+      activeEnrollment?.membershipPlan?.name ||
+      null;
+
+    const programCategory = activeEnrollment?.membershipPlan?.program?.category || null;
+    const levelName = activeEnrollment?.membershipPlan?.name || null;
+    const dayCombination = Array.isArray(activeEnrollment?.selectedDays)
+      ? (activeEnrollment.selectedDays as string[]).join(", ")
+      : null;
+
     return {
       hasBatch: false,
       batchId: null,
       batchCode: null,
       batchName: null,
-      programTitle: null,
-      programCategory: null,
-      levelName: null,
+      programTitle,
+      programCategory,
+      levelName,
       coachName: null,
       coachRank: null,
       coachDisciplines: null,
-      dayCombination: null,
+      dayCombination,
       timeSlot: null,
-      clockTiming: null,
+      clockTiming: activeEnrollment?.classTiming || null,
       meetingUrl: null,
       capacityLabel: null,
       batchStatus: null,
       isReady: false,
+      nextSession: dayCombination
+        ? calculateNextClassSession(dayCombination, activeEnrollment?.classTiming)
+        : null,
     };
   }
 
+  // If student has multiple batch assignments, select the single true next upcoming class
+  const now = new Date();
+  const sortedAssignments = [...assignments].sort((a, b) => {
+    // 1. Prefer ACTIVE or FULL batches over INACTIVE or CANCELLED
+    const aActive = a.batch.status === "ACTIVE" || a.batch.status === "FULL";
+    const bActive = b.batch.status === "ACTIVE" || b.batch.status === "FULL";
+    if (aActive && !bActive) return -1;
+    if (!aActive && bActive) return 1;
+
+    // 2. Soonest upcoming class session date/time
+    const aTime = getNextClassTimestamp(a.batch.dayCombination, a.batch.clockTiming, a.batch.timeSlot, now);
+    const bTime = getNextClassTimestamp(b.batch.dayCombination, b.batch.clockTiming, b.batch.timeSlot, now);
+    if (aTime !== bTime) {
+      return aTime - bTime;
+    }
+
+    // 3. Prefer batch with an active meeting URL
+    const aHasUrl = !!(a.batch.meetingUrl && a.batch.meetingUrl.trim());
+    const bHasUrl = !!(b.batch.meetingUrl && b.batch.meetingUrl.trim());
+    if (aHasUrl && !bHasUrl) return -1;
+    if (!aHasUrl && bHasUrl) return 1;
+
+    return 0;
+  });
+
+  const assignment = sortedAssignments[0];
   const b = assignment.batch;
   const hasValidMeetingUrl = !!(b.meetingUrl && b.meetingUrl.trim() !== "");
   const isBatchActive = b.status === "ACTIVE" || b.status === "FULL";
@@ -844,7 +950,7 @@ export async function getCentralClassReadinessForUser(userId: string) {
     capacityLabel: `${b.students.length} / ${b.maxCapacity}`,
     batchStatus: b.status,
     isReady: isReady,
-    nextSession: calculateNextClassSession(b.dayCombination, b.clockTiming, b.timeSlot),
+    nextSession: calculateNextClassSession(b.dayCombination, b.clockTiming, b.timeSlot, now),
     assignedAt: assignment.assignedAt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
   };
 }

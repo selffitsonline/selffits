@@ -108,90 +108,7 @@ export async function GET(
 
     const userId = liveUser.id;
 
-    // 3. Fetch all enrollment details for student
-    let activeEnrollmentSummary: StudentActiveEnrollmentSummaryDto | null = null;
-    let allEnrollmentsSummary: StudentActiveEnrollmentSummaryDto[] = [];
-    let isEnrolled = false;
-
-    try {
-      const now = new Date();
-      const allDbEnrollments = await db.enrollment.findMany({
-        where: {
-          userId,
-        },
-        include: {
-          membershipPlan: {
-            include: {
-              program: true,
-            },
-          },
-        },
-        orderBy: {
-          createdAt: "desc",
-        },
-      });
-
-      allEnrollmentsSummary = allDbEnrollments.map((enrollment) => {
-        const diffTime = new Date(enrollment.endDate).getTime() - now.getTime();
-        const daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
-
-        return {
-          id: enrollment.id,
-          programTitle:
-            enrollment.membershipPlan?.program?.title ||
-            enrollment.membershipPlan?.name ||
-            "Martial Arts Academy",
-          tierName: enrollment.membershipPlan?.name || null,
-          remainingClasses: enrollment.remainingClasses,
-          totalClasses: enrollment.totalClassesGranted,
-          expiryDate: enrollment.endDate.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          }),
-          daysRemaining,
-          martialArtsType: enrollment.martialArtsType || null,
-          includeDietNutrition: !!enrollment.includeDietNutrition,
-          status: enrollment.status,
-        };
-      });
-
-      const activeEnrollment = allDbEnrollments.find(
-        (e) => e.status === "ACTIVE" && new Date(e.endDate) > now && e.remainingClasses > 0
-      );
-
-      if (activeEnrollment) {
-        isEnrolled = true;
-        const diffTime = new Date(activeEnrollment.endDate).getTime() - now.getTime();
-        const daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
-
-        activeEnrollmentSummary = {
-          id: activeEnrollment.id,
-          programTitle:
-            activeEnrollment.membershipPlan?.program?.title ||
-            activeEnrollment.membershipPlan?.name ||
-            "Martial Arts Academy",
-          tierName: activeEnrollment.membershipPlan?.name || null,
-          remainingClasses: activeEnrollment.remainingClasses,
-          totalClasses: activeEnrollment.totalClassesGranted,
-          expiryDate: activeEnrollment.endDate.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          }),
-          daysRemaining,
-          martialArtsType: activeEnrollment.martialArtsType || null,
-          includeDietNutrition: !!activeEnrollment.includeDietNutrition,
-          status: activeEnrollment.status,
-        };
-      } else if (allEnrollmentsSummary.length > 0) {
-        activeEnrollmentSummary = allEnrollmentsSummary[0];
-      }
-    } catch (enrErr) {
-      console.warn("Enrollment lookup warning:", enrErr);
-    }
-
-    // 4. Fetch centralized class readiness & Google Meet link
+    // 3. Fetch centralized class readiness & Google Meet link
     let readiness;
     try {
       readiness = await getCentralClassReadinessForUser(userId);
@@ -226,9 +143,105 @@ export async function GET(
       };
     }
 
-    // Strict Security Guard: Un-enrolled, expired, or exhausted students must never receive Google Meet access
-    const meetingUrl = isEnrolled ? readiness.meetingUrl : null;
-    const isReady = isEnrolled ? readiness.isReady : false;
+    // 4. Fetch all enrollment details for student
+    let activeEnrollmentSummary: StudentActiveEnrollmentSummaryDto | null = null;
+    let allEnrollmentsSummary: StudentActiveEnrollmentSummaryDto[] = [];
+    let isEnrolled = false;
+    let meetingUrl: string | null = null;
+    let isReady = false;
+
+    try {
+      const now = new Date();
+      const allDbEnrollments = await db.enrollment.findMany({
+        where: {
+          userId,
+        },
+        include: {
+          membershipPlan: {
+            include: {
+              program: true,
+            },
+          },
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      });
+
+      const activeEnrollment = allDbEnrollments.find(
+        (e) => e.status === "ACTIVE" && new Date(e.endDate) > now && e.remainingClasses > 0
+      );
+
+      if (activeEnrollment) {
+        isEnrolled = true;
+      }
+
+      // Strict Security Guard: Un-enrolled, expired, or exhausted students must never receive Google Meet access
+      meetingUrl = isEnrolled ? readiness.meetingUrl : null;
+      isReady = isEnrolled ? readiness.isReady : false;
+
+      allEnrollmentsSummary = allDbEnrollments.map((enrollment) => {
+        const diffTime = new Date(enrollment.endDate).getTime() - now.getTime();
+        const daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+        const isThisEnrollmentActive =
+          enrollment.status === "ACTIVE" &&
+          new Date(enrollment.endDate) > now &&
+          enrollment.remainingClasses > 0;
+
+        return {
+          id: enrollment.id,
+          programTitle:
+            enrollment.membershipPlan?.program?.title ||
+            enrollment.membershipPlan?.name ||
+            "Martial Arts Academy",
+          tierName: enrollment.membershipPlan?.name || null,
+          remainingClasses: enrollment.remainingClasses,
+          totalClasses: enrollment.totalClassesGranted,
+          expiryDate: enrollment.endDate.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          }),
+          daysRemaining,
+          martialArtsType: enrollment.martialArtsType || null,
+          includeDietNutrition: !!enrollment.includeDietNutrition,
+          status: enrollment.status,
+          isReady: isThisEnrollmentActive ? isReady : false,
+          meetingUrl: isThisEnrollmentActive ? meetingUrl : null,
+        };
+      });
+
+      if (activeEnrollment) {
+        const diffTime = new Date(activeEnrollment.endDate).getTime() - now.getTime();
+        const daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+
+        activeEnrollmentSummary = {
+          id: activeEnrollment.id,
+          programTitle:
+            activeEnrollment.membershipPlan?.program?.title ||
+            activeEnrollment.membershipPlan?.name ||
+            "Martial Arts Academy",
+          tierName: activeEnrollment.membershipPlan?.name || null,
+          remainingClasses: activeEnrollment.remainingClasses,
+          totalClasses: activeEnrollment.totalClassesGranted,
+          expiryDate: activeEnrollment.endDate.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          }),
+          daysRemaining,
+          martialArtsType: activeEnrollment.martialArtsType || null,
+          includeDietNutrition: !!activeEnrollment.includeDietNutrition,
+          status: activeEnrollment.status,
+          isReady: isReady,
+          meetingUrl: meetingUrl,
+        };
+      } else if (allEnrollmentsSummary.length > 0) {
+        activeEnrollmentSummary = allEnrollmentsSummary[0];
+      }
+    } catch (enrErr) {
+      console.warn("Enrollment lookup warning:", enrErr);
+    }
 
     // 5. Count unread notifications
     let unreadCount = 0;

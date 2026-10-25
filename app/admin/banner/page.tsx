@@ -2221,6 +2221,146 @@ export default function AdminHomepageManagementPage() {
                   ))}
                 </div>
               </div>
+
+              {/* Instructor Recruitment / Become a Coach CTA Manager */}
+              <div className="pt-6 border-t border-white/10 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-extrabold text-white uppercase block">
+                      Instructor Recruitment / Become a Coach CTA
+                    </span>
+                    <p className="text-[11px] text-gray-400">
+                      Configures the promotional "Become a SELFFITS Coach" card shown on both the website and mobile app.
+                    </p>
+                  </div>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={coachesSection.recruitmentCta?.isEnabled ?? true}
+                      onChange={(e) => {
+                        const updated = {
+                          ...(coachesSection.recruitmentCta || {
+                            badgeText: "Instructor Recruitment",
+                            heading: "BECOME A SELFFITS COACH",
+                            description:
+                              "Are you a qualified fitness or martial arts instructor? Join SELFFITS and share your expertise with students from around the world.",
+                            buttonText: "BECOME A COACH",
+                            buttonLink: "/become-coach",
+                          }),
+                          isEnabled: e.target.checked,
+                        };
+                        setCoachesSection({ ...coachesSection, recruitmentCta: updated });
+                      }}
+                      className="w-4 h-4 rounded text-[#E50914] bg-[#14161D] border-white/20 focus:ring-0"
+                    />
+                    <span className="text-xs font-bold text-gray-300">
+                      {(coachesSection.recruitmentCta?.isEnabled ?? true) ? "Active & Visible" : "Disabled"}
+                    </span>
+                  </label>
+                </div>
+
+                <div className="p-4 rounded-xl bg-[#0F1117] border border-white/10 space-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] font-bold text-gray-400 block mb-1">
+                        Pill Badge Label
+                      </label>
+                      <input
+                        type="text"
+                        value={coachesSection.recruitmentCta?.badgeText || "Instructor Recruitment"}
+                        onChange={(e) => {
+                          const updated = {
+                            ...(coachesSection.recruitmentCta || {}),
+                            badgeText: e.target.value,
+                          };
+                          setCoachesSection({ ...coachesSection, recruitmentCta: updated });
+                        }}
+                        className="w-full h-9 px-3 rounded-lg bg-[#14161D] border border-white/10 text-white text-xs font-bold"
+                        placeholder="Instructor Recruitment"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-gray-400 block mb-1">
+                        Main Heading
+                      </label>
+                      <input
+                        type="text"
+                        value={coachesSection.recruitmentCta?.heading || "BECOME A SELFFITS COACH"}
+                        onChange={(e) => {
+                          const updated = {
+                            ...(coachesSection.recruitmentCta || {}),
+                            heading: e.target.value,
+                          };
+                          setCoachesSection({ ...coachesSection, recruitmentCta: updated });
+                        }}
+                        className="w-full h-9 px-3 rounded-lg bg-[#14161D] border border-white/10 text-white text-xs font-extrabold uppercase"
+                        placeholder="BECOME A SELFFITS COACH"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-[11px] font-bold text-gray-400 block mb-1">
+                      Supporting Description
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={
+                        coachesSection.recruitmentCta?.description ||
+                        "Are you a qualified fitness or martial arts instructor? Join SELFFITS and share your expertise with students from around the world."
+                      }
+                      onChange={(e) => {
+                        const updated = {
+                          ...(coachesSection.recruitmentCta || {}),
+                          description: e.target.value,
+                        };
+                        setCoachesSection({ ...coachesSection, recruitmentCta: updated });
+                      }}
+                      className="w-full p-2.5 rounded-lg bg-[#14161D] border border-white/10 text-white text-xs"
+                      placeholder="Recruitment description..."
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-[11px] font-bold text-gray-400 block mb-1">
+                        Button Label
+                      </label>
+                      <input
+                        type="text"
+                        value={coachesSection.recruitmentCta?.buttonText || "BECOME A COACH"}
+                        onChange={(e) => {
+                          const updated = {
+                            ...(coachesSection.recruitmentCta || {}),
+                            buttonText: e.target.value,
+                          };
+                          setCoachesSection({ ...coachesSection, recruitmentCta: updated });
+                        }}
+                        className="w-full h-9 px-3 rounded-lg bg-[#14161D] border border-white/10 text-white text-xs font-bold"
+                        placeholder="BECOME A COACH"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-bold text-gray-400 block mb-1">
+                        Application Destination Route / URL
+                      </label>
+                      <input
+                        type="text"
+                        value={coachesSection.recruitmentCta?.buttonLink || "/become-coach"}
+                        onChange={(e) => {
+                          const updated = {
+                            ...(coachesSection.recruitmentCta || {}),
+                            buttonLink: e.target.value,
+                          };
+                          setCoachesSection({ ...coachesSection, recruitmentCta: updated });
+                        }}
+                        className="w-full h-9 px-3 rounded-lg bg-[#14161D] border border-white/10 text-white text-xs font-mono"
+                        placeholder="/become-coach"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}

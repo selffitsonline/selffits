@@ -105,6 +105,8 @@ export interface StudentActiveEnrollmentSummaryDto {
   martialArtsType?: string | null;
   includeDietNutrition: boolean;
   status: string;
+  isReady?: boolean;
+  meetingUrl?: string | null;
 }
 
 export interface StudentDashboardResponseDto {
@@ -360,6 +362,15 @@ export interface PublicCoachesSectionDto {
   items: PublicCoachDto[];
 }
 
+export interface PublicBecomeCoachSectionDto {
+  isEnabled: boolean;
+  badgeText: string;
+  heading: string;
+  description: string;
+  buttonText: string;
+  buttonLink: string;
+}
+
 export interface PublicCatalogResponseDto {
   categories: PublicProgramCategoryDto[];
   martialArtsTypes: Array<{ id: string; label: string }>;
@@ -369,6 +380,7 @@ export interface PublicCatalogResponseDto {
   beltSyllabusSection?: PublicBeltSyllabusSectionDto | null;
   fitnessJourneySection?: PublicFitnessJourneySectionDto | null;
   coachesSection?: PublicCoachesSectionDto | null;
+  becomeCoachSection?: PublicBecomeCoachSectionDto | null;
   currencyNotice: string;
   checkoutBaseUrl: string;
   updatedAt: string;
