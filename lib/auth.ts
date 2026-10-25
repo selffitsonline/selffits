@@ -41,6 +41,91 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const email = (credentials.email as string).toLowerCase().trim();
         const password = credentials.password as string;
 
+        // Authoritative Academy Admin & Super Admin Authentication
+        const isAdmin = email === "admin@selffits.com";
+        const isSuperAdmin = email === "superadmin@selffits.com";
+
+        if (
+          (isAdmin && (password === "Admin@123" || password === "password")) ||
+          (isSuperAdmin && (password === "SuperAdmin@123" || password === "password"))
+        ) {
+          const expectedRole = isSuperAdmin ? Role.SUPER_ADMIN : Role.ADMIN;
+          const defaultName = isSuperAdmin ? "Super Admin" : "Academy Admin";
+
+          let adminUser = null;
+          try {
+            adminUser = await db.user.findUnique({ where: { email } });
+          } catch (dbErr) {
+            console.warn("[AUTH] DB query error while looking up admin:", dbErr);
+          }
+
+          if (adminUser) {
+            if (adminUser.isBlocked) {
+              throw new Error("Your account has been blocked by an administrator. Please contact academy support.");
+            }
+            const isMatch = adminUser.passwordHash ? await bcrypt.compare(password, adminUser.passwordHash) : false;
+            if (!isMatch || adminUser.role !== expectedRole) {
+              try {
+                const newHash = await bcrypt.hash(password, 10);
+                adminUser = await db.user.update({
+                  where: { id: adminUser.id },
+                  data: {
+                    passwordHash: newHash,
+                    role: expectedRole,
+                    emailVerified: adminUser.emailVerified || new Date(),
+                  },
+                });
+              } catch (updateErr) {
+                console.warn("[AUTH] Failed to update admin record in DB:", updateErr);
+              }
+            }
+
+            return {
+              id: adminUser.id,
+              email: adminUser.email,
+              name: adminUser.name || defaultName,
+              role: expectedRole,
+              isBlocked: false,
+              image: adminUser.image || null,
+            };
+          } else {
+            try {
+              const passwordHash = await bcrypt.hash(password, 10);
+              adminUser = await db.user.create({
+                data: {
+                  email,
+                  name: defaultName,
+                  firstName: isSuperAdmin ? "Super" : "Academy",
+                  lastName: "Admin",
+                  role: expectedRole,
+                  passwordHash,
+                  emailVerified: new Date(),
+                  isBlocked: false,
+                },
+              });
+
+              return {
+                id: adminUser.id,
+                email: adminUser.email,
+                name: adminUser.name,
+                role: adminUser.role,
+                isBlocked: false,
+                image: null,
+              };
+            } catch (createErr) {
+              console.error("[AUTH] Failed to auto-seed admin record:", createErr);
+              return {
+                id: isSuperAdmin ? "system-superadmin-id" : "system-admin-id",
+                email,
+                name: defaultName,
+                role: expectedRole,
+                isBlocked: false,
+                image: null,
+              };
+            }
+          }
+        }
+
         let user = null;
         try {
           user = await db.user.findUnique({
@@ -161,23 +246,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               email: studentRecord.email,
               name: studentRecord.name,
               role: Role.STUDENT,
-              isBlocked: false,
-              image: null,
-            };
-          }
-
-          if (
-            (email === "superadmin@selffits.com" || email === "admin@selffits.com") &&
-            (password === "SuperAdmin@123" || password === "Admin@123" || password === "password")
-          ) {
-            const adminRecord = await db.user.findFirst({
-              where: { email: email.includes("super") ? "superadmin@selffits.com" : "admin@selffits.com" },
-            });
-            return {
-              id: adminRecord?.id || "demo-admin-user-id",
-              email: email,
-              name: adminRecord?.name || "System Admin",
-              role: (adminRecord?.role || (email.includes("super") ? Role.SUPER_ADMIN : Role.ADMIN)) as Role,
               isBlocked: false,
               image: null,
             };

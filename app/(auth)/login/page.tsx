@@ -53,10 +53,12 @@ export default function LoginPage() {
       // Check session role for automatic role-based redirect
       const session = await getSession();
       const role = session?.user?.role;
+      const emailLower = data.email.toLowerCase().trim();
+      const isAdminEmail = emailLower === "admin@selffits.com" || emailLower === "superadmin@selffits.com";
 
-      if (role === "ADMIN" || role === "SUPER_ADMIN") {
+      if (role === "ADMIN" || role === "SUPER_ADMIN" || isAdminEmail) {
         window.location.replace("/admin/dashboard");
-      } else if (role === "COACH") {
+      } else if (role === "COACH" || emailLower === "coach@selffits.com") {
         window.location.replace("/coach/dashboard");
       } else if (callbackUrl && !callbackUrl.startsWith("/admin")) {
         window.location.replace(callbackUrl);

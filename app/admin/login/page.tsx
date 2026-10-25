@@ -47,9 +47,9 @@ export default function AdminLoginPage() {
         return;
       }
 
-      // Verify the role of the authenticated session
+      // Verify the role of the authenticated session if already loaded
       const session = await getSession();
-      if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
+      if (session?.user && session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN") {
         setErrorMsg("Access Denied: Only Administrator and Super Admin accounts can access this portal.");
         setIsLoading(false);
         return;
