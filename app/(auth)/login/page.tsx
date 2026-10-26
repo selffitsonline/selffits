@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -26,6 +26,14 @@ export default function LoginPage() {
   // Turnstile state
   const [turnstileToken, setTurnstileToken] = useState<string>("");
   const turnstileRef = useRef<TurnstileRef | null>(null);
+
+  const handleTurnstileVerify = useCallback((token: string) => {
+    setTurnstileToken(token);
+  }, []);
+
+  const handleTurnstileExpire = useCallback(() => {
+    setTurnstileToken("");
+  }, []);
 
   // Resend state
   const [isResending, setIsResending] = useState(false);
@@ -271,8 +279,8 @@ export default function LoginPage() {
           {/* Cloudflare Turnstile CAPTCHA */}
           <Turnstile
             ref={turnstileRef}
-            onVerify={(token) => setTurnstileToken(token)}
-            onExpire={() => setTurnstileToken("")}
+            onVerify={handleTurnstileVerify}
+            onExpire={handleTurnstileExpire}
             theme="dark"
           />
 

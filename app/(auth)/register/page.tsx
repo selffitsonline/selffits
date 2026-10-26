@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -25,6 +25,14 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string>("");
   const turnstileRef = useRef<TurnstileRef | null>(null);
+
+  const handleTurnstileVerify = useCallback((token: string) => {
+    setTurnstileToken(token);
+  }, []);
+
+  const handleTurnstileExpire = useCallback(() => {
+    setTurnstileToken("");
+  }, []);
 
   // Resend in success screen state
   const [resendStatus, setResendStatus] = useState<string | null>(null);
@@ -239,6 +247,8 @@ export default function RegisterPage() {
                   onClick={() => {
                     setSelectedProgram("MARTIAL_ARTS");
                     setServerError(null);
+                    setTurnstileToken("");
+                    turnstileRef.current?.reset();
                   }}
                   className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
                     selectedProgram === "MARTIAL_ARTS"
@@ -255,6 +265,8 @@ export default function RegisterPage() {
                   onClick={() => {
                     setSelectedProgram("WEIGHT_MANAGEMENT_FITNESS");
                     setServerError(null);
+                    setTurnstileToken("");
+                    turnstileRef.current?.reset();
                   }}
                   className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
                     selectedProgram === "WEIGHT_MANAGEMENT_FITNESS"
@@ -548,8 +560,8 @@ export default function RegisterPage() {
                   {/* Turnstile Bot Verification */}
                   <Turnstile
                     ref={turnstileRef}
-                    onVerify={(token) => setTurnstileToken(token)}
-                    onExpire={() => setTurnstileToken("")}
+                    onVerify={handleTurnstileVerify}
+                    onExpire={handleTurnstileExpire}
                     theme="dark"
                   />
 
@@ -894,8 +906,8 @@ export default function RegisterPage() {
                   {/* Turnstile Bot Verification */}
                   <Turnstile
                     ref={turnstileRef}
-                    onVerify={(token) => setTurnstileToken(token)}
-                    onExpire={() => setTurnstileToken("")}
+                    onVerify={handleTurnstileVerify}
+                    onExpire={handleTurnstileExpire}
                     theme="dark"
                   />
 

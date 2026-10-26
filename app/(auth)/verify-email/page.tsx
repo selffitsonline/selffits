@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
@@ -21,6 +21,14 @@ export default function VerifyEmailPage() {
   const [isResending, setIsResending] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState("");
   const turnstileRef = useRef<TurnstileRef | null>(null);
+
+  const handleTurnstileVerify = useCallback((token: string) => {
+    setTurnstileToken(token);
+  }, []);
+
+  const handleTurnstileExpire = useCallback(() => {
+    setTurnstileToken("");
+  }, []);
 
   useEffect(() => {
     if (!token) {
@@ -162,8 +170,8 @@ export default function VerifyEmailPage() {
 
                 <Turnstile
                   ref={turnstileRef}
-                  onVerify={(tok) => setTurnstileToken(tok)}
-                  onExpire={() => setTurnstileToken("")}
+                  onVerify={handleTurnstileVerify}
+                  onExpire={handleTurnstileExpire}
                   theme="dark"
                 />
 
