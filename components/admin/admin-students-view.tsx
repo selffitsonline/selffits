@@ -489,7 +489,18 @@ export function AdminStudentsView({
                             <p className="font-bold text-white text-sm hover:text-[#0080FF] transition-colors">
                               {std.name}
                             </p>
-                            <p className="text-gray-400 text-[11px]">{std.email}</p>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <p className="text-gray-400 text-[11px]">{std.email}</p>
+                              {std.isEmailVerified ? (
+                                <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[9px] font-extrabold uppercase">
+                                  Verified
+                                </span>
+                              ) : (
+                                <span className="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[9px] font-extrabold uppercase">
+                                  Unverified
+                                </span>
+                              )}
+                            </div>
                             {std.phone && std.phone !== "Not provided" && (
                               <p className="text-gray-500 text-[10px]">{std.phone}</p>
                             )}
@@ -537,8 +548,16 @@ export function AdminStudentsView({
                           </div>
                         ) : (
                           <div className="space-y-0.5">
-                            <p className="font-bold text-gray-400 text-xs">Unenrolled</p>
-                            <p className="text-gray-500 text-[10px]">No active course</p>
+                            <p className="font-bold text-gray-300 text-xs">
+                              {std.registeredProgram === "WEIGHT_MANAGEMENT_FITNESS"
+                                ? "Weight Management & Fitness"
+                                : std.registeredProgram === "MARTIAL_ARTS"
+                                ? "Martial Arts"
+                                : "Unenrolled"}
+                            </p>
+                            <p className="text-gray-500 text-[10px]">
+                              {std.registeredProgram ? "Registered Questionnaire" : "No active course"}
+                            </p>
                           </div>
                         )}
                       </td>

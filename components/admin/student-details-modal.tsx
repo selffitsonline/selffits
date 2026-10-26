@@ -54,6 +54,18 @@ interface StudentDetailsModalProps {
     firstName?: string;
     lastName?: string;
     email: string;
+    emailVerified?: string | null;
+    isEmailVerified?: boolean;
+    registeredProgram?: string | null;
+    studentType?: string | null;
+    martialArtsLevel?: string | null;
+    trainingGoal?: string | null;
+    currentWeightKg?: number | null;
+    targetWeightKg?: number | null;
+    fitnessGoal?: string | null;
+    fitnessLevel?: string | null;
+    workoutFrequency?: string | null;
+    questionnaireAnswers?: Record<string, any> | null;
     phone: string;
     country: string;
     city: string;
@@ -135,6 +147,15 @@ export function StudentDetailsModal({
                     : student.enrollmentStatus === "EXPIRED"
                     ? "Expired"
                     : "Unenrolled"}
+                </span>
+                <span
+                  className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wide border ${
+                    student.isEmailVerified
+                      ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                      : "bg-amber-500/20 text-amber-300 border-amber-500/30"
+                  }`}
+                >
+                  {student.isEmailVerified ? "Verified Email" : "Unverified Email"}
                 </span>
               </div>
               <p className="text-xs text-gray-400 mt-1 flex items-center gap-3">
@@ -329,6 +350,18 @@ export function StudentDetailsModal({
                   <p className="text-white font-bold">{student.totalEnrollments} Courses</p>
                 </div>
                 <div className="p-4 rounded-xl bg-[#0F1117] border border-white/5 space-y-1">
+                  <p className="text-gray-400 text-[11px]">Email Verification</p>
+                  <p
+                    className={`font-bold text-xs ${
+                      student.isEmailVerified ? "text-emerald-400" : "text-amber-400"
+                    }`}
+                  >
+                    {student.isEmailVerified
+                      ? `Verified (${student.emailVerified || student.joinedDate})`
+                      : "Pending Verification"}
+                  </p>
+                </div>
+                <div className="p-4 rounded-xl bg-[#0F1117] border border-white/5 space-y-1">
                   <p className="text-gray-400 text-[11px]">Account Status</p>
                   <p
                     className={`font-bold ${
@@ -337,6 +370,94 @@ export function StudentDetailsModal({
                   >
                     {student.isBlocked ? "Blocked" : "Active & Clear"}
                   </p>
+                </div>
+              </div>
+
+              {/* Registration Questionnaire Answers Section */}
+              <div className="mt-6 pt-5 border-t border-white/10 space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-black uppercase tracking-wider text-[#E50914]">
+                    Registration Questionnaire Profile
+                  </h4>
+                  <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10 text-gray-300 text-[10px] font-bold">
+                    {student.registeredProgram === "WEIGHT_MANAGEMENT_FITNESS"
+                      ? "Weight Management & Fitness"
+                      : "Martial Arts"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  {student.studentType && (
+                    <div className="p-3 rounded-xl bg-[#0F1117] border border-white/5 space-y-1">
+                      <p className="text-gray-500 text-[10px] uppercase font-bold tracking-wider">
+                        Student Type / Age Group
+                      </p>
+                      <p className="text-white text-xs font-bold">{student.studentType}</p>
+                    </div>
+                  )}
+
+                  {student.martialArtsLevel && (
+                    <div className="p-3 rounded-xl bg-[#0F1117] border border-white/5 space-y-1">
+                      <p className="text-gray-500 text-[10px] uppercase font-bold tracking-wider">
+                        Martial Arts Level
+                      </p>
+                      <p className="text-white text-xs font-bold">{student.martialArtsLevel}</p>
+                    </div>
+                  )}
+
+                  {student.trainingGoal && (
+                    <div className="p-3 rounded-xl bg-[#0F1117] border border-white/5 space-y-1">
+                      <p className="text-gray-500 text-[10px] uppercase font-bold tracking-wider">
+                        Training Goal
+                      </p>
+                      <p className="text-white text-xs font-bold">{student.trainingGoal}</p>
+                    </div>
+                  )}
+
+                  {student.fitnessGoal && (
+                    <div className="p-3 rounded-xl bg-[#0F1117] border border-white/5 space-y-1">
+                      <p className="text-gray-500 text-[10px] uppercase font-bold tracking-wider">
+                        Main Fitness Goal
+                      </p>
+                      <p className="text-white text-xs font-bold">{student.fitnessGoal}</p>
+                    </div>
+                  )}
+
+                  {student.fitnessLevel && (
+                    <div className="p-3 rounded-xl bg-[#0F1117] border border-white/5 space-y-1">
+                      <p className="text-gray-500 text-[10px] uppercase font-bold tracking-wider">
+                        Fitness Level
+                      </p>
+                      <p className="text-white text-xs font-bold">{student.fitnessLevel}</p>
+                    </div>
+                  )}
+
+                  {student.workoutFrequency && (
+                    <div className="p-3 rounded-xl bg-[#0F1117] border border-white/5 space-y-1">
+                      <p className="text-gray-500 text-[10px] uppercase font-bold tracking-wider">
+                        Workout Frequency
+                      </p>
+                      <p className="text-white text-xs font-bold">{student.workoutFrequency}</p>
+                    </div>
+                  )}
+
+                  {student.currentWeightKg != null && (
+                    <div className="p-3 rounded-xl bg-[#0F1117] border border-white/5 space-y-1">
+                      <p className="text-gray-500 text-[10px] uppercase font-bold tracking-wider">
+                        Current Weight
+                      </p>
+                      <p className="text-white text-xs font-bold">{student.currentWeightKg} kg</p>
+                    </div>
+                  )}
+
+                  {student.targetWeightKg != null && (
+                    <div className="p-3 rounded-xl bg-[#0F1117] border border-white/5 space-y-1">
+                      <p className="text-gray-500 text-[10px] uppercase font-bold tracking-wider">
+                        Target Weight
+                      </p>
+                      <p className="text-white text-xs font-bold">{student.targetWeightKg} kg</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

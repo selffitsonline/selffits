@@ -1,0 +1,29 @@
+-- AlterTable
+ALTER TABLE "StudentProfile" 
+ADD COLUMN IF NOT EXISTS "registeredProgram" TEXT,
+ADD COLUMN IF NOT EXISTS "studentType" TEXT,
+ADD COLUMN IF NOT EXISTS "martialArtsLevel" TEXT,
+ADD COLUMN IF NOT EXISTS "trainingGoal" TEXT,
+ADD COLUMN IF NOT EXISTS "currentWeightKg" DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS "targetWeightKg" DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS "fitnessGoal" TEXT,
+ADD COLUMN IF NOT EXISTS "fitnessLevel" TEXT,
+ADD COLUMN IF NOT EXISTS "workoutFrequency" TEXT,
+ADD COLUMN IF NOT EXISTS "questionnaireAnswers" JSONB,
+ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
+-- CreateTable
+CREATE TABLE IF NOT EXISTS "RateLimitRecord" (
+    "id" TEXT NOT NULL,
+    "key" TEXT NOT NULL,
+    "action" TEXT NOT NULL,
+    "points" INTEGER NOT NULL DEFAULT 1,
+    "expiresAt" TIMESTAMP(3) NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "RateLimitRecord_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE INDEX IF NOT EXISTS "RateLimitRecord_key_action_expiresAt_idx" ON "RateLimitRecord"("key", "action", "expiresAt");

@@ -143,6 +143,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           if (user.passwordHash) {
             const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
             if (isPasswordValid) {
+              if (user.role === Role.STUDENT && !user.emailVerified) {
+                throw new Error("EMAIL_NOT_VERIFIED");
+              }
               return {
                 id: user.id,
                 email: user.email,
@@ -150,6 +153,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 role: user.role,
                 isBlocked: user.isBlocked,
                 image: user.image,
+                emailVerified: user.emailVerified,
               };
             }
           }
@@ -270,6 +274,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = user.id as string;
         token.role = user.role as Role;
         token.isBlocked = (user as any).isBlocked || false;
+        token.emailVerified = (user as any).emailVerified ? true : false;
       }
       return token;
     },
@@ -278,6 +283,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.id = token.id;
         session.user.role = token.role;
         (session.user as any).isBlocked = (token as any).isBlocked || false;
+        (session.user as any).emailVerified = (token as any).emailVerified || false;
       }
       return session;
     },

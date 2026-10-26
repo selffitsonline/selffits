@@ -114,6 +114,21 @@ model StudentProfile {
   gender           String?
   currentBelt      String    @default("White Belt")
   beltAwardedAt    DateTime?
+
+  // Questionnaire Additions (Additive & Backward-Compatible)
+  registeredProgram     String?   // "MARTIAL_ARTS" | "WEIGHT_MANAGEMENT_FITNESS"
+  studentType           String?   // "Child (under 18)" | "Adult (18+)"
+  martialArtsLevel      String?   // "Beginner — I'm just starting" | "Intermediate — I have some experience" | "Advanced — I train regularly"
+  trainingGoal          String?   // "Self-defence", "Fitness and flexibility", etc.
+  currentWeightKg       Float?
+  targetWeightKg        Float?
+  fitnessGoal           String?   // "Weight management", "Improve overall fitness", etc.
+  fitnessLevel          String?   // "Beginner" | "Intermediate" | "Advanced"
+  workoutFrequency      String?   // "1–2 days per week", etc.
+  questionnaireAnswers  Json?
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @default(now()) @updatedAt
 }
 
 model VerificationToken {
@@ -473,4 +488,15 @@ model CouponUsage {
   @@index([couponId])
   @@index([userId])
   @@index([userEmail])
+}
+
+model RateLimitRecord {
+  id        String   @id @default(cuid())
+  key       String   // e.g. IP or email identifier
+  action    String   // "login", "register", "forgot_password", "resend_verification", "reset_password"
+  points    Int      @default(1)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([key, action, expiresAt])
 }

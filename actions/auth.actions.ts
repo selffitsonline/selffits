@@ -6,178 +6,516 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import {
   RegisterSchema,
+  MartialArtsRegistrationSchema,
+  WeightFitnessRegistrationSchema,
+  ProgramRegistrationSchema,
   ForgotPasswordSchema,
   ResetPasswordSchema,
+  ResendVerificationSchema,
   RegisterInput,
+  MartialArtsRegistrationInput,
+  WeightFitnessRegistrationInput,
+  ProgramRegistrationInput,
   ForgotPasswordInput,
   ResetPasswordInput,
+  ResendVerificationInput,
 } from "@/types/validation.schemas";
 import { validatePhoneNumberForCountry } from "@/lib/countries";
-import { WelcomeVerificationEmail } from "@/emails/welcome-verification.email";
-import { ResetPasswordEmail } from "@/emails/reset-password.email";
+import { WelcomeVerificationEmail, renderWelcomeVerificationEmailHtml } from "@/emails/welcome-verification.email";
+import { ResetPasswordEmail, renderResetPasswordEmailHtml } from "@/emails/reset-password.email";
+import { verifyTurnstileToken } from "@/lib/turnstile";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 export type AuthActionResult = {
   success: boolean;
   message?: string;
   error?: string;
   fieldErrors?: Record<string, string[]>;
+  rateLimited?: boolean;
 };
 
+/**
+ * Validates login pre-checks (Rate Limiting & Cloudflare Turnstile CAPTCHA)
+ */
+export async function preLoginCheckAction(
+  email: string,
+  turnstileToken?: string
+): Promise<AuthActionResult> {
+  const clientIp = await getClientIp();
+
+  // 1. Rate Limiting Check (max 10 attempts per 5 minutes per IP/email)
+  const rateLimit = await checkRateLimit({
+    key: email || clientIp,
+    action: "login",
+    maxAttempts: 10,
+    windowSeconds: 300,
+  });
+
+  if (!rateLimit.success) {
+    return {
+      success: false,
+      error: rateLimit.error || "Too many login attempts. Please wait before trying again.",
+      rateLimited: true,
+    };
+  }
+
+  // 2. Cloudflare Turnstile Verification
+  const turnstile = await verifyTurnstileToken(turnstileToken, clientIp);
+  if (!turnstile.success) {
+    return {
+      success: false,
+      error: turnstile.error || "Security verification failed. Please try again.",
+    };
+  }
+
+  return { success: true };
+}
+
+/**
+ * Registers a student with either Martial Arts or Weight Management questionnaire.
+ * Also supports legacy registration inputs for full backward compatibility.
+ */
 export async function registerStudentAction(
-  data: RegisterInput
+  data: ProgramRegistrationInput | RegisterInput | any
 ): Promise<AuthActionResult> {
   try {
-    const validated = RegisterSchema.safeParse(data);
-    if (!validated.success) {
+    const clientIp = await getClientIp();
+
+    // 1. Rate Limiting (max 5 registration attempts per 5 minutes per IP)
+    const rateLimit = await checkRateLimit({
+      key: clientIp,
+      action: "register",
+      maxAttempts: 5,
+      windowSeconds: 300,
+    });
+
+    if (!rateLimit.success) {
       return {
         success: false,
-        error: "Validation failed. Please check the form errors.",
-        fieldErrors: validated.error.flatten().fieldErrors,
+        error: rateLimit.error || "Too many registration attempts. Please wait a few minutes.",
+        rateLimited: true,
       };
     }
 
-    const { firstName, lastName, email, phone, age, gender, country, password } = validated.data;
-    const normalizedEmail = email.toLowerCase().trim();
-
-    const phoneValidation = validatePhoneNumberForCountry(phone, country);
-    if (!phoneValidation.isValid) {
+    // 2. Turnstile Verification
+    const turnstileToken = data?.turnstileToken;
+    const turnstile = await verifyTurnstileToken(turnstileToken, clientIp);
+    if (!turnstile.success) {
       return {
         success: false,
-        error: phoneValidation.message || "Invalid phone number for the selected country.",
-        fieldErrors: { phone: [phoneValidation.message || "Invalid phone number"] },
+        error: turnstile.error || "Bot verification failed. Please complete the security check.",
       };
     }
 
-    const formattedPhone = phoneValidation.formatted || phone.trim();
+    // 3. Schema Parsing based on registered program or legacy form
+    let fullName = "";
+    let email = "";
+    let phone = "";
+    let country = "India";
+    let password = "";
+    let registeredProgram = "MARTIAL_ARTS";
+    let studentType: string | undefined = undefined;
+    let martialArtsLevel: string | undefined = undefined;
+    let trainingGoal: string | undefined = undefined;
+    let currentWeightKg: number | undefined = undefined;
+    let targetWeightKg: number | undefined = undefined;
+    let fitnessGoal: string | undefined = undefined;
+    let fitnessLevel: string | undefined = undefined;
+    let workoutFrequency: string | undefined = undefined;
+    let questionnaireAnswers: Record<string, any> = {};
 
+    if (data.registeredProgram === "WEIGHT_MANAGEMENT_FITNESS") {
+      const parsed = WeightFitnessRegistrationSchema.safeParse(data);
+      if (!parsed.success) {
+        return {
+          success: false,
+          error: "Please complete all required fitness questionnaire fields.",
+          fieldErrors: parsed.error.flatten().fieldErrors,
+        };
+      }
+      const val = parsed.data;
+      fullName = val.fullName.trim();
+      email = val.email.toLowerCase().trim();
+      phone = val.phone.trim();
+      country = val.country || "India";
+      password = val.password;
+      registeredProgram = "WEIGHT_MANAGEMENT_FITNESS";
+      studentType = val.ageGroup;
+      currentWeightKg = val.currentWeightKg;
+      targetWeightKg = val.targetWeightKg;
+      fitnessGoal = val.fitnessGoal;
+      fitnessLevel = val.fitnessLevel;
+      workoutFrequency = val.workoutFrequency;
+      questionnaireAnswers = {
+        ageGroup: val.ageGroup,
+        currentWeightKg: val.currentWeightKg,
+        targetWeightKg: val.targetWeightKg,
+        fitnessGoal: val.fitnessGoal,
+        fitnessLevel: val.fitnessLevel,
+        workoutFrequency: val.workoutFrequency,
+      };
+    } else if (data.registeredProgram === "MARTIAL_ARTS" || ("martialArtsLevel" in data && !("firstName" in data))) {
+      const parsed = MartialArtsRegistrationSchema.safeParse(data);
+      if (!parsed.success) {
+        return {
+          success: false,
+          error: "Please complete all required martial arts questionnaire fields.",
+          fieldErrors: parsed.error.flatten().fieldErrors,
+        };
+      }
+      const val = parsed.data;
+      fullName = val.fullName.trim();
+      email = val.email.toLowerCase().trim();
+      phone = val.phone.trim();
+      country = val.country || "India";
+      password = val.password;
+      registeredProgram = "MARTIAL_ARTS";
+      studentType = val.studentType;
+      martialArtsLevel = val.martialArtsLevel;
+      trainingGoal = val.trainingGoal;
+      currentWeightKg = val.currentWeightKg;
+      questionnaireAnswers = {
+        studentType: val.studentType,
+        martialArtsLevel: val.martialArtsLevel,
+        trainingGoal: val.trainingGoal,
+        currentWeightKg: val.currentWeightKg,
+      };
+    } else {
+      // Legacy Registration input
+      const parsed = RegisterSchema.safeParse(data);
+      if (!parsed.success) {
+        return {
+          success: false,
+          error: "Validation failed. Please check form errors.",
+          fieldErrors: parsed.error.flatten().fieldErrors,
+        };
+      }
+      const val = parsed.data;
+      fullName = `${val.firstName.trim()} ${val.lastName.trim()}`;
+      email = val.email.toLowerCase().trim();
+      phone = val.phone.trim();
+      country = val.country;
+      password = val.password;
+      registeredProgram = "MARTIAL_ARTS";
+      studentType = val.age < 18 ? "Child (under 18)" : "Adult (18+)";
+      questionnaireAnswers = {
+        age: val.age,
+        gender: val.gender,
+      };
+    }
+
+    // Split name into first and last name for storage
+    const nameParts = fullName.split(" ").filter(Boolean);
+    const firstName = nameParts[0] || fullName;
+    const lastName = nameParts.slice(1).join(" ") || "";
+
+    // 4. Check for existing accounts
     const existingUser = await db.user.findUnique({
-      where: { email: normalizedEmail },
+      where: { email },
     });
 
     if (existingUser) {
       return {
         success: false,
-        error: "An account with this email address already exists.",
+        error: "An account with this email address already exists. Please log in or reset your password.",
         fieldErrors: { email: ["Email address is already registered"] },
       };
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const fullName = `${firstName.trim()} ${lastName.trim()}`;
 
-    // Create user and student profile in a transaction
+    // 5. Create user and student profile (Mandatory: emailVerified remains NULL)
     const newUser = await db.$transaction(async (tx) => {
       const user = await tx.user.create({
         data: {
-          firstName: firstName.trim(),
-          lastName: lastName.trim(),
+          firstName,
+          lastName,
           name: fullName,
-          email: normalizedEmail,
+          email,
           passwordHash,
           role: "STUDENT",
-          emailVerified: new Date(),
+          emailVerified: null, // Compulsory: Must NOT be verified upon registration
+          isBlocked: false,
         },
       });
 
       await tx.studentProfile.create({
         data: {
           userId: user.id,
-          phone: formattedPhone,
-          age,
-          gender,
-          country: country.trim(),
+          phone,
+          country,
+          registeredProgram,
+          studentType,
+          martialArtsLevel,
+          trainingGoal,
+          currentWeightKg,
+          targetWeightKg,
+          fitnessGoal,
+          fitnessLevel,
+          workoutFrequency,
+          questionnaireAnswers,
         },
       });
 
       return user;
     });
 
-    // Safe optional verification token generation & email dispatch
+    // 6. Generate secure single-use 24-hour verification token & send email
     try {
+      // Clear any prior verification tokens for this email
+      await db.verificationToken.deleteMany({ where: { email } });
+
       const token = crypto.randomBytes(32).toString("hex");
-      const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 Hours
 
       await db.verificationToken.create({
         data: {
-          email: normalizedEmail,
+          email,
           token,
           expires,
         },
       });
 
-      const baseUrl = process.env.NEXTAUTH_URL || "https://selffits.vercel.app";
-      const verificationUrl = `${baseUrl}/verify-email?token=${token}`;
+      const baseUrl =
+        process.env.NEXTAUTH_URL ||
+        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+      const verificationUrl = `${baseUrl.replace(/\/$/, "")}/verify-email?token=${token}`;
 
       await resend.emails.send({
         from: EMAIL_FROM,
-        to: normalizedEmail,
+        to: email,
         subject: "Verify Your SELFFITS Academy Account",
-        react: WelcomeVerificationEmail({
-          name: firstName,
-          verificationUrl,
-        }),
+        html: renderWelcomeVerificationEmailHtml(firstName, verificationUrl),
       });
     } catch (emailErr) {
-      console.error("Non-blocking verification email/token error:", emailErr);
+      console.error("[AUTH] Verification email delivery error:", emailErr);
+      // We still complete registration, but notify that email dispatch failed
+      return {
+        success: true,
+        message:
+          "Account registered! However, email dispatch encountered a temporary delay. You can use 'Resend Verification' on the login page.",
+      };
     }
 
     return {
       success: true,
-      message: "Registration successful! Your student account has been created.",
+      message:
+        "Registration successful! We have sent a verification email to your inbox. Please verify your email before logging in.",
     };
   } catch (err: any) {
-    console.error("registerStudentAction error:", err);
-    const detailMsg = err?.message || "Internal database processing error";
+    console.error("[AUTH] registerStudentAction error:", err);
+    if (err?.code === "P2002") {
+      return {
+        success: false,
+        error: "An account with this email address already exists.",
+        fieldErrors: { email: ["Email address is already registered"] },
+      };
+    }
     return {
       success: false,
-      error: `Registration error: ${detailMsg.slice(0, 150)}`,
+      error: "An unexpected error occurred during registration. Please try again.",
     };
   }
 }
 
+/**
+ * Verifies email using a cryptographically secure single-use token.
+ */
 export async function verifyEmailAction(token: string): Promise<AuthActionResult> {
   try {
-    if (!token) {
-      return { success: false, error: "Invalid verification token." };
+    if (!token || typeof token !== "string" || token.trim() === "") {
+      return { success: false, error: "Invalid verification link. Token is missing." };
     }
 
+    const cleanToken = token.trim();
+
     const verificationRecord = await db.verificationToken.findUnique({
-      where: { token },
+      where: { token: cleanToken },
     });
 
     if (!verificationRecord) {
-      return { success: false, error: "Invalid or expired verification token." };
+      return {
+        success: false,
+        error: "Invalid or already used verification link. If your account is not verified, please request a new link.",
+      };
     }
 
     if (verificationRecord.expires < new Date()) {
-      await db.verificationToken.delete({ where: { token } });
-      return { success: false, error: "Verification token has expired. Please request a new link." };
+      await db.verificationToken.delete({ where: { token: cleanToken } }).catch(() => {});
+      return {
+        success: false,
+        error: "This verification link has expired. Please request a new verification email from the login page.",
+      };
     }
 
+    // Atomic update & single-use token invalidation
     await db.$transaction([
       db.user.update({
         where: { email: verificationRecord.email },
         data: { emailVerified: new Date() },
       }),
       db.verificationToken.delete({
-        where: { token },
+        where: { token: cleanToken },
       }),
     ]);
 
     return {
       success: true,
-      message: "Your email has been verified successfully! You can now log in.",
+      message: "Your email address has been verified successfully! You can now log in.",
     };
   } catch (err) {
-    console.error("verifyEmailAction error:", err);
-    return { success: false, error: "Failed to verify email. Please try again." };
+    console.error("[AUTH] verifyEmailAction error:", err);
+    return { success: false, error: "Failed to verify email. Please try again or request a new link." };
   }
 }
 
+/**
+ * Resends a verification email with Turnstile CAPTCHA and Rate Limiting.
+ */
+export async function resendVerificationEmailAction(
+  data: ResendVerificationInput
+): Promise<AuthActionResult> {
+  try {
+    const clientIp = await getClientIp();
+
+    // 1. Rate Limiting (max 3 resends per 5 minutes per IP/email)
+    const normalizedEmail = data.email?.toLowerCase().trim();
+    const rateLimit = await checkRateLimit({
+      key: normalizedEmail || clientIp,
+      action: "resend_verification",
+      maxAttempts: 3,
+      windowSeconds: 300,
+    });
+
+    if (!rateLimit.success) {
+      return {
+        success: false,
+        error: rateLimit.error || "Too many verification requests. Please wait a few minutes.",
+        rateLimited: true,
+      };
+    }
+
+    // 2. Turnstile Verification
+    const turnstile = await verifyTurnstileToken(data.turnstileToken, clientIp);
+    if (!turnstile.success) {
+      return {
+        success: false,
+        error: turnstile.error || "Security verification failed. Please try again.",
+      };
+    }
+
+    const parsed = ResendVerificationSchema.safeParse(data);
+    if (!parsed.success) {
+      return { success: false, error: "Please provide a valid email address." };
+    }
+
+    const user = await db.user.findUnique({
+      where: { email: normalizedEmail },
+    });
+
+    // Prevent account enumeration: return uniform success response
+    if (!user) {
+      return {
+        success: true,
+        message: "If an account with that email exists and requires verification, a new link has been sent.",
+      };
+    }
+
+    if (user.emailVerified) {
+      return {
+        success: true,
+        message: "This email address is already verified. You can log in directly.",
+      };
+    }
+
+    // Delete existing tokens
+    await db.verificationToken.deleteMany({
+      where: { email: normalizedEmail },
+    });
+
+    const token = crypto.randomBytes(32).toString("hex");
+    const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 Hours
+
+    await db.verificationToken.create({
+      data: {
+        email: normalizedEmail,
+        token,
+        expires,
+      },
+    });
+
+    const baseUrl =
+      process.env.NEXTAUTH_URL ||
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+    const verificationUrl = `${baseUrl.replace(/\/$/, "")}/verify-email?token=${token}`;
+
+    try {
+      await resend.emails.send({
+        from: EMAIL_FROM,
+        to: normalizedEmail,
+        subject: "Verify Your SELFFITS Academy Account",
+        html: renderWelcomeVerificationEmailHtml(
+          user.firstName || user.name || "Student",
+          verificationUrl
+        ),
+      });
+    } catch (emailErr) {
+      console.error("[AUTH] Resend verification email failed:", emailErr);
+      return {
+        success: false,
+        error: "Failed to dispatch verification email. Please try again later.",
+      };
+    }
+
+    return {
+      success: true,
+      message: "A new verification link has been sent to your email address.",
+    };
+  } catch (err) {
+    console.error("[AUTH] resendVerificationEmailAction error:", err);
+    return {
+      success: false,
+      error: "An unexpected error occurred. Please try again.",
+    };
+  }
+}
+
+/**
+ * Initiates Forgot Password recovery with Turnstile CAPTCHA and Rate Limiting.
+ */
 export async function forgotPasswordAction(
   data: ForgotPasswordInput
 ): Promise<AuthActionResult> {
   try {
+    const clientIp = await getClientIp();
+
+    const normalizedEmail = data.email?.toLowerCase().trim();
+
+    // 1. Rate Limiting (max 5 requests per 5 minutes)
+    const rateLimit = await checkRateLimit({
+      key: normalizedEmail || clientIp,
+      action: "forgot_password",
+      maxAttempts: 5,
+      windowSeconds: 300,
+    });
+
+    if (!rateLimit.success) {
+      return {
+        success: false,
+        error: rateLimit.error || "Too many password recovery requests. Please wait.",
+        rateLimited: true,
+      };
+    }
+
+    // 2. Turnstile Verification
+    const turnstile = await verifyTurnstileToken(data.turnstileToken, clientIp);
+    if (!turnstile.success) {
+      return {
+        success: false,
+        error: turnstile.error || "Security verification failed. Please try again.",
+      };
+    }
+
     const validated = ForgotPasswordSchema.safeParse(data);
     if (!validated.success) {
       return {
@@ -187,7 +525,6 @@ export async function forgotPasswordAction(
       };
     }
 
-    const normalizedEmail = validated.data.email.toLowerCase().trim();
     const user = await db.user.findUnique({
       where: { email: normalizedEmail },
     });
@@ -208,38 +545,69 @@ export async function forgotPasswordAction(
         },
       });
 
-      const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-      const resetUrl = `${baseUrl}/reset-password?token=${token}`;
+      const baseUrl =
+        process.env.NEXTAUTH_URL ||
+        (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+      const resetUrl = `${baseUrl.replace(/\/$/, "")}/reset-password?token=${token}`;
 
       try {
         await resend.emails.send({
           from: EMAIL_FROM,
           to: normalizedEmail,
           subject: "Reset Your SELFFITS Account Password",
-          react: ResetPasswordEmail({
-            name: user.name,
-            resetUrl,
-          }),
+          html: renderResetPasswordEmailHtml(user.name, resetUrl),
         });
       } catch (emailErr) {
-        console.error("Failed to send reset password email via Resend:", emailErr);
+        console.error("[AUTH] Failed to send reset password email via Resend:", emailErr);
       }
     }
 
+    // Always return generic response to avoid account enumeration
     return {
       success: true,
       message: "If an account exists with that email, a password reset link has been sent.",
     };
   } catch (err) {
-    console.error("forgotPasswordAction error:", err);
+    console.error("[AUTH] forgotPasswordAction error:", err);
     return { success: false, error: "An unexpected error occurred. Please try again." };
   }
 }
 
+/**
+ * Resets account password using a single-use token.
+ */
 export async function resetPasswordAction(
   data: ResetPasswordInput
 ): Promise<AuthActionResult> {
   try {
+    const clientIp = await getClientIp();
+
+    // 1. Rate Limiting (max 5 reset attempts per 5 minutes)
+    const rateLimit = await checkRateLimit({
+      key: clientIp,
+      action: "reset_password",
+      maxAttempts: 5,
+      windowSeconds: 300,
+    });
+
+    if (!rateLimit.success) {
+      return {
+        success: false,
+        error: rateLimit.error || "Too many reset attempts. Please wait.",
+        rateLimited: true,
+      };
+    }
+
+    // 2. Cloudflare Turnstile Verification
+    const turnstile = await verifyTurnstileToken(data.turnstileToken, clientIp);
+    if (!turnstile.success) {
+      return {
+        success: false,
+        error: turnstile.error || "Security verification failed. Please try again.",
+      };
+    }
+
+    // 3. Validate Input
     const validated = ResetPasswordSchema.safeParse(data);
     if (!validated.success) {
       return {
@@ -250,29 +618,31 @@ export async function resetPasswordAction(
     }
 
     const { token, password } = validated.data;
+    const cleanToken = token.trim();
 
     const resetRecord = await db.passwordResetToken.findUnique({
-      where: { token },
+      where: { token: cleanToken },
     });
 
     if (!resetRecord) {
-      return { success: false, error: "Invalid or expired password reset link." };
+      return { success: false, error: "Invalid or already used password reset link." };
     }
 
     if (resetRecord.expires < new Date()) {
-      await db.passwordResetToken.delete({ where: { token } });
+      await db.passwordResetToken.delete({ where: { token: cleanToken } }).catch(() => {});
       return { success: false, error: "Password reset link has expired. Please request a new one." };
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
 
+    // Atomic update & single-use token deletion
     await db.$transaction([
       db.user.update({
         where: { email: resetRecord.email },
         data: { passwordHash },
       }),
       db.passwordResetToken.delete({
-        where: { token },
+        where: { token: cleanToken },
       }),
     ]);
 
@@ -281,7 +651,7 @@ export async function resetPasswordAction(
       message: "Your password has been reset successfully! You can now log in with your new password.",
     };
   } catch (err) {
-    console.error("resetPasswordAction error:", err);
+    console.error("[AUTH] resetPasswordAction error:", err);
     return { success: false, error: "Failed to reset password. Please try again." };
   }
 }
