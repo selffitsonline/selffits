@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { Role } from "@prisma/client";
 import { db } from "@/lib/db";
+import { auth } from "@/lib/auth";
 import { verifyMobileAuth, enforceMobileRole } from "@/lib/mobile-auth";
 import { calculateNextClassSession } from "@/lib/class-schedule";
 import {
@@ -16,36 +17,19 @@ export async function GET(
   req: Request
 ): Promise<NextResponse<ApiResponse<CoachDashboardResponseDto>>> {
   try {
+    let liveUser: {
+      id: string;
+      name: string | null;
+      email: string;
+      role: Role;
+      isBlocked: boolean;
+    } | null = null;
+
     const authResult = await verifyMobileAuth(req);
 
-    if (!authResult.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: authResult.errorCode,
-            message: authResult.message,
-          },
-        },
-        { status: authResult.statusCode }
-      );
-    }
-
-    // 1. Live database re-verification: enforce immediate revocation if account is blocked or deleted
-    let liveUser = await db.user.findUnique({
-      where: { id: authResult.user.id },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        isBlocked: true,
-      },
-    });
-
-    if (!liveUser && authResult.user.email) {
+    if (authResult.success) {
       liveUser = await db.user.findUnique({
-        where: { email: authResult.user.email.toLowerCase().trim() },
+        where: { id: authResult.user.id },
         select: {
           id: true,
           name: true,
@@ -54,6 +38,86 @@ export async function GET(
           isBlocked: true,
         },
       });
+
+      if (!liveUser && authResult.user.email) {
+        liveUser = await db.user.findUnique({
+          where: { email: authResult.user.email.toLowerCase().trim() },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            isBlocked: true,
+          },
+        });
+      }
+    } else if (authResult.errorCode === "ACCOUNT_BLOCKED") {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "ACCOUNT_BLOCKED",
+            message: authResult.message,
+          },
+        },
+        { status: 403 }
+      );
+    } else if (authResult.errorCode === "MISSING_BEARER_TOKEN") {
+      // Check for active web session if Bearer token is absent
+      let webSession = null;
+      try {
+        webSession = await auth();
+      } catch {
+        webSession = null;
+      }
+
+      if (webSession?.user?.id) {
+        liveUser = await db.user.findUnique({
+          where: { id: webSession.user.id },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            isBlocked: true,
+          },
+        });
+
+        if (!liveUser && webSession.user.email) {
+          liveUser = await db.user.findUnique({
+            where: { email: webSession.user.email.toLowerCase().trim() },
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              role: true,
+              isBlocked: true,
+            },
+          });
+        }
+      } else {
+        return NextResponse.json(
+          {
+            success: false,
+            error: {
+              code: "UNAUTHORIZED",
+              message: "Authentication required to access coach dashboard.",
+            },
+          },
+          { status: 401 }
+        );
+      }
+    } else {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: authResult.errorCode || "UNAUTHORIZED",
+            message: authResult.message || "Authentication required to access coach dashboard.",
+          },
+        },
+        { status: authResult.statusCode || 401 }
+      );
     }
 
     if (!liveUser) {
@@ -82,7 +146,7 @@ export async function GET(
       );
     }
 
-    // 2. Role check using live database role
+    // Role check using live database role: strictly reject non-coaches with HTTP 403
     const roleCheck = enforceMobileRole(
       {
         id: liveUser.id,

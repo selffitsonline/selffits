@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
+import { Role } from "@prisma/client";
 import { getCoachDashboardDataAction } from "@/actions/coach.actions";
 import { CoachDashboardView } from "@/components/coach/coach-dashboard-view";
 
@@ -12,11 +13,11 @@ export default async function CoachDashboardPage() {
   const session = await auth();
 
   if (!session || !session.user) {
-    redirect("/login?callbackUrl=/coach/dashboard");
+    redirect("/login");
   }
 
   const role = session.user.role;
-  if (role !== "COACH" && role !== "ADMIN" && role !== "SUPER_ADMIN") {
+  if (role !== Role.COACH && role !== Role.ADMIN && role !== Role.SUPER_ADMIN) {
     redirect("/dashboard");
   }
 

@@ -2,6 +2,7 @@
 
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
+import { Role } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { calculateNextClassSession, NextClassSession } from "@/lib/class-schedule";
 
@@ -60,14 +61,48 @@ export async function getCoachDashboardDataAction(): Promise<{
   data?: CoachDashboardData;
 }> {
   try {
-    const session = await auth();
-    if (!session || !session.user) {
+    let session = null;
+    try {
+      session = await auth();
+    } catch {
+      session = null;
+    }
+
+    if (!session || !session.user || !session.user.id) {
       return { success: false, error: "Please log in to access the Coach Dashboard." };
     }
 
-    const userEmail = session.user.email?.toLowerCase().trim();
-    const userId = session.user.id;
-    const userRole = session.user.role;
+    // Live database re-verification
+    const liveUser = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isBlocked: true,
+      },
+    });
+
+    if (!liveUser) {
+      return { success: false, error: "User account no longer exists." };
+    }
+
+    if (liveUser.isBlocked) {
+      return { success: false, error: "Your account has been blocked by an administrator." };
+    }
+
+    // Strict role authorization: Only COACH, ADMIN, or SUPER_ADMIN
+    if (
+      liveUser.role !== Role.COACH &&
+      liveUser.role !== Role.ADMIN &&
+      liveUser.role !== Role.SUPER_ADMIN
+    ) {
+      return { success: false, error: "Access denied. Coach privileges required." };
+    }
+
+    const userEmail = liveUser.email.toLowerCase().trim();
+    const userRole = liveUser.role;
 
     // Find CoachApplication by user email or check if admin is previewing
     let coach = null;
@@ -81,7 +116,7 @@ export async function getCoachDashboardDataAction(): Promise<{
     }
 
     // If logged in as admin / super_admin and no coach with that email, allow previewing the first active coach
-    if (!coach && (userRole === "ADMIN" || userRole === "SUPER_ADMIN")) {
+    if (!coach && (userRole === Role.ADMIN || userRole === Role.SUPER_ADMIN)) {
       coach = await db.coachApplication.findFirst({
         where: {
           batches: { some: {} }, // Coach with assigned batches
@@ -97,6 +132,14 @@ export async function getCoachDashboardDataAction(): Promise<{
       return {
         success: false,
         error: "No Coach profile found matching your account. Please contact academy support.",
+      };
+    }
+
+    // Enforce suspension and deactivation check
+    if (coach.status === "SUSPENDED" || coach.status === "REJECTED") {
+      return {
+        success: false,
+        error: "Your coach profile has been suspended or deactivated by an administrator.",
       };
     }
 

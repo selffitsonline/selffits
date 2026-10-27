@@ -77,7 +77,6 @@ export async function middleware(req: NextRequest) {
   if (isCoachRoute) {
     if (!token) {
       const loginUrl = new URL("/login", req.url);
-      loginUrl.searchParams.set("callbackUrl", pathname);
       return NextResponse.redirect(loginUrl);
     }
 

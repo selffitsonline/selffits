@@ -8,7 +8,11 @@ import { signIn, getSession } from "next-auth/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { LoginSchema, LoginInput } from "@/types/validation.schemas";
-import { preLoginCheckAction, resendVerificationEmailAction } from "@/actions/auth.actions";
+import {
+  preLoginCheckAction,
+  resendVerificationEmailAction,
+  getPostLoginRedirectAction,
+} from "@/actions/auth.actions";
 import { Turnstile, TurnstileRef } from "@/components/ui/turnstile";
 import { Mail, RefreshCw, AlertCircle, CheckCircle2 } from "lucide-react";
 
@@ -45,6 +49,10 @@ export default function LoginPage() {
       setErrorMsg("Your email address is not verified yet. Please check your inbox or resend the verification link.");
     } else if (urlError === "BlockedAccount") {
       setErrorMsg("Your account has been blocked by an administrator. Please contact academy support.");
+    } else if (urlError === "CoachSuspended") {
+      setErrorMsg("Your coach account has been suspended by an administrator. Please contact academy support.");
+    } else if (urlError === "InvalidRole") {
+      setErrorMsg("Invalid account role. Access denied.");
     }
   }, [urlError]);
 
@@ -99,6 +107,12 @@ export default function LoginPage() {
           );
         } else if (res.error.toLowerCase().includes("blocked")) {
           setErrorMsg("Your account has been blocked by an administrator. Please contact academy support.");
+        } else if (
+          res.error === "COACH_SUSPENDED" ||
+          res.error.includes("COACH_SUSPENDED") ||
+          res.error.toLowerCase().includes("suspended")
+        ) {
+          setErrorMsg("Your coach account has been suspended by an administrator. Please contact academy support.");
         } else {
           setErrorMsg("Invalid email or password. Please check your credentials and try again.");
         }
@@ -108,32 +122,36 @@ export default function LoginPage() {
         return;
       }
 
-      // Check session role for automatic role-based redirect
-      const session = await getSession();
-      const role = session?.user?.role;
-      const emailLower = data.email.toLowerCase().trim();
-      const isAdminEmail =
-        emailLower === "admin@selffits.com" || emailLower === "superadmin@selffits.com";
-
-      if (role === "ADMIN" || role === "SUPER_ADMIN" || isAdminEmail) {
-        window.location.replace("/admin/dashboard");
-      } else if (role === "COACH" || emailLower === "coach@selffits.com") {
-        window.location.replace("/coach/dashboard");
-      } else if (callbackUrl && !callbackUrl.startsWith("/admin")) {
-        window.location.replace(callbackUrl);
-      } else {
-        window.location.replace("/dashboard");
+      // 3. Authoritative server-side role resolution and redirect URL determination
+      const postLogin = await getPostLoginRedirectAction(callbackUrl);
+      if (!postLogin.success) {
+        if (
+          postLogin.error === "EMAIL_NOT_VERIFIED" ||
+          postLogin.error?.includes("EMAIL_NOT_VERIFIED")
+        ) {
+          setIsUnverified(true);
+          setUnverifiedEmail(data.email);
+          setErrorMsg(
+            "Your email address is not verified yet. Email verification is compulsory before accessing your student portal."
+          );
+        } else if (postLogin.error === "ACCOUNT_BLOCKED") {
+          setErrorMsg("Your account has been blocked by an administrator. Please contact academy support.");
+        } else if (postLogin.error === "COACH_SUSPENDED") {
+          setErrorMsg("Your coach account has been suspended by an administrator. Please contact academy support.");
+        } else {
+          setErrorMsg(postLogin.error || "Login authorization failed. Please contact academy support.");
+        }
+        turnstileRef.current?.reset();
+        setTurnstileToken("");
+        setIsLoading(false);
+        return;
       }
+
+      window.location.replace(postLogin.redirectUrl);
     } catch (err: any) {
       if (err?.message?.includes("NEXT_REDIRECT") || err?.digest?.includes("NEXT_REDIRECT")) {
-        const session = await getSession();
-        if (session?.user?.role === "ADMIN" || session?.user?.role === "SUPER_ADMIN") {
-          window.location.replace("/admin/dashboard");
-        } else if (session?.user?.role === "COACH") {
-          window.location.replace("/coach/dashboard");
-        } else {
-          window.location.replace("/dashboard");
-        }
+        const postLogin = await getPostLoginRedirectAction(callbackUrl).catch(() => null);
+        window.location.replace(postLogin?.redirectUrl || "/dashboard");
         return;
       }
       console.error("[LOGIN] Sign in exception:", err);

@@ -146,6 +146,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               if (user.role === Role.STUDENT && !user.emailVerified) {
                 throw new Error("EMAIL_NOT_VERIFIED");
               }
+              if (user.role === Role.COACH) {
+                try {
+                  const coachApp = await db.coachApplication.findFirst({
+                    where: { email: { equals: user.email, mode: "insensitive" } },
+                    select: { status: true },
+                  });
+                  if (coachApp && (coachApp.status === "SUSPENDED" || coachApp.status === "REJECTED")) {
+                    throw new Error("COACH_SUSPENDED");
+                  }
+                } catch (cErr: any) {
+                  if (cErr?.message === "COACH_SUSPENDED") throw cErr;
+                }
+              }
               return {
                 id: user.id,
                 email: user.email,
@@ -272,16 +285,44 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id as string;
-        token.role = user.role as Role;
+        token.role = (user.role as Role) || Role.STUDENT;
         token.isBlocked = (user as any).isBlocked || false;
         token.emailVerified = (user as any).emailVerified ? true : false;
       }
+
+      // Safe recovery and verification: if role is missing or invalid, resolve from DB
+      if (!token.role && (token.id || token.email)) {
+        try {
+          const dbUser = token.id
+            ? await db.user.findUnique({
+                where: { id: token.id as string },
+                select: { id: true, role: true, isBlocked: true, emailVerified: true },
+              })
+            : await db.user.findUnique({
+                where: { email: (token.email as string).toLowerCase().trim() },
+                select: { id: true, role: true, isBlocked: true, emailVerified: true },
+              });
+
+          if (dbUser) {
+            token.id = dbUser.id;
+            token.role = dbUser.role;
+            token.isBlocked = dbUser.isBlocked;
+            token.emailVerified = Boolean(dbUser.emailVerified);
+          } else {
+            // Fail closed: Unknown or missing users must never default to COACH or ADMIN
+            token.role = Role.STUDENT;
+          }
+        } catch {
+          token.role = Role.STUDENT;
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
       if (token && session.user) {
         session.user.id = token.id;
-        session.user.role = token.role;
+        session.user.role = token.role || Role.STUDENT;
         (session.user as any).isBlocked = (token as any).isBlocked || false;
         (session.user as any).emailVerified = (token as any).emailVerified || false;
       }

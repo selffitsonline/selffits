@@ -1,6 +1,8 @@
 "use server";
 
 import { db } from "@/lib/db";
+import { auth } from "@/lib/auth";
+import { Role } from "@prisma/client";
 import { resend, EMAIL_FROM } from "@/lib/resend";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
@@ -710,5 +712,152 @@ export async function resetPasswordAction(
   } catch (err) {
     console.error("[AUTH] resetPasswordAction error:", err);
     return { success: false, error: "Failed to reset password. Please try again." };
+  }
+}
+
+/**
+ * Authoritative Server-Side Role and Redirect Resolution after Login.
+ *
+ * Guarantees:
+ * - Coach -> /coach/dashboard only (or valid /coach/* path)
+ * - Student -> /dashboard only (or valid /dashboard/*, /settings, /profile path)
+ * - Admin/Super Admin -> /admin/dashboard only
+ * - Rejects any student attempt to redirect to /coach or /admin
+ * - Blocks suspended or blocked accounts
+ * - Fails closed on missing or invalid roles
+ */
+export async function getPostLoginRedirectAction(
+  intendedCallbackUrl?: string | null
+): Promise<{
+  success: boolean;
+  role?: string;
+  redirectUrl: string;
+  error?: string;
+}> {
+  try {
+    let session = null;
+    try {
+      session = await auth();
+    } catch {
+      session = null;
+    }
+
+    if (!session || !session.user || !session.user.id) {
+      return {
+        success: false,
+        redirectUrl: "/login",
+        error: "Authentication failed. No active session.",
+      };
+    }
+
+    const liveUser = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { id: true, email: true, role: true, isBlocked: true, emailVerified: true },
+    });
+
+    if (!liveUser) {
+      return {
+        success: false,
+        redirectUrl: "/login",
+        error: "User account no longer exists.",
+      };
+    }
+
+    if (liveUser.isBlocked) {
+      return {
+        success: false,
+        redirectUrl: "/login?error=BlockedAccount",
+        error: "ACCOUNT_BLOCKED",
+      };
+    }
+
+    const role = liveUser.role;
+
+    if (role === Role.ADMIN || role === Role.SUPER_ADMIN) {
+      return {
+        success: true,
+        role,
+        redirectUrl: "/admin/dashboard",
+      };
+    }
+
+    if (role === Role.COACH) {
+      const coachApp = await db.coachApplication.findFirst({
+        where: { email: { equals: liveUser.email, mode: "insensitive" } },
+        select: { status: true },
+      });
+
+      if (coachApp && (coachApp.status === "SUSPENDED" || coachApp.status === "REJECTED")) {
+        return {
+          success: false,
+          redirectUrl: "/login?error=CoachSuspended",
+          error: "COACH_SUSPENDED",
+        };
+      }
+
+      if (
+        intendedCallbackUrl &&
+        intendedCallbackUrl.startsWith("/coach") &&
+        !intendedCallbackUrl.startsWith("/coach/dashboard")
+      ) {
+        return {
+          success: true,
+          role: Role.COACH,
+          redirectUrl: intendedCallbackUrl,
+        };
+      }
+
+      return {
+        success: true,
+        role: Role.COACH,
+        redirectUrl: "/coach/dashboard",
+      };
+    }
+
+    if (role === Role.STUDENT) {
+      if (!liveUser.emailVerified) {
+        return {
+          success: false,
+          redirectUrl: "/login?error=EMAIL_NOT_VERIFIED",
+          error: "EMAIL_NOT_VERIFIED",
+        };
+      }
+
+      // Sanitize callbackUrl: strictly reject /coach/* or /admin/* for students
+      if (
+        intendedCallbackUrl &&
+        (intendedCallbackUrl.startsWith("/dashboard") ||
+          intendedCallbackUrl.startsWith("/settings") ||
+          intendedCallbackUrl.startsWith("/profile")) &&
+        !intendedCallbackUrl.startsWith("/coach") &&
+        !intendedCallbackUrl.startsWith("/admin")
+      ) {
+        return {
+          success: true,
+          role: Role.STUDENT,
+          redirectUrl: intendedCallbackUrl,
+        };
+      }
+
+      return {
+        success: true,
+        role: Role.STUDENT,
+        redirectUrl: "/dashboard",
+      };
+    }
+
+    // Fail-closed for invalid, unrecognized, or missing role
+    return {
+      success: false,
+      redirectUrl: "/login?error=InvalidRole",
+      error: "Invalid account role. Access denied.",
+    };
+  } catch (err: any) {
+    console.error("getPostLoginRedirectAction error:", err);
+    return {
+      success: false,
+      redirectUrl: "/login?error=AuthError",
+      error: "Authorization failed. Please try again.",
+    };
   }
 }
