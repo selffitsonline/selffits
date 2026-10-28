@@ -15,6 +15,7 @@ import {
   Clock,
   ShieldAlert,
   ShieldCheck,
+  RotateCcw,
 } from "lucide-react";
 
 interface EnrollmentItem {
@@ -93,6 +94,8 @@ interface StudentDetailsModalProps {
     payments: PaymentItem[];
   } | null;
   onOpenBlockModal: (student: any) => void;
+  isSuperAdmin?: boolean;
+  onOpenReleaseModal?: (student: any) => void;
 }
 
 export function StudentDetailsModal({
@@ -100,6 +103,8 @@ export function StudentDetailsModal({
   onClose,
   student,
   onOpenBlockModal,
+  isSuperAdmin,
+  onOpenReleaseModal,
 }: StudentDetailsModalProps) {
   const [activeTab, setActiveTab] = useState<"overview" | "enrollments" | "payments">("overview");
 
@@ -172,6 +177,20 @@ export function StudentDetailsModal({
           </div>
 
           <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+            {isSuperAdmin && (
+              <button
+                onClick={() => onOpenReleaseModal?.(student)}
+                disabled={student.email?.endsWith("@released.selffits.internal")}
+                className="px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30 disabled:opacity-40 disabled:pointer-events-none"
+                title={
+                  student.email?.endsWith("@released.selffits.internal")
+                    ? "Email already released"
+                    : "Release Email for Re-registration"
+                }
+              >
+                <RotateCcw className="w-4 h-4" /> Release Email
+              </button>
+            )}
             <button
               onClick={() => onOpenBlockModal(student)}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
@@ -198,6 +217,16 @@ export function StudentDetailsModal({
             </button>
           </div>
         </div>
+
+        {/* Released Email Archival Banner */}
+        {student.email?.endsWith("@released.selffits.internal") && (
+          <div className="mx-6 mt-4 p-3 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center gap-3 text-xs text-purple-300">
+            <RotateCcw className="w-4 h-4 shrink-0 text-purple-400" />
+            <span>
+              This student&apos;s original email address was released by a Super Admin for fresh registration. Historical records, payments, and enrollments remain preserved under this archival account.
+            </span>
+          </div>
+        )}
 
         {/* Modal Navigation Tabs */}
         <div className="px-6 border-b border-white/10 bg-[#0F1117]/50 flex items-center gap-6 text-xs font-bold text-gray-400">

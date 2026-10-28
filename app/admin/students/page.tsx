@@ -30,6 +30,7 @@ export default async function AdminStudentsPage() {
       initialCounts={initialCounts}
       initialCategories={initialCategories}
       initialPrograms={initialPrograms}
+      isSuperAdmin={session.user.role === "SUPER_ADMIN"}
     />
   );
 }

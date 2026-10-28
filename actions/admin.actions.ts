@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import { optimizeMediaUrls } from "@/lib/media-helper";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import {
   MartialArtsTypeItem,
   DEFAULT_MARTIAL_ARTS_TYPE_ITEMS,
@@ -2626,6 +2627,177 @@ export async function toggleBlockStudentAction(userId: string, isBlocked: boolea
   } catch (err: any) {
     console.error("toggleBlockStudentAction error:", err);
     return { success: false, error: "Failed to update student block status." };
+  }
+}
+
+export async function releaseStudentEmailAction(
+  userId: string,
+  confirmEmail: string,
+  reason: string
+) {
+  try {
+    const session = await auth();
+    if (!session || session.user.role !== "SUPER_ADMIN") {
+      return {
+        success: false,
+        error: "Unauthorized access. Only a Super Admin can release user email addresses.",
+      };
+    }
+
+    if (!userId || typeof userId !== "string" || !userId.trim()) {
+      return { success: false, error: "Invalid student identifier provided." };
+    }
+
+    if (!confirmEmail || typeof confirmEmail !== "string" || !confirmEmail.trim()) {
+      return { success: false, error: "Target email confirmation is required." };
+    }
+
+    if (!reason || typeof reason !== "string" || reason.trim().length < 5) {
+      return {
+        success: false,
+        error: "A valid administrative reason (minimum 5 characters) is required.",
+      };
+    }
+
+    const normalizedConfirmEmail = confirmEmail.trim().toLowerCase();
+    const trimmedReason = reason.trim();
+
+    // 1. Prevent self-release by Super Admin
+    if (
+      userId === session.user.id ||
+      normalizedConfirmEmail === session.user.email?.trim().toLowerCase()
+    ) {
+      return {
+        success: false,
+        error: "Self-action rejected: You cannot release your own Super Admin email address.",
+      };
+    }
+
+    // 2. Protect critical system and admin accounts
+    const CRITICAL_SYSTEM_ACCOUNTS = [
+      "superadmin@selffits.com",
+      "admin@selffits.com",
+    ];
+    if (CRITICAL_SYSTEM_ACCOUNTS.includes(normalizedConfirmEmail)) {
+      return {
+        success: false,
+        error: "Action rejected: Critical system accounts cannot be released.",
+      };
+    }
+
+    // 3. Execute atomic transaction to release email and deactivate account
+    const result = await db.$transaction(async (tx) => {
+      // Find target user
+      const targetUser = await tx.user.findUnique({
+        where: { id: userId.trim() },
+        select: {
+          id: true,
+          email: true,
+          role: true,
+          name: true,
+        },
+      });
+
+      if (!targetUser) {
+        throw new Error("Student record not found.");
+      }
+
+      if (targetUser.role !== "STUDENT") {
+        throw new Error(
+          `Action restricted: User account has role '${targetUser.role}'. Only STUDENT accounts can be released.`
+        );
+      }
+
+      if (targetUser.email.toLowerCase() !== normalizedConfirmEmail) {
+        throw new Error(
+          `Confirmation email '${normalizedConfirmEmail}' does not match the student's recorded email address.`
+        );
+      }
+
+      if (targetUser.email.endsWith("@released.selffits.internal")) {
+        throw new Error("This student account's email has already been released.");
+      }
+
+      const originalEmail = targetUser.email;
+      const timestamp = Date.now();
+      const idSuffix = targetUser.id.slice(-6);
+      const randomHex = crypto.randomBytes(4).toString("hex");
+      const archivalEmail = `released_${timestamp}_${idSuffix}_${randomHex}@released.selffits.internal`;
+
+      // Update User record: Mutate email, strip password, block account, clear emailVerified
+      const updatedUser = await tx.user.update({
+        where: { id: targetUser.id },
+        data: {
+          email: archivalEmail,
+          passwordHash: null,
+          isBlocked: true,
+          emailVerified: null,
+        },
+        select: {
+          id: true,
+          email: true,
+          isBlocked: true,
+        },
+      });
+
+      // Purge pending auth tokens for the original email
+      const [deletedVerificationTokens, deletedPasswordResetTokens] = await Promise.all([
+        tx.verificationToken.deleteMany({
+          where: { email: originalEmail },
+        }),
+        tx.passwordResetToken.deleteMany({
+          where: { email: originalEmail },
+        }),
+      ]);
+
+      return {
+        originalEmail,
+        archivalEmail: updatedUser.email,
+        studentId: targetUser.id,
+        studentName: targetUser.name,
+        verificationTokensDeleted: deletedVerificationTokens.count,
+        passwordResetTokensDeleted: deletedPasswordResetTokens.count,
+      };
+    });
+
+    // 4. Audit Log (Structured logging, unmasked PII protected)
+    const maskedOriginalEmail = result.originalEmail.replace(
+      /(^.{2})(.*)(?=@)/,
+      (_, start, rest) => `${start}${"*".repeat(rest.length)}`
+    );
+
+    console.info(
+      JSON.stringify({
+        event: "SUPER_ADMIN_RELEASE_USER_EMAIL",
+        timestamp: new Date().toISOString(),
+        actorId: session.user.id,
+        actorEmail: session.user.email,
+        targetUserId: result.studentId,
+        maskedTargetEmail: maskedOriginalEmail,
+        archivalEmail: result.archivalEmail,
+        reason: trimmedReason,
+        verificationTokensPurged: result.verificationTokensDeleted,
+        passwordResetTokensPurged: result.passwordResetTokensDeleted,
+      })
+    );
+
+    revalidatePath("/admin/students");
+    revalidatePath("/admin/dashboard");
+
+    return {
+      success: true,
+      message: `Email address '${result.originalEmail}' has been successfully released and is now available for new registrations. The historical account (${result.studentId}) is retained with deactivated credentials.`,
+      data: {
+        originalEmail: result.originalEmail,
+        archivalEmail: result.archivalEmail,
+      },
+    };
+  } catch (err: any) {
+    console.error("releaseStudentEmailAction error:", err);
+    return {
+      success: false,
+      error: err.message || "Failed to release student email address.",
+    };
   }
 }
 

@@ -18,11 +18,14 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
+  RotateCcw,
 } from "lucide-react";
 import { StudentDetailsModal } from "@/components/admin/student-details-modal";
 import { BlockStudentModal } from "@/components/admin/block-student-modal";
+import { ReleaseEmailModal } from "@/components/admin/release-email-modal";
 import {
   toggleBlockStudentAction,
+  releaseStudentEmailAction,
   getAdminStudentsAction,
   getAdminStudentDetailsAction,
 } from "@/actions/admin.actions";
@@ -44,6 +47,7 @@ interface AdminStudentsViewProps {
   };
   initialCategories: string[];
   initialPrograms: { id: string; title: string; categoryLabel: string }[];
+  isSuperAdmin?: boolean;
 }
 
 export function AdminStudentsView({
@@ -52,6 +56,7 @@ export function AdminStudentsView({
   initialCounts,
   initialCategories,
   initialPrograms,
+  isSuperAdmin = false,
 }: AdminStudentsViewProps) {
   const [students, setStudents] = useState<any[]>(initialStudents || []);
   const [categories, setCategories] = useState<string[]>(initialCategories || []);
@@ -93,6 +98,7 @@ export function AdminStudentsView({
   // Modals
   const [selectedStudentForDetails, setSelectedStudentForDetails] = useState<any | null>(null);
   const [selectedStudentForBlock, setSelectedStudentForBlock] = useState<any | null>(null);
+  const [selectedStudentForRelease, setSelectedStudentForRelease] = useState<any | null>(null);
   const [notification, setNotification] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   useEffect(() => {
@@ -239,6 +245,66 @@ export function AdminStudentsView({
     }
 
     setTimeout(() => setNotification(null), 4000);
+  };
+
+  const handleReleaseEmailConfirm = async (
+    studentId: string,
+    confirmedEmail: string,
+    reason: string
+  ) => {
+    const res = await releaseStudentEmailAction(studentId, confirmedEmail, reason);
+    if (res.success) {
+      if (res.data?.archivalEmail) {
+        setStudents((prev) =>
+          prev.map((std) =>
+            std.id === studentId
+              ? {
+                  ...std,
+                  email: res.data!.archivalEmail,
+                  isBlocked: true,
+                  accountStatus: "BLOCKED",
+                  isEmailVerified: false,
+                }
+              : std
+          )
+        );
+
+        if (selectedStudentForDetails?.id === studentId) {
+          setSelectedStudentForDetails((prev: any) =>
+            prev
+              ? {
+                  ...prev,
+                  email: res.data!.archivalEmail,
+                  isBlocked: true,
+                  accountStatus: "BLOCKED",
+                  isEmailVerified: false,
+                }
+              : null
+          );
+        }
+      }
+
+      setNotification({
+        message: res.message || "Student email released successfully.",
+        type: "success",
+      });
+      fetchStudents(
+        currentPage,
+        itemsPerPage,
+        activeTab,
+        selectedCategory,
+        selectedProgram,
+        searchQuery
+      );
+    } else {
+      setNotification({
+        message: res.error || "Failed to release student email.",
+        type: "error",
+      });
+    }
+
+    setTimeout(() => setNotification(null), 5000);
+    return res;
   };
 
   return (
@@ -491,7 +557,11 @@ export function AdminStudentsView({
                             </p>
                             <div className="flex items-center gap-1.5 flex-wrap">
                               <p className="text-gray-400 text-[11px]">{std.email}</p>
-                              {std.isEmailVerified ? (
+                              {std.email?.endsWith("@released.selffits.internal") ? (
+                                <span className="px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[9px] font-extrabold uppercase">
+                                  Released
+                                </span>
+                              ) : std.isEmailVerified ? (
                                 <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[9px] font-extrabold uppercase">
                                   Verified
                                 </span>
@@ -632,6 +702,24 @@ export function AdminStudentsView({
                               <ShieldAlert className="w-4 h-4" />
                             )}
                           </button>
+                          {isSuperAdmin && (
+                            <button
+                              onClick={() => setSelectedStudentForRelease(std)}
+                              disabled={std.email?.endsWith("@released.selffits.internal")}
+                              className={`p-2 rounded-xl border transition-colors ${
+                                std.email?.endsWith("@released.selffits.internal")
+                                  ? "bg-gray-800/40 border-gray-700/40 text-gray-600 cursor-not-allowed"
+                                  : "bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border-amber-500/30"
+                              }`}
+                              title={
+                                std.email?.endsWith("@released.selffits.internal")
+                                  ? "Email already released"
+                                  : "Release Student Email (Super Admin Only)"
+                              }
+                            >
+                              <RotateCcw className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -734,6 +822,10 @@ export function AdminStudentsView({
           onOpenBlockModal={(std) => {
             setSelectedStudentForBlock(std);
           }}
+          isSuperAdmin={isSuperAdmin}
+          onOpenReleaseModal={(std) => {
+            setSelectedStudentForRelease(std);
+          }}
         />
 
         <BlockStudentModal
@@ -741,6 +833,13 @@ export function AdminStudentsView({
           onClose={() => setSelectedStudentForBlock(null)}
           student={selectedStudentForBlock}
           onConfirm={handleToggleBlockConfirm}
+        />
+
+        <ReleaseEmailModal
+          isOpen={!!selectedStudentForRelease}
+          onClose={() => setSelectedStudentForRelease(null)}
+          student={selectedStudentForRelease}
+          onConfirm={handleReleaseEmailConfirm}
         />
       </div>
     </AdminShell>

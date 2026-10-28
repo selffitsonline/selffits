@@ -15,6 +15,7 @@ import 'package:selffits_mobile/features/public/presentation/account_screen.dart
 import 'package:selffits_mobile/features/public/presentation/public_home_screen.dart';
 import 'package:selffits_mobile/features/public/presentation/public_main_shell.dart';
 import 'package:selffits_mobile/features/public/presentation/widgets/martial_arts_journey_section.dart';
+import 'package:selffits_mobile/features/public/presentation/widgets/explore_programs_section.dart';
 import 'package:selffits_mobile/features/public/repositories/catalog_repository.dart';
 
 class MockHttpClient extends http.BaseClient {
@@ -231,7 +232,8 @@ void main() {
         final json = {
           'headingBadge': 'BELT PROGRESSION SYLLABUS',
           'headingTitle': 'Your Martial Arts Learning Journey',
-          'headingSubtitle': 'Custom short mobile description for martial arts.',
+          'headingSubtitle':
+              'Custom short mobile description for martial arts.',
           'belts': [
             {
               'id': 'white_belt',
@@ -243,7 +245,10 @@ void main() {
           ],
         };
         final section = PublicBeltSyllabusSection.fromJson(json);
-        expect(section.headingSubtitle, 'Custom short mobile description for martial arts.');
+        expect(
+          section.headingSubtitle,
+          'Custom short mobile description for martial arts.',
+        );
         expect(section.belts.length, 1);
         expect(section.belts.first.name, 'White Belt');
       },
@@ -287,6 +292,71 @@ void main() {
         );
         expect(find.text('Your Martial Arts Learning Journey'), findsOneWidget);
         expect(find.text('White Belt'), findsWidgets);
+      },
+    );
+
+    testWidgets(
+      'ExploreProgramsSection renders SizedBox.shrink when sectionData is null and never renders fake hardcoded prices',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: ExploreProgramsSection(
+                sectionData: null,
+                onSelectProgram: (_, _) {},
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Explore Our Programs'), findsNothing);
+        expect(find.textContaining('Kids Martial Arts'), findsNothing);
+        expect(find.textContaining('\$25'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'ExploreProgramsSection renders real program items when provided',
+      (WidgetTester tester) async {
+        const testSection = PublicFeaturedProgramsSection(
+          headingBadge: 'PATHWAYS',
+          headingTitle: 'Explore Our Programs',
+          headingSubtitle: 'Live online pathways',
+          items: [
+            PublicFeaturedProgram(
+              id: 'p1',
+              title: 'Real Server Program',
+              category: 'MARTIAL ARTS',
+              image: '/images/real.png',
+              description: 'Authentic description from backend',
+              classes: '12 classes',
+              duration: '3 days/wk',
+              priceStartsUSD: '35',
+              targetCategory: 'mma',
+              targetAudience: 'adults',
+              href: '/programs/p1',
+            ),
+          ],
+        );
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SingleChildScrollView(
+                child: ExploreProgramsSection(
+                  sectionData: testSection,
+                  onSelectProgram: (_, _) {},
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        expect(find.text('Explore Our Programs'), findsOneWidget);
+        expect(find.text('Real Server Program'), findsOneWidget);
+        expect(find.text('\$35 / mo'), findsOneWidget);
       },
     );
 
@@ -605,17 +675,65 @@ void main() {
       },
     );
 
-    test('CatalogRepository forceRefresh sends cache-busting query and headers', () async {
+    test(
+      'CatalogRepository forceRefresh sends cache-busting query and headers',
+      () async {
+        final storage = InMemorySecureStorageService();
+        http.BaseRequest? capturedRequest;
+
+        final mockClient = MockHttpClient((request) async {
+          capturedRequest = request;
+          return http.Response(
+            jsonEncode({'success': true, 'data': createSampleCatalogJson()}),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        });
+
+        final repository = CatalogRepository(
+          apiClient: ApiClient(httpClient: mockClient),
+          storage: storage,
+        );
+        repository.clearMemoryCache();
+
+        // 1. Normal request (forceRefresh = false)
+        final normalResult = await repository.getCatalog(forceRefresh: false);
+        expect(normalResult.data, isNotNull);
+        expect(normalResult.isFromCache, isFalse);
+        expect(capturedRequest?.url.queryParameters.containsKey('t'), isFalse);
+        expect(capturedRequest?.headers.containsKey('cache-control'), isFalse);
+
+        // 2. Force refresh (forceRefresh = true)
+        final refreshResult = await repository.getCatalog(forceRefresh: true);
+        expect(refreshResult.data, isNotNull);
+        expect(refreshResult.isFromCache, isFalse);
+        expect(capturedRequest?.url.queryParameters.containsKey('t'), isTrue);
+        expect(capturedRequest?.headers['cache-control'], contains('no-cache'));
+        expect(capturedRequest?.headers['pragma'], equals('no-cache'));
+
+        // 3. Force refresh offline fallback
+        final offlineClient = MockHttpClient((request) async {
+          return http.Response('Offline Error', 503);
+        });
+        final offlineRepo = CatalogRepository(
+          apiClient: ApiClient(httpClient: offlineClient),
+          storage: storage,
+        );
+        offlineRepo.clearMemoryCache();
+        final offlineResult = await offlineRepo.getCatalog(forceRefresh: true);
+        expect(offlineResult.isFromCache, isTrue);
+        expect(offlineResult.data, isNotNull);
+      },
+    );
+
+    test('CatalogRepository reuses in-memory cache without repeating network call', () async {
       final storage = InMemorySecureStorageService();
-      http.BaseRequest? capturedRequest;
+      int networkCallCount = 0;
 
       final mockClient = MockHttpClient((request) async {
-        capturedRequest = request;
+        networkCallCount++;
         return http.Response(
-          jsonEncode({
-            'success': true,
-            'data': createSampleCatalogJson(),
-          }),
+          jsonEncode({'success': true, 'data': createSampleCatalogJson()}),
           200,
           headers: {'content-type': 'application/json'},
         );
@@ -625,33 +743,114 @@ void main() {
         apiClient: ApiClient(httpClient: mockClient),
         storage: storage,
       );
+      repository.clearMemoryCache();
 
-      // 1. Normal request (forceRefresh = false)
-      final normalResult = await repository.getCatalog(forceRefresh: false);
-      expect(normalResult.data, isNotNull);
-      expect(normalResult.isFromCache, isFalse);
-      expect(capturedRequest?.url.queryParameters.containsKey('t'), isFalse);
-      expect(capturedRequest?.headers.containsKey('cache-control'), isFalse);
+      // 1. First call: hits network
+      final result1 = await repository.getCatalog();
+      expect(result1.data, isNotNull);
+      expect(networkCallCount, equals(1));
+      expect(repository.isMemoryCacheValid, isTrue);
+      expect(repository.memoryCachedData, isNotNull);
 
-      // 2. Force refresh (forceRefresh = true)
-      final refreshResult = await repository.getCatalog(forceRefresh: true);
-      expect(refreshResult.data, isNotNull);
-      expect(refreshResult.isFromCache, isFalse);
-      expect(capturedRequest?.url.queryParameters.containsKey('t'), isTrue);
-      expect(capturedRequest?.headers['cache-control'], contains('no-cache'));
-      expect(capturedRequest?.headers['pragma'], equals('no-cache'));
+      // 2. Second call: instant memory return, 0 network calls
+      final result2 = await repository.getCatalog();
+      expect(result2.data, isNotNull);
+      expect(networkCallCount, equals(1)); // Still exactly 1!
 
-      // 3. Force refresh offline fallback
-      final offlineClient = MockHttpClient((request) async {
-        return http.Response('Offline Error', 503);
+      // 3. getCachedData returns memory cache immediately
+      final cachedResult = await repository.getCachedData();
+      expect(cachedResult, isNotNull);
+      expect(networkCallCount, equals(1));
+    });
+
+    test('CatalogRepository deduplicates concurrent in-flight requests', () async {
+      final storage = InMemorySecureStorageService();
+      int networkCallCount = 0;
+
+      final mockClient = MockHttpClient((request) async {
+        networkCallCount++;
+        await Future.delayed(const Duration(milliseconds: 50));
+        return http.Response(
+          jsonEncode({'success': true, 'data': createSampleCatalogJson()}),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
       });
-      final offlineRepo = CatalogRepository(
-        apiClient: ApiClient(httpClient: offlineClient),
+
+      final repository = CatalogRepository(
+        apiClient: ApiClient(httpClient: mockClient),
         storage: storage,
       );
-      final offlineResult = await offlineRepo.getCatalog(forceRefresh: true);
-      expect(offlineResult.isFromCache, isTrue);
-      expect(offlineResult.data, isNotNull);
+      repository.clearMemoryCache();
+
+      // Fire 3 concurrent calls simultaneously
+      final futures = await Future.wait([
+        repository.getCatalog(),
+        repository.getCatalog(),
+        repository.getCatalog(),
+      ]);
+
+      // Exactly 1 network call occurred
+      expect(networkCallCount, equals(1));
+      expect(futures[0].data, isNotNull);
+      expect(futures[1].data, isNotNull);
+      expect(futures[2].data, isNotNull);
+    });
+
+    test('CatalogRepository clearMemoryCache cleanly resets state', () async {
+      final storage = InMemorySecureStorageService();
+      final mockClient = MockHttpClient((request) async {
+        return http.Response(
+          jsonEncode({'success': true, 'data': createSampleCatalogJson()}),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final repository = CatalogRepository(
+        apiClient: ApiClient(httpClient: mockClient),
+        storage: storage,
+      );
+      repository.clearMemoryCache();
+
+      await repository.getCatalog();
+      expect(repository.isMemoryCacheValid, isTrue);
+
+      repository.clearMemoryCache();
+      expect(repository.isMemoryCacheValid, isFalse);
+      expect(repository.memoryCachedData, isNull);
+    });
+
+    test('CatalogRepository forceRefresh bypasses memory cache', () async {
+      final storage = InMemorySecureStorageService();
+      int networkCallCount = 0;
+
+      final mockClient = MockHttpClient((request) async {
+        networkCallCount++;
+        return http.Response(
+          jsonEncode({'success': true, 'data': createSampleCatalogJson()}),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
+
+      final repository = CatalogRepository(
+        apiClient: ApiClient(httpClient: mockClient),
+        storage: storage,
+      );
+      repository.clearMemoryCache();
+
+      // 1. Initial call
+      await repository.getCatalog();
+      expect(networkCallCount, equals(1));
+
+      // 2. Normal call within TTL: served from memory
+      await repository.getCatalog(forceRefresh: false);
+      expect(networkCallCount, equals(1));
+
+      // 3. Force refresh: bypasses memory cache and hits server
+      await repository.getCatalog(forceRefresh: true);
+      expect(networkCallCount, equals(2));
     });
   });
 }

@@ -79,56 +79,49 @@ const CATALOG_DEFINITIONS: Array<{
   },
 ];
 
-/**
- * Helper to fetch authoritative schedule config from WebsiteSettings with code default fallback
- */
-async function fetchCategoryConfig(
-  category: string,
-  group: string
-): Promise<CentralScheduleConfig> {
-  const configKey = getCompositeDbKey(category, group);
-  const defaultConfig = getDefaultScheduleConfig(category, group);
-
-  try {
-    const setting = await db.websiteSettings.findUnique({
-      where: { key: configKey },
-    });
-
-    if (setting && setting.value) {
-      const stored = setting.value as unknown as CentralScheduleConfig;
-      return {
-        trainingDays: stored.trainingDays || defaultConfig.trainingDays,
-        batchTimings: stored.batchTimings || defaultConfig.batchTimings,
-        membershipPlans: stored.membershipPlans || defaultConfig.membershipPlans,
-      };
-    }
-  } catch (err) {
-    console.error(`Error loading schedule config for ${configKey}:`, err);
-  }
-
-  return defaultConfig;
-}
-
 export async function GET(): Promise<NextResponse<ApiResponse<PublicCatalogResponseDto>>> {
   try {
-    // 1. Fetch live configs for all defined categories and homepage management in parallel
-    const [configs, catalogSetting, dietSetting, homepageRes] = await Promise.all([
-      Promise.all(
-        CATALOG_DEFINITIONS.map((def) =>
-          fetchCategoryConfig(def.category, def.group)
-        )
-      ),
-      db.websiteSettings.findUnique({
-        where: { key: "programs_catalog" },
-      }),
-      db.websiteSettings.findUnique({
-        where: { key: "diet_nutrition_config" },
+    // 1. Fetch all schedule and homepage settings in a single consolidated database batch query
+    const categoryConfigKeys = CATALOG_DEFINITIONS.map((def) =>
+      getCompositeDbKey(def.category, def.group)
+    );
+    const allSettingKeys = [
+      ...categoryConfigKeys,
+      "programs_catalog",
+      "diet_nutrition_config",
+    ];
+
+    const [settingsList, homepageRes] = await Promise.all([
+      db.websiteSettings.findMany({
+        where: { key: { in: allSettingKeys } },
       }),
       getAdminHomepageManagementAction().catch((err) => {
         console.warn("Failed to fetch homepage data for mobile catalog:", err);
         return { success: false, homepageData: null };
       }),
     ]);
+
+    const settingsMap = new Map<string, any>();
+    settingsList.forEach((s) => settingsMap.set(s.key, s.value));
+
+    // Resolve category configs in-memory with reliable code fallbacks (0 additional DB queries)
+    const configs: CentralScheduleConfig[] = CATALOG_DEFINITIONS.map((def) => {
+      const configKey = getCompositeDbKey(def.category, def.group);
+      const defaultConfig = getDefaultScheduleConfig(def.category, def.group);
+      const stored = settingsMap.get(configKey) as CentralScheduleConfig | undefined;
+
+      if (stored) {
+        return {
+          trainingDays: stored.trainingDays || defaultConfig.trainingDays,
+          batchTimings: stored.batchTimings || defaultConfig.batchTimings,
+          membershipPlans: stored.membershipPlans || defaultConfig.membershipPlans,
+        };
+      }
+      return defaultConfig;
+    });
+
+    const catalogSettingValue = settingsMap.get("programs_catalog");
+    const dietSettingValue = settingsMap.get("diet_nutrition_config");
 
     const hpData =
       homepageRes && homepageRes.success ? (homepageRes as any).homepageData : null;
@@ -327,8 +320,8 @@ export async function GET(): Promise<NextResponse<ApiResponse<PublicCatalogRespo
       label: item.label,
     }));
 
-    if (catalogSetting && catalogSetting.value) {
-      const rawCatalog = catalogSetting.value as any;
+    if (catalogSettingValue) {
+      const rawCatalog = catalogSettingValue as any;
       if (rawCatalog.martialArtsTypes) {
         martialArtsTypes = normalizeMartialArtsTypeItems(
           rawCatalog.martialArtsTypes
@@ -345,8 +338,8 @@ export async function GET(): Promise<NextResponse<ApiResponse<PublicCatalogRespo
       activeStatus: true,
     };
 
-    if (dietSetting && dietSetting.value) {
-      const stored = dietSetting.value as any;
+    if (dietSettingValue) {
+      const stored = dietSettingValue as any;
       dietNutrition = {
         title: stored.title || dietNutrition.title,
         description: stored.description || dietNutrition.description,
@@ -434,7 +427,7 @@ export async function GET(): Promise<NextResponse<ApiResponse<PublicCatalogRespo
       {
         status: 200,
         headers: {
-          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+          "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600",
         },
       }
     );
