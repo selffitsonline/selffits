@@ -36,11 +36,21 @@ export function parseDayCombinationToDaysList(dcStr: string): string[] {
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
+export interface CalculateNextClassSessionOptions {
+  /**
+   * If true, evaluates day boundaries and offsets in UTC rather than the server's local timezone.
+   * Useful for server-side cron jobs and UTC-normalized schedule calculations.
+   * Default: false (preserves local runtime timezone behavior for existing callers).
+   */
+  useUtc?: boolean;
+}
+
 export function calculateNextClassSession(
   dayCombination: string,
   clockTiming?: string | null,
   timeSlot?: string | null,
-  referenceDate: Date = new Date()
+  referenceDate: Date = new Date(),
+  options?: CalculateNextClassSessionOptions
 ): NextClassSession {
   const timing = clockTiming || "05:00 PM to 06:00 PM (GMT)";
   const slot = timeSlot || "Evening";
@@ -52,14 +62,19 @@ export function calculateNextClassSession(
 
   const validIndexes = matchedDayIndexes.length > 0 ? matchedDayIndexes : [1, 3, 5];
 
-  const currentDayIndex = referenceDate.getDay();
+  const useUtc = Boolean(options?.useUtc);
+  const currentDayIndex = useUtc ? referenceDate.getUTCDay() : referenceDate.getDay();
 
   // Search forward from today (offset 0) up to 7 days
   for (let offset = 0; offset < 7; offset++) {
     const candidateDayIndex = (currentDayIndex + offset) % 7;
     if (validIndexes.includes(candidateDayIndex)) {
       const targetDate = new Date(referenceDate);
-      targetDate.setDate(referenceDate.getDate() + offset);
+      if (useUtc) {
+        targetDate.setUTCDate(referenceDate.getUTCDate() + offset);
+      } else {
+        targetDate.setDate(referenceDate.getDate() + offset);
+      }
 
       const isToday = offset === 0;
       const dayName = DAY_NAMES[candidateDayIndex];
@@ -67,6 +82,7 @@ export function calculateNextClassSession(
         month: "short",
         day: "numeric",
         year: "numeric",
+        timeZone: useUtc ? "UTC" : undefined,
       });
       const fullDateFormatted = `${dayName}, ${dateFormatted}`;
       const relativeLabel = isToday ? "Today" : offset === 1 ? "Tomorrow" : `In ${offset} days`;

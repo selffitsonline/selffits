@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import crypto from "crypto";
 import { PaymentSuccessEmail } from "@/emails/payment-success.email";
 import { validateCouponAction } from "@/actions/coupons.actions";
+import { dispatchPaymentSuccessNotification } from "@/lib/payment-notification";
 
 export type PaymentPlanDetail = {
   id: string;
@@ -398,6 +399,16 @@ export async function verifyPaymentSignatureAction(payload: {
       return { enrollment, updatedPayment };
     });
 
+    // Dispatch in-app and FCM push notification for confirmed payment & enrollment
+    await dispatchPaymentSuccessNotification({
+      userId: user.id,
+      orderId: razorpayOrderId,
+      planName: plan.name,
+      enrollmentId: result.enrollment.id,
+      amount: finalPaidPrice,
+      currency: "INR",
+    });
+
     const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
     try {
       await resend.emails.send({
@@ -775,6 +786,16 @@ export async function createDirectCardEnrollmentAction(
       }
 
       return { enrollment, payment };
+    });
+
+    // Dispatch in-app and FCM push notification for confirmed direct card enrollment
+    await dispatchPaymentSuccessNotification({
+      userId: user.id,
+      orderId,
+      planName: plan.name,
+      enrollmentId: result.enrollment.id,
+      amount: finalPrice,
+      currency,
     });
 
     return {

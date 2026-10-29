@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { storageProvider } from "@/lib/storage";
 import { revalidatePath } from "next/cache";
+import { pushNotificationService } from "@/lib/push-notification-service";
 
 export async function POST(req: NextRequest) {
   try {
@@ -173,6 +174,29 @@ export async function POST(req: NextRequest) {
         message: `Your official ${titleInput} (${certificateNumber}) has been uploaded by the admin and is ready for download!`,
       },
     });
+
+    try {
+      await pushNotificationService.sendToUser(
+        userId,
+        {
+          title: "Official Certificate Uploaded! 📜",
+          body: `Your official ${titleInput} (${certificateNumber}) has been uploaded by the admin and is ready for download!`,
+          data: {
+            type: "CERTIFICATE_AWARDED",
+            deepLink: "selffits://dashboard/student",
+            certificateId: cert.id,
+            certificateNumber,
+            beltName,
+          },
+        },
+        {
+          persistInApp: false,
+          deduplicationKey: `cert_uploaded:${cert.id}`,
+        }
+      );
+    } catch (pushErr) {
+      console.warn("Failed to dispatch certificate uploaded push notification:", pushErr);
+    }
 
     revalidatePath("/admin/student-progress");
     revalidatePath("/dashboard/certificates");

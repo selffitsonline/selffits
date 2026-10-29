@@ -3,7 +3,13 @@
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { Role } from "@prisma/client";
-import { resend, EMAIL_FROM } from "@/lib/resend";
+import {
+  resend,
+  EMAIL_FROM,
+  isResendConfigured,
+  getAppBaseUrl,
+  sendPasswordResetEmail,
+} from "@/lib/resend";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import {
@@ -528,11 +534,13 @@ export async function forgotPasswordAction(
     }
 
     // Fail early if email provider is unconfigured
-    const isApiKeyMissingOrPlaceholder =
-      !process.env.RESEND_API_KEY ||
-      process.env.RESEND_API_KEY === "re_placeholder_key";
+    const isMockEnv =
+      process.env.NODE_ENV === "test" ||
+      process.env.EMAIL_MOCK === "true" ||
+      (normalizedEmail.endsWith("@selffits-test.local") &&
+        process.env.RESEND_API_KEY === "re_test_selffits_resend_key");
 
-    if (isApiKeyMissingOrPlaceholder) {
+    if (!isResendConfigured() && !isMockEnv) {
       console.error(
         "[AUTH] Forgot Password service unavailable: RESEND_API_KEY is not configured or placeholder."
       );
@@ -563,55 +571,22 @@ export async function forgotPasswordAction(
         },
       });
 
-      const configuredUrl = process.env.NEXTAUTH_URL?.trim();
-      const baseUrl =
-        configuredUrl && !configuredUrl.includes("localhost")
-          ? configuredUrl
-          : process.env.VERCEL_PROJECT_PRODUCTION_URL
-          ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-          : process.env.NODE_ENV === "production"
-          ? "https://selffits.com"
-          : configuredUrl ||
-            (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+      const baseUrl = getAppBaseUrl();
+      const resetUrl = `${baseUrl}/reset-password?token=${token}`;
 
-      const resetUrl = `${baseUrl.replace(/\/$/, "")}/reset-password?token=${token}`;
+      const emailResult = await sendPasswordResetEmail({
+        to: normalizedEmail,
+        name: user.firstName || user.name || "Member",
+        resetUrl,
+      });
 
-      let emailSent = false;
-      const isTestMockAccount =
-        normalizedEmail.endsWith("@selffits-test.local") &&
-        process.env.RESEND_API_KEY === "re_test_selffits_resend_key";
-
-      if (isTestMockAccount) {
-        // In local test suite with mock test domain and placeholder keys, simulate email dispatch
-        emailSent = true;
-        console.log(`[AUTH-TEST] Simulated password reset email for test domain: ${normalizedEmail}`);
-      } else {
-        try {
-          const { data: resendData, error: resendError } = await resend.emails.send({
-            from: EMAIL_FROM,
-            to: normalizedEmail,
-            subject: "Reset Your SELFFITS Account Password",
-            html: renderResetPasswordEmailHtml(user.firstName || user.name || "Member", resetUrl),
-          });
-
-          if (resendError) {
-            console.error("[AUTH] Resend rejected reset password email:", resendError);
-          } else if (resendData?.id) {
-            emailSent = true;
-            console.log(
-              `[AUTH] Reset password email accepted by Resend (ID: ${resendData.id}) for user ${user.id}`
-            );
-          }
-        } catch (emailErr) {
-          console.error("[AUTH] Failed to send reset password email via Resend:", emailErr);
-        }
-      }
-
-      if (!emailSent) {
+      if (!emailResult.success) {
         // Rollback created token so dead tokens do not accumulate
-        await db.passwordResetToken.deleteMany({
-          where: { token },
-        }).catch(() => {});
+        await db.passwordResetToken
+          .deleteMany({
+            where: { token },
+          })
+          .catch(() => {});
 
         return {
           success: false,

@@ -60,6 +60,21 @@ export interface MobileLoginResponseDto {
   user: MobileUserSummaryDto;
 }
 
+export interface MobileRegisterResponseDto {
+  userId: string;
+  email: string;
+  fullName: string;
+  registeredProgram: string;
+  emailVerificationRequired: true;
+  message: string;
+  emailDeliveryWarning?: string;
+}
+
+export interface MobileForgotPasswordResponseDto {
+  message: string;
+}
+
+
 // ==========================================
 // Student Dashboard DTOs
 // ==========================================

@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { ExaminationStatus } from "@prisma/client";
+import { pushNotificationService } from "@/lib/push-notification-service";
 import fs from "fs";
 import path from "path";
 
@@ -473,6 +474,28 @@ export async function updateExaminationStatusAction(payload: {
           message: `Congratulations! You passed your ${exam.targetBelt} examination. Your coach will assign your new belt shortly.`,
         },
       });
+
+      try {
+        await pushNotificationService.sendToUser(
+          exam.userId,
+          {
+            title: "Examination Passed! 🎉",
+            body: `Congratulations! You passed your ${exam.targetBelt} examination. Your coach will assign your new belt shortly.`,
+            data: {
+              type: "ENROLLMENT_UPDATE",
+              deepLink: "selffits://dashboard/student",
+              examinationId: exam.id,
+              status: "PASSED",
+            },
+          },
+          {
+            persistInApp: false,
+            deduplicationKey: `exam:${exam.id}:PASSED`,
+          }
+        );
+      } catch (pushErr) {
+        console.warn("Failed to dispatch exam passed push notification:", pushErr);
+      }
     } else if (status === "FAILED") {
       await db.notification.create({
         data: {
@@ -481,6 +504,28 @@ export async function updateExaminationStatusAction(payload: {
           message: `Your recent ${exam.targetBelt} examination result has been updated. Please consult your head coach for feedback.`,
         },
       });
+
+      try {
+        await pushNotificationService.sendToUser(
+          exam.userId,
+          {
+            title: "Examination Result Updated",
+            body: `Your recent ${exam.targetBelt} examination result has been updated. Please consult your head coach for feedback.`,
+            data: {
+              type: "ENROLLMENT_UPDATE",
+              deepLink: "selffits://dashboard/student",
+              examinationId: exam.id,
+              status: "FAILED",
+            },
+          },
+          {
+            persistInApp: false,
+            deduplicationKey: `exam:${exam.id}:FAILED`,
+          }
+        );
+      } catch (pushErr) {
+        console.warn("Failed to dispatch exam failed push notification:", pushErr);
+      }
     }
 
     revalidatePath("/admin/student-progress");
@@ -496,6 +541,8 @@ export async function updateExaminationStatusAction(payload: {
     return { success: false, error: "Failed to update examination status." };
   }
 }
+
+export const evaluateExaminationAction = updateExaminationStatusAction;
 
 // 5. ASSIGN BELT (Strict Guard: Examination MUST be PASSED)
 export async function assignStudentBeltAction(payload: {
@@ -573,6 +620,30 @@ export async function assignStudentBeltAction(payload: {
         message: `Congratulations! You have been officially promoted from ${previousBelt} to ${targetBelt}!`,
       },
     });
+
+    try {
+      await pushNotificationService.sendToUser(
+        userId,
+        {
+          title: "New Belt Awarded! 🥋",
+          body: `Congratulations! You have been officially promoted from ${previousBelt} to ${targetBelt}!`,
+          data: {
+            type: "ENROLLMENT_UPDATE",
+            deepLink: "selffits://dashboard/student",
+            targetBelt,
+            previousBelt,
+            beltProgressionId: beltProg.id,
+            examinationId,
+          },
+        },
+        {
+          persistInApp: false,
+          deduplicationKey: `belt_promotion:${userId}:${examinationId}:${targetBelt}`,
+        }
+      );
+    } catch (pushErr) {
+      console.warn("Failed to dispatch belt promotion push notification:", pushErr);
+    }
 
     revalidatePath("/admin/student-progress");
     revalidatePath("/dashboard/progress");
@@ -681,6 +752,29 @@ export async function issueBeltCertificateAction(payload: {
       },
     });
 
+    try {
+      await pushNotificationService.sendToUser(
+        userId,
+        {
+          title: "Official Certificate Issued! 📜",
+          body: `Your official ${certTitle} (${certificateNumber}) has been issued and is now ready for download in your dashboard!`,
+          data: {
+            type: "CERTIFICATE_AWARDED",
+            deepLink: "selffits://dashboard/student",
+            certificateId: cert.id,
+            certificateNumber,
+            beltName,
+          },
+        },
+        {
+          persistInApp: false,
+          deduplicationKey: `cert_issued:${cert.id}`,
+        }
+      );
+    } catch (pushErr) {
+      console.warn("Failed to dispatch certificate issued push notification:", pushErr);
+    }
+
     revalidatePath("/admin/student-progress");
     revalidatePath("/dashboard/certificates");
     revalidatePath("/dashboard/progress");
@@ -741,6 +835,28 @@ export async function assignStudentBeltDirectAction(payload: {
         message: `Congratulations! You have been officially assigned the ${targetBelt} rank!`,
       },
     });
+
+    try {
+      await pushNotificationService.sendToUser(
+        userId,
+        {
+          title: "New Belt Rank Assigned! 🥋",
+          body: `Congratulations! You have been officially assigned the ${targetBelt} rank!`,
+          data: {
+            type: "ENROLLMENT_UPDATE",
+            deepLink: "selffits://dashboard/student",
+            targetBelt,
+            previousBelt,
+          },
+        },
+        {
+          persistInApp: false,
+          deduplicationKey: `belt_direct:${userId}:${targetBelt}`,
+        }
+      );
+    } catch (pushErr) {
+      console.warn("Failed to dispatch direct belt assignment push notification:", pushErr);
+    }
 
     revalidatePath("/admin/student-progress");
     revalidatePath("/dashboard/progress");

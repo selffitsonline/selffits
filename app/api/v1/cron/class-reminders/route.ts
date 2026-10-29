@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { calculateNextClassSession } from "@/lib/class-schedule";
@@ -5,6 +6,20 @@ import { pushNotificationService } from "@/lib/push-notification-service";
 import { ApiResponse, ClassReminderCronResponseDto } from "@/types/mobile-api.dto";
 
 export const dynamic = "force-dynamic";
+
+/**
+ * Constant-time string comparison using crypto.timingSafeEqual to prevent timing attacks.
+ * Safely handles strings of different lengths or null/undefined without throwing.
+ */
+function timingSafeCompare(a: string | null | undefined, b: string | null | undefined): boolean {
+  if (!a || !b) return false;
+  const bufA = Buffer.from(a, "utf8");
+  const bufB = Buffer.from(b, "utf8");
+  if (bufA.length !== bufB.length) {
+    return false;
+  }
+  return crypto.timingSafeEqual(bufA, bufB);
+}
 
 /**
  * Helper to parse timing string into UTC minutes-until-start.
@@ -36,30 +51,41 @@ function getMinutesUntilClassStart(clockTiming: string, referenceDate: Date = ne
 /**
  * GET or POST /api/v1/cron/class-reminders
  * Server-side cron job triggering 15-minute class reminders.
- * Secured by CRON_SECRET environment variable.
+ * Secured by CRON_SECRET environment variable (fails closed if secret is missing or invalid).
  */
 async function handleClassRemindersCron(req: Request): Promise<NextResponse<ApiResponse<ClassReminderCronResponseDto>>> {
-  const cronSecret = process.env.CRON_SECRET;
+  const cronSecret = process.env.CRON_SECRET?.trim();
 
-  // Enforce CRON_SECRET authorization if configured
-  if (cronSecret) {
-    const authHeader = req.headers.get("authorization");
-    const customHeader = req.headers.get("x-cron-secret");
-    const providedSecret =
-      customHeader || (authHeader?.startsWith("Bearer ") ? authHeader.substring(7) : null);
-
-    if (providedSecret !== cronSecret) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "UNAUTHORIZED_CRON",
-            message: "Invalid or missing cron authentication secret.",
-          },
+  // Fail closed: reject request if CRON_SECRET is not configured on the server
+  if (!cronSecret) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: "UNAUTHORIZED_CRON",
+          message: "CRON_SECRET is not configured on the server.",
         },
-        { status: 401 }
-      );
-    }
+      },
+      { status: 401 }
+    );
+  }
+
+  const authHeader = req.headers.get("authorization");
+  const customHeader = req.headers.get("x-cron-secret");
+  const providedSecret =
+    customHeader?.trim() || (authHeader?.startsWith("Bearer ") ? authHeader.substring(7).trim() : null);
+
+  if (!timingSafeCompare(providedSecret, cronSecret)) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: "UNAUTHORIZED_CRON",
+          message: "Invalid or missing cron authentication secret.",
+        },
+      },
+      { status: 401 }
+    );
   }
 
   const now = new Date();
@@ -91,7 +117,8 @@ async function handleClassRemindersCron(req: Request): Promise<NextResponse<ApiR
           batch.dayCombination,
           batch.clockTiming,
           batch.timeSlot,
-          now
+          now,
+          { useUtc: true }
         );
 
         // Only process sessions scheduled for today

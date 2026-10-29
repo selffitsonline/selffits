@@ -18,6 +18,7 @@ import {
   MobileEnrollmentSchema,
   MobileEnrollmentResponseDto,
 } from "@/types/mobile-api.dto";
+import { dispatchPaymentSuccessNotification } from "@/lib/payment-notification";
 
 export const dynamic = "force-dynamic";
 
@@ -631,6 +632,16 @@ export async function POST(
       }
 
       return { enrollment, payment };
+    });
+
+    // Dispatch in-app and FCM push notification for confirmed enrollment & payment
+    await dispatchPaymentSuccessNotification({
+      userId: authResult.user.id,
+      orderId: verifiedOrderId,
+      planName: `${programTitle} (${membershipPlan.name})`,
+      enrollmentId: transactionResult.enrollment.id,
+      amount: finalAmount,
+      currency,
     });
 
     const responsePayload: MobileEnrollmentResponseDto = {

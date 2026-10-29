@@ -4,6 +4,14 @@ import { db } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import { calculateNextClassSession } from "@/lib/class-schedule";
+import {
+  notifyBatchScheduleChange,
+  notifyBatchCancellation,
+  notifyCoachReassignment,
+  notifyBatchStudentAssignment,
+  notifyBatchStudentRemoval,
+  notifyBatchCreation,
+} from "@/lib/class-lifecycle-notifications";
 
 const TIME_SLOT_MAP: Record<string, string> = {
   "1st Batch": "05:15 PM to 06:00 PM (GMT)",
@@ -433,7 +441,7 @@ export async function createBatchAction(data: {
     const randomNum = Math.floor(1000 + Math.random() * 9000);
     const generatedBatchId = `BATCH-${prgPrefix}-${randomNum}`;
 
-    await db.batch.create({
+    const createdBatch = await db.batch.create({
       data: {
         batchId: generatedBatchId,
         name: data.name.trim(),
@@ -450,6 +458,18 @@ export async function createBatchAction(data: {
         status: "ACTIVE",
       },
     });
+
+    try {
+      await notifyBatchCreation({
+        batchId: createdBatch.id,
+        batchName: createdBatch.name,
+        dayCombination: createdBatch.dayCombination,
+        clockTiming: createdBatch.clockTiming,
+        coachApplicationId: createdBatch.coachId,
+      });
+    } catch (notifErr) {
+      console.warn("Non-fatal batch creation notification error:", notifErr);
+    }
 
     revalidatePath("/admin/batches");
     revalidatePath("/admin/student-progress");
@@ -491,7 +511,7 @@ export async function updateBatchAction(
 
     const existingBatch = await db.batch.findUnique({
       where: { id: batchId },
-      include: { students: true },
+      include: { students: true, coach: true },
     });
 
     if (!existingBatch) {
@@ -527,7 +547,7 @@ export async function updateBatchAction(
       }
     }
 
-    const clockTiming = data.clockTiming || TIME_SLOT_MAP[timeSlot] || existingBatch.clockTiming;
+    const clockTiming = data.clockTiming || (data.timeSlot ? (TIME_SLOT_MAP[data.timeSlot] || existingBatch.clockTiming) : existingBatch.clockTiming);
     const maxCapacity = data.maxCapacity !== undefined ? Math.max(1, Number(data.maxCapacity)) : existingBatch.maxCapacity;
     const studentCount = existingBatch.students.length;
 
@@ -598,6 +618,57 @@ export async function updateBatchAction(
       where: { id: batchId },
       data: updateData,
     });
+
+    const studentUserIds = existingBatch.students.map((s) => s.userId);
+    const updatedBatchName = (data.name && data.name.trim() !== "") ? data.name.trim() : existingBatch.name;
+
+    try {
+      if (targetStatus === "INACTIVE" && existingBatch.status !== "INACTIVE") {
+        await notifyBatchCancellation({
+          batchId,
+          batchName: updatedBatchName,
+          studentUserIds,
+          coachApplicationId: existingBatch.coachId,
+        });
+      } else {
+        const scheduleChanged =
+          dayCombination !== existingBatch.dayCombination ||
+          clockTiming !== existingBatch.clockTiming;
+
+        if (scheduleChanged) {
+          await notifyBatchScheduleChange({
+            batchId,
+            batchName: updatedBatchName,
+            dayCombination,
+            clockTiming,
+            meetingUrl,
+            studentUserIds,
+            coachApplicationId: targetCoachId,
+          });
+        }
+
+        const coachChanged = targetCoachId && targetCoachId !== existingBatch.coachId;
+        if (coachChanged) {
+          const newCoachApp = await db.coachApplication.findUnique({
+            where: { id: targetCoachId },
+            select: { fullName: true },
+          });
+
+          await notifyCoachReassignment({
+            batchId,
+            batchName: updatedBatchName,
+            dayCombination,
+            clockTiming,
+            studentUserIds,
+            newCoachApplicationId: targetCoachId,
+            newCoachName: newCoachApp?.fullName || "your head coach",
+            previousCoachApplicationId: existingBatch.coachId,
+          });
+        }
+      }
+    } catch (notifErr) {
+      console.warn("Non-fatal batch update notification error:", notifErr);
+    }
 
     revalidatePath("/admin/batches");
     revalidatePath("/admin/student-progress");
@@ -683,6 +754,20 @@ export async function assignStudentToBatchAction(batchId: string, userId: string
       },
     });
 
+    try {
+      await notifyBatchStudentAssignment({
+        batchId,
+        batchName: batch.name,
+        dayCombination: batch.dayCombination,
+        clockTiming: batch.clockTiming,
+        studentUserId: userId,
+        studentName: student.name || "A student",
+        coachApplicationId: batch.coachId,
+      });
+    } catch (notifErr) {
+      console.warn("Non-fatal batch student assignment notification error:", notifErr);
+    }
+
     // Check new count to see if full
     const newCount = batch.students.length + 1;
     if (newCount >= batch.maxCapacity) {
@@ -734,6 +819,18 @@ export async function removeStudentFromBatchAction(batchId: string, userId: stri
       });
     }
 
+    if (batch) {
+      try {
+        await notifyBatchStudentRemoval({
+          batchId,
+          batchName: batch.name,
+          studentUserId: userId,
+        });
+      } catch (notifErr) {
+        console.warn("Non-fatal batch student removal notification error:", notifErr);
+      }
+    }
+
     revalidatePath("/admin/batches");
     revalidatePath("/admin/student-progress");
     revalidatePath("/admin/students");
@@ -756,6 +853,11 @@ export async function deactivateOrDeleteBatchAction(batchId: string, deletePerma
       return { success: false, error: "Unauthorized access." };
     }
 
+    const batch = await db.batch.findUnique({
+      where: { id: batchId },
+      include: { students: true },
+    });
+
     if (deletePermanently) {
       await db.batch.delete({ where: { id: batchId } });
     } else {
@@ -763,6 +865,19 @@ export async function deactivateOrDeleteBatchAction(batchId: string, deletePerma
         where: { id: batchId },
         data: { status: "INACTIVE" },
       });
+    }
+
+    if (batch) {
+      try {
+        await notifyBatchCancellation({
+          batchId: batch.id,
+          batchName: batch.name,
+          studentUserIds: batch.students.map((s) => s.userId),
+          coachApplicationId: batch.coachId,
+        });
+      } catch (notifErr) {
+        console.warn("Non-fatal batch cancellation notification error:", notifErr);
+      }
     }
 
     revalidatePath("/admin/batches");

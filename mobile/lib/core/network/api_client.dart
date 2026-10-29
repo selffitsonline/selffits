@@ -245,6 +245,34 @@ class ApiClient {
           statusCode: 403,
         );
 
+      case 409:
+        final rawFieldErrors =
+            errorObj?['fieldErrors'] as Map<String, dynamic>?;
+        final fieldErrors = <String, List<String>>{};
+        if (rawFieldErrors != null) {
+          rawFieldErrors.forEach((key, val) {
+            if (val is List) {
+              fieldErrors[key] = val.map((e) => e.toString()).toList();
+            }
+          });
+        }
+        throw DuplicateEmailException(
+          message: errorMessage,
+          code: errorCode,
+          fieldErrors: fieldErrors,
+        );
+
+      case 429:
+        final retryAfterHeader = response.headers['retry-after'];
+        final retryAfterSec = retryAfterHeader != null
+            ? int.tryParse(retryAfterHeader)
+            : null;
+        throw RateLimitException(
+          message: errorMessage,
+          code: errorCode,
+          retryAfterSeconds: retryAfterSec,
+        );
+
       case 500:
       default:
         throw ServerException(

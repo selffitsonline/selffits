@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { DeviceTokenStore, StoredDeviceToken } from "./device-token-store";
 import { PushNotificationPayload, NotificationType } from "@/types/mobile-api.dto";
 import { db } from "./db";
@@ -14,97 +15,298 @@ export interface IPushProvider {
   send(tokens: StoredDeviceToken[], payload: PushNotificationPayload): Promise<PushSendResult>;
 }
 
+export interface FirebasePushProviderOptions {
+  projectId?: string | null;
+  clientEmail?: string | null;
+  privateKey?: string | null;
+  fetchFn?: typeof fetch;
+}
+
 /**
- * Live Firebase Cloud Messaging (FCM) v1 provider.
- * Uses HTTP v1 API or simulated fallback when environment credentials are not yet supplied.
+ * Encodes a buffer or string into URL-safe Base64 without padding.
+ */
+function base64url(input: string | Buffer): string {
+  const buf = typeof input === "string" ? Buffer.from(input, "utf8") : input;
+  return buf
+    .toString("base64")
+    .replace(/=/g, "")
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_");
+}
+
+/**
+ * Live Firebase Cloud Messaging (FCM) HTTP v1 Provider.
+ * Generates and exchanges Google OAuth2 Service Account assertion JWTs natively,
+ * caches short-lived Bearer tokens, and securely dispatches push notifications
+ * to Google FCM v1 endpoint without exposing secrets or credentials.
  */
 export class FirebasePushProvider implements IPushProvider {
   private projectId: string | null = null;
   private clientEmail: string | null = null;
   private privateKey: string | null = null;
-  private isConfigured: boolean = false;
+  private fetchFn: typeof fetch;
+  private cachedAccessToken: string | null = null;
+  private tokenExpiresAt: number = 0; // Milliseconds timestamp
 
-  constructor() {
-    this.projectId = process.env.FIREBASE_PROJECT_ID || null;
-    this.clientEmail = process.env.FIREBASE_CLIENT_EMAIL || null;
-    this.privateKey = process.env.FIREBASE_PRIVATE_KEY ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n") : null;
-    this.isConfigured = Boolean(this.projectId && this.clientEmail && this.privateKey);
+  constructor(options?: FirebasePushProviderOptions) {
+    const rawProjectId =
+      options?.projectId !== undefined
+        ? options.projectId
+        : (process.env.FIREBASE_PROJECT_ID || null);
+    this.projectId = rawProjectId ? rawProjectId.trim() : null;
+
+    const rawClientEmail =
+      options?.clientEmail !== undefined
+        ? options.clientEmail
+        : (process.env.FIREBASE_CLIENT_EMAIL || null);
+    this.clientEmail = rawClientEmail ? rawClientEmail.trim() : null;
+
+    const rawKey =
+      options?.privateKey !== undefined
+        ? options.privateKey
+        : (process.env.FIREBASE_PRIVATE_KEY || null);
+
+    this.privateKey = rawKey
+      ? rawKey.replace(/\\n/g, "\n").replace(/^["']|["']$/g, "").trim()
+      : null;
+
+    this.fetchFn = options?.fetchFn || globalThis.fetch.bind(globalThis);
   }
 
   get configured(): boolean {
-    return this.isConfigured;
+    return Boolean(this.projectId && this.clientEmail && this.privateKey);
   }
 
+  getProjectId(): string | null {
+    return this.projectId;
+  }
+
+  /**
+   * Resets the cached access token (useful for unit testing or token expiration).
+   */
+  _resetAccessTokenCache(): void {
+    this.cachedAccessToken = null;
+    this.tokenExpiresAt = 0;
+  }
+
+  /**
+   * Generates a signed Google OAuth2 service account JWT assertion and exchanges it
+   * for a Google OAuth2 access token with `https://www.googleapis.com/auth/firebase.messaging` scope.
+   * Access tokens are cached in memory for up to 55 minutes to minimize network latency.
+   */
+  async getAccessToken(): Promise<string> {
+    const nowMs = Date.now();
+    if (this.cachedAccessToken && nowMs < this.tokenExpiresAt) {
+      return this.cachedAccessToken;
+    }
+
+    if (!this.clientEmail || !this.privateKey) {
+      throw new Error("Missing Firebase client email or private key for authentication");
+    }
+
+    const nowSec = Math.floor(nowMs / 1000);
+    const header = { alg: "RS256", typ: "JWT" };
+    const claims = {
+      iss: this.clientEmail,
+      scope: "https://www.googleapis.com/auth/firebase.messaging",
+      aud: "https://oauth2.googleapis.com/token",
+      exp: nowSec + 3600,
+      iat: nowSec,
+    };
+
+    const encodedHeader = base64url(JSON.stringify(header));
+    const encodedClaims = base64url(JSON.stringify(claims));
+    const toSign = `${encodedHeader}.${encodedClaims}`;
+
+    let signature: string;
+    try {
+      const signer = crypto.createSign("RSA-SHA256");
+      signer.update(toSign);
+      signature = base64url(signer.sign(this.privateKey));
+    } catch (signErr: any) {
+      throw new Error(`Failed to sign Firebase service account JWT: ${signErr.message}`);
+    }
+
+    const assertion = `${toSign}.${signature}`;
+
+    const tokenRes = await this.fetchFn("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${encodeURIComponent(assertion)}`,
+    });
+
+    if (!tokenRes.ok) {
+      const errorText = await tokenRes.text().catch(() => "");
+      throw new Error(`Google OAuth2 token exchange failed [HTTP ${tokenRes.status}]: ${errorText}`);
+    }
+
+    const data = (await tokenRes.json()) as { access_token?: string; expires_in?: number };
+    if (!data.access_token) {
+      throw new Error("Google OAuth2 token exchange did not return an access token");
+    }
+
+    this.cachedAccessToken = data.access_token;
+    const expiresInSec = typeof data.expires_in === "number" ? data.expires_in : 3600;
+    // Cache with a 5-minute safety margin
+    this.tokenExpiresAt = nowMs + Math.max(0, expiresInSec - 300) * 1000;
+
+    return this.cachedAccessToken;
+  }
+
+  /**
+   * Dispatches notifications to FCM v1 HTTP endpoint:
+   * https://fcm.googleapis.com/v1/projects/{projectId}/messages:send
+   */
   async send(tokens: StoredDeviceToken[], payload: PushNotificationPayload): Promise<PushSendResult> {
     if (!tokens || tokens.length === 0) {
       return { success: true, successCount: 0, failureCount: 0, invalidTokens: [], errors: [] };
     }
 
-    // If live credentials are not yet configured in environment, safely simulate dispatch without crashing
-    if (!this.isConfigured) {
+    if (!this.configured || !this.projectId) {
       return {
-        success: true,
-        successCount: tokens.length,
-        failureCount: 0,
+        success: false,
+        successCount: 0,
+        failureCount: tokens.length,
         invalidTokens: [],
-        errors: ["FIREBASE_NOT_CONFIGURED_SIMULATED_DISPATCH"],
+        errors: ["FIREBASE_NOT_CONFIGURED: Missing FIREBASE_PROJECT_ID, FIREBASE_CLIENT_EMAIL, or FIREBASE_PRIVATE_KEY"],
       };
     }
 
-    // When credentials are fully present, dispatch via FCM v1 endpoint
+    let accessToken: string;
+    try {
+      accessToken = await this.getAccessToken();
+    } catch (authErr: any) {
+      return {
+        success: false,
+        successCount: 0,
+        failureCount: tokens.length,
+        invalidTokens: [],
+        errors: [`FCM_AUTH_ERROR: ${authErr.message}`],
+      };
+    }
+
+    const endpoint = `https://fcm.googleapis.com/v1/projects/${encodeURIComponent(this.projectId)}/messages:send`;
     const invalidTokens: string[] = [];
     const errors: string[] = [];
     let successCount = 0;
     let failureCount = 0;
 
-    for (const item of tokens) {
-      try {
-        // FCM payload formatted for both iOS (APNs alert) and Android (notification)
-        const _fcmMessage = {
-          token: item.token,
-          notification: {
-            title: payload.title,
-            body: payload.body,
-          },
-          data: {
-            ...payload.data,
-            click_action: "FLUTTER_NOTIFICATION_CLICK",
-          },
-          android: {
-            priority: "high",
-            notification: {
-              channelId: "selffits_high_importance_channel",
-              sound: "default",
-            },
-          },
-          apns: {
-            payload: {
-              aps: {
-                alert: {
-                  title: payload.title,
-                  body: payload.body,
-                },
-                sound: "default",
-                badge: 1,
-              },
-            },
-          },
-        };
-
-        // In production with FCM credentials, this executes the Google OAuth2 authenticated request
-        // For simulated testing or invalid tokens:
-        if (item.token.startsWith("invalid-") || item.token.includes("expired")) {
-          invalidTokens.push(item.token);
-          failureCount++;
-          errors.push(`Token unregistered: ${item.token}`);
-        } else {
-          successCount++;
+    // Convert all custom data dictionary attributes to string values (FCM v1 requirement)
+    const fcmData: Record<string, string> = {};
+    if (payload.data) {
+      for (const [key, val] of Object.entries(payload.data)) {
+        if (val !== undefined && val !== null) {
+          fcmData[key] = String(val);
         }
-      } catch (err: any) {
-        failureCount++;
-        errors.push(err.message || "Failed to dispatch push");
       }
     }
+    if (!fcmData.click_action) {
+      fcmData.click_action = "FLUTTER_NOTIFICATION_CLICK";
+    }
+
+    await Promise.all(
+      tokens.map(async (item) => {
+        try {
+          const messageBody = {
+            message: {
+              token: item.token,
+              notification: {
+                title: payload.title,
+                body: payload.body,
+              },
+              data: fcmData,
+              android: {
+                priority: "high",
+                notification: {
+                  channelId: "selffits_high_importance_channel",
+                  sound: "default",
+                  defaultSound: true,
+                  defaultVibrateTimings: true,
+                },
+              },
+              apns: {
+                payload: {
+                  aps: {
+                    alert: {
+                      title: payload.title,
+                      body: payload.body,
+                    },
+                    sound: "default",
+                    badge: 1,
+                    "content-available": 1,
+                  },
+                },
+              },
+            },
+          };
+
+          const res = await this.fetchFn(endpoint, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "Content-Type": "application/json; UTF-8",
+            },
+            body: JSON.stringify(messageBody),
+          });
+
+          if (res.ok) {
+            successCount++;
+          } else {
+            failureCount++;
+            const status = res.status;
+            let errorDetail = "";
+            let isUnregistered = false;
+
+            if (status === 401) {
+              // Token expired or invalid authorization, reset cache
+              this._resetAccessTokenCache();
+            }
+
+            try {
+              const errorJson = await res.json();
+              const errObj = errorJson?.error;
+              const errorCode = errObj?.details?.[0]?.errorCode || errObj?.status || "";
+              const errMsg = errObj?.message || "";
+              errorDetail = `${status} ${errorCode}: ${errMsg}`.trim();
+
+              const lowerMsg = errMsg.toLowerCase();
+              const isExplicitTokenError =
+                lowerMsg.includes("registration token") ||
+                lowerMsg.includes("not a valid fcm registration token") ||
+                lowerMsg.includes("invalid registration");
+
+              if (
+                status === 404 ||
+                errorCode === "UNREGISTERED" ||
+                lowerMsg.includes("unregistered") ||
+                lowerMsg.includes("requested entity was not found") ||
+                (status === 400 && isExplicitTokenError)
+              ) {
+                isUnregistered = true;
+              }
+            } catch {
+              errorDetail = `HTTP ${status}`;
+              if (status === 404) {
+                isUnregistered = true;
+              }
+            }
+
+            if (isUnregistered) {
+              invalidTokens.push(item.token);
+            }
+
+            const maskedToken = item.token.length > 8 ? `...${item.token.slice(-6)}` : item.token;
+            errors.push(`Token ${maskedToken} delivery failed: ${errorDetail}`);
+          }
+        } catch (netErr: any) {
+          failureCount++;
+          const maskedToken = item.token.length > 8 ? `...${item.token.slice(-6)}` : item.token;
+          errors.push(`Token ${maskedToken} transport error: ${netErr.message || "Failed to dispatch"}`);
+        }
+      })
+    );
 
     return {
       success: failureCount === 0,
@@ -194,8 +396,28 @@ export class PushNotificationService {
   async sendToUser(
     userId: string,
     payload: PushNotificationPayload,
-    options?: { persistInApp?: boolean }
-  ): Promise<PushSendResult> {
+    options?: { persistInApp?: boolean; deduplicationKey?: string }
+  ): Promise<PushSendResult & { deduplicated?: boolean }> {
+    if (options?.deduplicationKey) {
+      const now = Date.now();
+      for (const [k, timestamp] of deduplicationCache.entries()) {
+        if (now - timestamp > DEDUP_TTL_MS) {
+          deduplicationCache.delete(k);
+        }
+      }
+
+      if (deduplicationCache.has(options.deduplicationKey)) {
+        return {
+          success: true,
+          successCount: 0,
+          failureCount: 0,
+          invalidTokens: [],
+          errors: [],
+          deduplicated: true,
+        };
+      }
+    }
+
     const tokens = await DeviceTokenStore.getUserTokens(userId);
 
     // Also persist in-app notification in database if requested
@@ -214,10 +436,17 @@ export class PushNotificationService {
     }
 
     if (tokens.length === 0) {
+      if (options?.deduplicationKey) {
+        deduplicationCache.set(options.deduplicationKey, Date.now());
+      }
       return { success: true, successCount: 0, failureCount: 0, invalidTokens: [], errors: [] };
     }
 
     const result = await this.provider.send(tokens, payload);
+
+    if (options?.deduplicationKey) {
+      deduplicationCache.set(options.deduplicationKey, Date.now());
+    }
 
     // Automatically prune invalid tokens reported by FCM
     if (result.invalidTokens.length > 0) {
@@ -233,8 +462,28 @@ export class PushNotificationService {
   async sendToUsers(
     userIds: string[],
     payload: PushNotificationPayload,
-    options?: { persistInApp?: boolean }
-  ): Promise<PushSendResult> {
+    options?: { persistInApp?: boolean; deduplicationKey?: string }
+  ): Promise<PushSendResult & { deduplicated?: boolean }> {
+    if (options?.deduplicationKey) {
+      const now = Date.now();
+      for (const [k, timestamp] of deduplicationCache.entries()) {
+        if (now - timestamp > DEDUP_TTL_MS) {
+          deduplicationCache.delete(k);
+        }
+      }
+
+      if (deduplicationCache.has(options.deduplicationKey)) {
+        return {
+          success: true,
+          successCount: 0,
+          failureCount: 0,
+          invalidTokens: [],
+          errors: [],
+          deduplicated: true,
+        };
+      }
+    }
+
     if (userIds.length === 0) {
       return { success: true, successCount: 0, failureCount: 0, invalidTokens: [], errors: [] };
     }
@@ -268,10 +517,17 @@ export class PushNotificationService {
     }
 
     if (tokens.length === 0) {
+      if (options?.deduplicationKey) {
+        deduplicationCache.set(options.deduplicationKey, Date.now());
+      }
       return { success: true, successCount: 0, failureCount: 0, invalidTokens: [], errors: [] };
     }
 
     const result = await this.provider.send(tokens, payload);
+
+    if (options?.deduplicationKey) {
+      deduplicationCache.set(options.deduplicationKey, Date.now());
+    }
 
     if (result.invalidTokens.length > 0) {
       await DeviceTokenStore.pruneInvalidTokens(result.invalidTokens);
@@ -282,7 +538,8 @@ export class PushNotificationService {
 
   /**
    * Sends a 15-minute upcoming class reminder to students and coaches.
-   * Includes duplicate prevention so reminders are never sent twice for the same session.
+   * Includes session-level duplicate prevention so separate sessions on the same day do not suppress each other,
+   * while repeat invocations of the same session are safely deduplicated in-memory and in the database.
    */
   async sendClassReminder(params: {
     batchId: string;
@@ -293,7 +550,13 @@ export class PushNotificationService {
     userIds: string[];
     dateStr: string;
   }): Promise<PushSendResult & { deduplicated?: boolean }> {
-    const dedupKey = `reminder:${params.batchId}:${params.dateStr}`;
+    // Normalize session start time from startTimeStr (e.g. "05:15 PM to 06:00 PM (GMT)" -> "05:15PM")
+    const timeMatch = params.startTimeStr.match(/(\d{1,2}:\d{2}\s*(?:AM|PM))/i);
+    const normalizedStartTime = timeMatch
+      ? timeMatch[1].replace(/\s+/g, "").toUpperCase()
+      : params.startTimeStr.trim().replace(/[^a-zA-Z0-9]/g, "_");
+
+    const dedupKey = `reminder:${params.batchId}:${params.dateStr}:${normalizedStartTime}`;
 
     // Clean up expired dedup entries
     const now = Date.now();
@@ -326,7 +589,56 @@ export class PushNotificationService {
       },
     };
 
-    const result = await this.sendToUsers(params.userIds, payload);
+    // Idempotent in-app notification creation with database-level lookup-before-insert check
+    if (params.userIds.length > 0) {
+      try {
+        const existingUsers = await db.user.findMany({
+          where: { id: { in: params.userIds } },
+          select: { id: true },
+        });
+        const validUserIds = existingUsers.map((u) => u.id);
+
+        for (const uid of validUserIds) {
+          const existing = await db.notification.findFirst({
+            where: {
+              userId: uid,
+              title: payload.title,
+              message: { contains: `(Ref: ${dedupKey})` },
+            },
+          });
+
+          if (!existing) {
+            await db.notification.create({
+              data: {
+                userId: uid,
+                title: payload.title,
+                message: `${payload.body} (Ref: ${dedupKey})`,
+              },
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to persist in-app reminder notification idempotently:", err);
+      }
+    }
+
+    let result: PushSendResult & { deduplicated?: boolean };
+    try {
+      result = await this.sendToUsers(params.userIds, payload, {
+        persistInApp: false, // In-app notification already managed above with deduplication
+        deduplicationKey: dedupKey,
+      });
+    } catch (pushErr: any) {
+      console.warn("Failed to dispatch class reminder push notifications:", pushErr);
+      return {
+        success: false,
+        successCount: 0,
+        failureCount: params.userIds.length,
+        invalidTokens: [],
+        errors: [`PUSH_TRANSPORT_ERROR: ${pushErr?.message || "Unknown transport failure"}`],
+      };
+    }
+
     deduplicationCache.set(dedupKey, now);
 
     return result;
