@@ -37,6 +37,8 @@ export interface StudentRecord {
   enrolledPrograms?: Array<{
     programId: string;
     programTitle: string;
+    category?: string;
+    targetAudience?: string;
     planName?: string;
     levelName?: string;
     purchaseDate?: string;
@@ -63,6 +65,8 @@ interface AssignStudentModalProps {
     name: string;
     programId: string;
     programTitle: string;
+    programCategory?: string;
+    targetAudience?: string;
     levelName: string;
     maxCapacity: number;
     studentCount: number;
@@ -136,13 +140,26 @@ export function AssignStudentModal({
         return false;
       }
 
-      // Must be actively enrolled in the batch's program
+      // Helper for fitness category comparison
+      const isFitness = (cat?: string) => cat === "FITNESS_WEIGHT_LOSS" || cat === "FITNESS_HIIT";
+
+      // Must be actively enrolled in the batch's program or matching category & audience
       const matchesEnrolledIds =
         Array.isArray(std.enrolledProgramIds) && std.enrolledProgramIds.includes(batch.programId);
       const matchesActiveId = std.activeProgramId === batch.programId;
       const matchesProgramsList =
         Array.isArray(std.enrolledPrograms) &&
-        std.enrolledPrograms.some((p) => p.programId === batch.programId);
+        std.enrolledPrograms.some((p) => {
+          if (p.programId === batch.programId) return true;
+          if (batch.programCategory && batch.targetAudience && p.category && p.targetAudience) {
+            const audienceMatch = p.targetAudience === batch.targetAudience;
+            const categoryMatch =
+              p.category === batch.programCategory ||
+              (isFitness(p.category) && isFitness(batch.programCategory));
+            return audienceMatch && categoryMatch;
+          }
+          return false;
+        });
 
       const hasMatchingEnrollment = matchesEnrolledIds || matchesActiveId || matchesProgramsList;
       if (!hasMatchingEnrollment) {

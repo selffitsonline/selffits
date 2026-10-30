@@ -318,7 +318,12 @@ export async function getBatchFormDataAction() {
                   tierType: true,
                   programId: true,
                   program: {
-                    select: { id: true, title: true },
+                    select: {
+                      id: true,
+                      title: true,
+                      category: true,
+                      targetAudience: true,
+                    },
                   },
                 },
               },
@@ -390,6 +395,8 @@ export async function getBatchFormDataAction() {
           enrollmentId: enr.id,
           programId: prg.id,
           programTitle: prg.title,
+          category: prg.category,
+          targetAudience: prg.targetAudience,
           planId: mp.id,
           planName: mp.name,
           levelName: getProgramLevelName(mp.tierType, mp.name),
@@ -836,8 +843,32 @@ export async function assignStudentToBatchAction(batchId: string, userId: string
 
     // Check student program eligibility: student must have an active enrollment for this batch's program
     // Do not filter by belt, belt color, rank or level. There is only one starting belt.
+    const isFitness = (cat?: string) => cat === "FITNESS_WEIGHT_LOSS" || cat === "FITNESS_HIIT";
+    const programConditions: any[] = [{ id: batch.programId }];
+    if (batch.program?.category && batch.program?.targetAudience) {
+      if (isFitness(batch.program.category)) {
+        programConditions.push({
+          category: { in: ["FITNESS_WEIGHT_LOSS", "FITNESS_HIIT"] },
+          targetAudience: batch.program.targetAudience,
+        });
+      } else {
+        programConditions.push({
+          category: batch.program.category,
+          targetAudience: batch.program.targetAudience,
+        });
+      }
+    }
+
+    const matchingPrograms = await db.program.findMany({
+      where: {
+        OR: programConditions,
+      },
+      select: { id: true },
+    });
+    const matchingProgramIds = new Set(matchingPrograms.map((p) => p.id));
+
     const matchingEnrollment = student.enrollments.find(
-      (enr) => enr.membershipPlan?.programId === batch.programId
+      (enr) => enr.membershipPlan?.programId && matchingProgramIds.has(enr.membershipPlan.programId)
     );
 
     if (!matchingEnrollment) {
@@ -917,6 +948,35 @@ export async function getEligibleStudentsForBatchAction(batchId: string) {
 
     const currentAssignedUserIds = batch.students.map((s) => s.userId);
 
+    // Find all programs that are compatible with this batch:
+    // 1. Direct programId match
+    // 2. Same category and targetAudience (e.g. Kung Fu / Taekwondo / Adults Mixed Martial Arts)
+    // 3. Or both are fitness categories with same targetAudience
+    const isFitness = (cat?: string) => cat === "FITNESS_WEIGHT_LOSS" || cat === "FITNESS_HIIT";
+    const programConditions: any[] = [{ id: batch.programId }];
+    if (batch.program?.category && batch.program?.targetAudience) {
+      if (isFitness(batch.program.category)) {
+        programConditions.push({
+          category: { in: ["FITNESS_WEIGHT_LOSS", "FITNESS_HIIT"] },
+          targetAudience: batch.program.targetAudience,
+        });
+      } else {
+        programConditions.push({
+          category: batch.program.category,
+          targetAudience: batch.program.targetAudience,
+        });
+      }
+    }
+
+    const matchingPrograms = await db.program.findMany({
+      where: {
+        OR: programConditions,
+      },
+      select: { id: true, title: true, category: true, targetAudience: true },
+    });
+
+    const matchingProgramIds = matchingPrograms.map((p) => p.id);
+
     // Retrieve students who have an active enrollment for the batch's program
     // Exclude students who are already assigned to this batch
     // Do not filter by belt, belt color, rank or level.
@@ -928,7 +988,7 @@ export async function getEligibleStudentsForBatchAction(batchId: string) {
           some: {
             status: "ACTIVE",
             membershipPlan: {
-              programId: batch.programId,
+              programId: { in: matchingProgramIds },
             },
           },
         },
@@ -957,7 +1017,7 @@ export async function getEligibleStudentsForBatchAction(batchId: string) {
           where: {
             status: "ACTIVE",
             membershipPlan: {
-              programId: batch.programId,
+              programId: { in: matchingProgramIds },
             },
           },
           orderBy: { createdAt: "desc" },
@@ -973,7 +1033,7 @@ export async function getEligibleStudentsForBatchAction(batchId: string) {
                 tierType: true,
                 programId: true,
                 program: {
-                  select: { id: true, title: true },
+                  select: { id: true, title: true, category: true, targetAudience: true },
                 },
               },
             },
@@ -1020,12 +1080,12 @@ export async function getEligibleStudentsForBatchAction(batchId: string) {
         email: std.email,
         phone: std.studentProfile?.phone || "Not provided",
         activeProgramId: batch.programId,
-        activeProgramTitle: prg.title,
+        activeProgramTitle: batch.program.title,
         activePlanId: mp?.id || null,
         activeLevelName: getProgramLevelName(mp?.tierType, mp?.name),
         martialArtsType: activeEnr?.martialArtsType || null,
         isEnrolled: true,
-        enrolledProgramIds: [batch.programId],
+        enrolledProgramIds: matchingProgramIds,
         purchaseDate: `${dateStr} • ${timeStr}`,
         purchaseDateShort: dateStr,
         purchaseTimestamp: purchaseDateObj.getTime(),
