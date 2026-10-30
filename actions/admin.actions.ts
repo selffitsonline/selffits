@@ -3,7 +3,7 @@
 import { db, ensureDatabaseEnums, ensureCouponTables } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
-import { optimizeMediaUrls } from "@/lib/media-helper";
+import { optimizeMediaUrls, clearMediaBufferCache } from "@/lib/media-helper";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import {
@@ -1074,12 +1074,42 @@ export async function updateAdminHomepageSectionAction(sectionKey: string, data:
       data.isEnabled = true;
     }
 
+    // Explore Programs: Prevent storing dead self-referential /api/media URLs
+    if (sectionKey === "homepage_programs" && data && Array.isArray(data.items)) {
+      const existingRecord = await db.websiteSettings.findUnique({
+        where: { key: "homepage_programs" },
+        select: { value: true },
+      });
+      const existingItems: any[] = (existingRecord?.value as any)?.items || [];
+      const existingMap = new Map(existingItems.map((it: any) => [String(it.id), it]));
+
+      data.items = data.items.map((item: any) => {
+        if (typeof item.image === "string" && item.image.startsWith("/api/media")) {
+          const prev = existingMap.get(String(item.id));
+          if (prev && typeof prev.image === "string" && !prev.image.startsWith("/api/media")) {
+            return { ...item, image: prev.image };
+          }
+          const fallback =
+            item.id === "adults"
+              ? "/images/adults_martial_arts.png"
+              : item.id === "ladies"
+              ? "/images/ladies_fitness.png"
+              : item.id === "weight-loss" || item.id === "fitness"
+              ? "/images/weight_loss_hiit.png"
+              : "/images/kids_martial_arts.png";
+          return { ...item, image: fallback };
+        }
+        return item;
+      });
+    }
+
     await db.websiteSettings.upsert({
       where: { key: sectionKey },
       update: { value: data },
       create: { key: sectionKey, value: data },
     });
 
+    clearMediaBufferCache(sectionKey);
     revalidateTag("homepage_settings", { expire: 0 });
     revalidatePath("/");
     revalidatePath("/coaches");

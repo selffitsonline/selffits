@@ -65,6 +65,51 @@ const defaultProgramsList: ProgramCardItem[] = [
   },
 ];
 
+function getProgramFallbackImage(id?: string, category?: string): string {
+  const lower = (id || "").toLowerCase();
+  if (lower === "kids" || lower.includes("kid")) return "/images/kids_martial_arts.png";
+  if (lower === "adults" || lower.includes("adult")) return "/images/adults_martial_arts.png";
+  if (lower === "ladies" || lower.includes("lad") || lower.includes("women")) return "/images/ladies_fitness.png";
+  if (lower === "weight-loss" || lower.includes("weight") || lower.includes("loss") || lower.includes("hiit")) {
+    return "/images/weight_loss_hiit.png";
+  }
+  const catLower = (category || "").toLowerCase();
+  if (catLower.includes("lad") || catLower.includes("women")) return "/images/ladies_fitness.png";
+  if (catLower.includes("weight") || catLower.includes("fit") || catLower.includes("hiit")) return "/images/weight_loss_hiit.png";
+  if (catLower.includes("adult")) return "/images/adults_martial_arts.png";
+  if (catLower.includes("kid")) return "/images/kids_martial_arts.png";
+  return "/images/kids_martial_arts.png";
+}
+
+function ProgramCardImage({ prog }: { prog: ProgramCardItem }) {
+  const fallback = React.useMemo(() => getProgramFallbackImage(prog.id, prog.category), [prog.id, prog.category]);
+  const initialSrc = prog.image && prog.image.trim() ? prog.image : fallback;
+  const [imgSrc, setImgSrc] = useState(initialSrc);
+
+  useEffect(() => {
+    if (prog.image && prog.image.trim()) {
+      setImgSrc(prog.image);
+    } else {
+      setImgSrc(fallback);
+    }
+  }, [prog.image, fallback]);
+
+  return (
+    <Image
+      src={imgSrc}
+      alt={prog.title ? `${prog.title} - SELFFITS Program` : "SELFFITS Martial Arts & Fitness Program"}
+      fill
+      unoptimized
+      className="object-cover group-hover:scale-105 transition-transform duration-500"
+      onError={() => {
+        if (imgSrc !== fallback) {
+          setImgSrc(fallback);
+        }
+      }}
+    />
+  );
+}
+
 export function ProgramsCarousel({ items }: { items?: ProgramCardItem[] }) {
   const programs = items && items.length > 0 ? items : defaultProgramsList;
 
@@ -146,13 +191,7 @@ export function ProgramsCarousel({ items }: { items?: ProgramCardItem[] }) {
               <div>
                 {/* Image Container */}
                 <div className="relative h-48 sm:h-52 overflow-hidden">
-                  <Image
-                    src={prog.image || "/images/kids_martial_arts.png"}
-                    alt={prog.title ? `${prog.title} - SELFFITS Program` : "SELFFITS Martial Arts & Fitness Program"}
-                    fill
-                    unoptimized
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
+                  <ProgramCardImage prog={prog} />
                   <span className="absolute top-3 left-3 px-3 py-1 rounded-full bg-[#0A0B0E]/85 backdrop-blur-md text-[11px] font-extrabold uppercase tracking-wider text-[#0080FF] border border-white/10">
                     {prog.category}
                   </span>

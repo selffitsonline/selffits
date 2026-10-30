@@ -931,6 +931,40 @@ export default function AdminHomepageManagementPage() {
                             <Upload className="w-3.5 h-3.5" /> Upload
                           </label>
                         </div>
+                        {/* Live Image Preview Thumbnail */}
+                        <div className="mt-2 relative w-full h-28 rounded-lg overflow-hidden border border-white/10 bg-[#14161D]">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={
+                              item.image ||
+                              (item.id === "adults"
+                                ? "/images/adults_martial_arts.png"
+                                : item.id === "ladies"
+                                ? "/images/ladies_fitness.png"
+                                : item.id === "weight-loss" || item.id === "fitness"
+                                ? "/images/weight_loss_hiit.png"
+                                : "/images/kids_martial_arts.png")
+                            }
+                            alt={item.title || "Program preview"}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const fallback =
+                                item.id === "adults"
+                                  ? "/images/adults_martial_arts.png"
+                                  : item.id === "ladies"
+                                  ? "/images/ladies_fitness.png"
+                                  : item.id === "weight-loss" || item.id === "fitness"
+                                  ? "/images/weight_loss_hiit.png"
+                                  : "/images/kids_martial_arts.png";
+                              if (e.currentTarget.src !== fallback) {
+                                e.currentTarget.src = fallback;
+                              }
+                            }}
+                          />
+                          <span className="absolute bottom-1 right-2 px-1.5 py-0.5 rounded text-[10px] font-mono bg-black/70 text-gray-400">
+                            Live Card Preview
+                          </span>
+                        </div>
                       </div>
                     </div>
                   ))}
