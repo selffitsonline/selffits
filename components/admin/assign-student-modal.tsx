@@ -126,24 +126,28 @@ export function AssignStudentModal({
   const eligibleStudents = useMemo(() => {
     if (!batch) return [];
 
-    // If fresh remote data is loaded, use it
-    if (remoteStudents !== null) {
+    // If fresh remote data is loaded and has students, prioritize it
+    if (remoteStudents !== null && remoteStudents.length > 0) {
       return remoteStudents;
     }
 
-    // Otherwise, compute from passed allStudents
+    // Otherwise, compute from passed allStudents (or remoteStudents if allStudents is empty)
     const currentAssignedUserIds = batch.students.map((s) => s.id);
+    const sourceStudents = (allStudents && allStudents.length > 0) ? allStudents : (remoteStudents || []);
 
-    const filtered = allStudents.filter((std) => {
+    const unassigned = sourceStudents.filter((std) => {
       // Must not already be assigned to this batch
-      if (currentAssignedUserIds.includes(std.id)) {
-        return false;
-      }
+      return !currentAssignedUserIds.includes(std.id);
+    });
 
-      // Helper for fitness category comparison
-      const isFitness = (cat?: string) => cat === "FITNESS_WEIGHT_LOSS" || cat === "FITNESS_HIIT";
+    // Helper for fitness category comparison
+    const isFitness = (cat?: string) => cat === "FITNESS_WEIGHT_LOSS" || cat === "FITNESS_HIIT";
 
-      // Must be actively enrolled in the batch's program or matching category & audience
+    // Partition into compatible matches vs general purchased students
+    const compatible: StudentRecord[] = [];
+    const otherPurchased: StudentRecord[] = [];
+
+    unassigned.forEach((std) => {
       const matchesEnrolledIds =
         Array.isArray(std.enrolledProgramIds) && std.enrolledProgramIds.includes(batch.programId);
       const matchesActiveId = std.activeProgramId === batch.programId;
@@ -161,20 +165,25 @@ export function AssignStudentModal({
           return false;
         });
 
-      const hasMatchingEnrollment = matchesEnrolledIds || matchesActiveId || matchesProgramsList;
-      if (!hasMatchingEnrollment) {
-        return false;
+      if (matchesEnrolledIds || matchesActiveId || matchesProgramsList || (std as any).isDirectMatch) {
+        compatible.push(std);
+      } else {
+        otherPurchased.push(std);
       }
-
-      return true;
     });
 
     // Sort by purchase/enrollment date, newest first
-    return [...filtered].sort((a, b) => {
+    const sortByDate = (a: StudentRecord, b: StudentRecord) => {
       const timeA = a.purchaseTimestamp || 0;
       const timeB = b.purchaseTimestamp || 0;
       return timeB - timeA;
-    });
+    };
+
+    compatible.sort(sortByDate);
+    otherPurchased.sort(sortByDate);
+
+    // If compatible students exist, show them first, followed by other purchased students
+    return [...compatible, ...otherPurchased];
   }, [batch, remoteStudents, allStudents]);
 
   // Live autocomplete search filtering (name, email, phone)
