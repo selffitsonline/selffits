@@ -44,10 +44,17 @@ interface AdminBatchesViewProps {
     name: string;
     email: string;
     phone: string;
-    activeProgramId: string | null;
-    activeProgramTitle: string;
-    activeLevelName: string;
-    isEnrolled: boolean;
+    activeProgramId?: string | null;
+    activeProgramTitle?: string;
+    activeLevelName?: string;
+    isEnrolled?: boolean;
+    purchaseDate?: string;
+    purchaseDateShort?: string;
+    purchaseTimestamp?: number;
+    enrolledProgramIds?: string[];
+    enrolledPrograms?: any[];
+    assignedBatches?: any[];
+    assignedBatchIds?: string[];
   }[];
   dayCombinations: string[];
   timeSlots: string[];
@@ -208,6 +215,21 @@ export function AdminBatchesView({
   const handleAssignStudent = async (batchId: string, userId: string) => {
     const res = await assignStudentToBatchAction(batchId, userId);
     if (res.success) {
+      setBatches((prev) =>
+        prev.map((b) => {
+          if (b.id === batchId) {
+            const newCount = b.studentCount + 1;
+            return {
+              ...b,
+              studentCount: newCount,
+              availableSeats: Math.max(0, b.maxCapacity - newCount),
+              capacityLabel: `${newCount} / ${b.maxCapacity}`,
+              status: newCount >= b.maxCapacity ? "FULL" : b.status,
+            };
+          }
+          return b;
+        })
+      );
       setNotification({ message: res.message || "Student assigned.", type: "success" });
       setSelectedBatchForAssign(null);
       window.location.reload();

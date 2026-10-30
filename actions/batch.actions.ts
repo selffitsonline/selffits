@@ -286,22 +286,50 @@ export async function getBatchFormDataAction() {
           id: true,
           name: true,
           email: true,
+          createdAt: true,
           studentProfile: {
             select: { phone: true },
           },
+          batchStudents: {
+            select: {
+              batchId: true,
+              batch: {
+                select: {
+                  id: true,
+                  name: true,
+                  programId: true,
+                },
+              },
+            },
+          },
           enrollments: {
             where: { status: "ACTIVE" },
-            take: 1,
+            orderBy: { createdAt: "desc" },
             select: {
+              id: true,
               martialArtsType: true,
+              createdAt: true,
+              startDate: true,
+              status: true,
               membershipPlan: {
                 select: {
                   id: true,
                   name: true,
                   tierType: true,
+                  programId: true,
                   program: {
                     select: { id: true, title: true },
                   },
+                },
+              },
+              payments: {
+                where: { status: "SUCCESS" },
+                orderBy: { createdAt: "desc" },
+                take: 1,
+                select: {
+                  id: true,
+                  amount: true,
+                  createdAt: true,
                 },
               },
             },
@@ -339,23 +367,92 @@ export async function getBatchFormDataAction() {
     }));
 
     const formattedStudents = activeStudents.map((std) => {
-      const activeEnr = std.enrollments[0];
-      const prg = activeEnr?.membershipPlan?.program;
-      const mp = activeEnr?.membershipPlan;
+      const validEnrollments = std.enrollments.filter(
+        (enr) => enr.membershipPlan?.program
+      );
+
+      const enrolledPrograms = validEnrollments.map((enr) => {
+        const prg = enr.membershipPlan!.program;
+        const mp = enr.membershipPlan!;
+        const purchaseDateObj = enr.payments[0]?.createdAt || enr.createdAt || std.createdAt;
+        const dateStr = purchaseDateObj.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+        const timeStr = purchaseDateObj.toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+        });
+
+        return {
+          enrollmentId: enr.id,
+          programId: prg.id,
+          programTitle: prg.title,
+          planId: mp.id,
+          planName: mp.name,
+          levelName: getProgramLevelName(mp.tierType, mp.name),
+          martialArtsType: enr.martialArtsType || null,
+          purchaseDate: `${dateStr} • ${timeStr}`,
+          purchaseDateShort: dateStr,
+          purchaseTimestamp: purchaseDateObj.getTime(),
+        };
+      });
+
+      // Sort enrolled programs with newest purchase first
+      enrolledPrograms.sort((a, b) => b.purchaseTimestamp - a.purchaseTimestamp);
+
+      const latestProgram = enrolledPrograms[0] || null;
+      const userDateStr = std.createdAt.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+      const userTimeStr = std.createdAt.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+
+      const latestPurchaseDate = latestProgram
+        ? latestProgram.purchaseDate
+        : `${userDateStr} • ${userTimeStr}`;
+      const latestPurchaseDateShort = latestProgram
+        ? latestProgram.purchaseDateShort
+        : userDateStr;
+      const latestTimestamp = latestProgram ? latestProgram.purchaseTimestamp : std.createdAt.getTime();
+
+      const enrolledProgramIds = validEnrollments.map((e) => e.membershipPlan!.programId);
+      const assignedBatches = (std.batchStudents || []).map((bs) => ({
+        batchId: bs.batchId,
+        batchName: bs.batch?.name || "",
+        programId: bs.batch?.programId || "",
+      }));
 
       return {
         id: std.id,
         name: std.name,
         email: std.email,
         phone: std.studentProfile?.phone || "Not provided",
-        activeProgramId: prg?.id || null,
-        activeProgramTitle: prg?.title || "Unenrolled",
-        activePlanId: mp?.id || null,
-        activeLevelName: getProgramLevelName(mp?.tierType, mp?.name),
-        martialArtsType: activeEnr?.martialArtsType || null,
-        isEnrolled: !!activeEnr,
+        activeProgramId: latestProgram?.programId || null,
+        activeProgramTitle: latestProgram?.programTitle || "Unenrolled",
+        activePlanId: latestProgram?.planId || null,
+        activeLevelName: latestProgram?.levelName || "Starting Level",
+        martialArtsType: latestProgram?.martialArtsType || null,
+        isEnrolled: enrolledPrograms.length > 0,
+        enrolledPrograms,
+        enrolledProgramIds,
+        assignedBatches,
+        assignedBatchIds: assignedBatches.map((b) => b.batchId),
+        purchaseDate: latestPurchaseDate,
+        purchaseDateShort: latestPurchaseDateShort,
+        purchaseTimestamp: latestTimestamp,
       };
     });
+
+    // Sort students by latest purchase/enrollment timestamp, newest first
+    formattedStudents.sort((a, b) => b.purchaseTimestamp - a.purchaseTimestamp);
 
     return {
       success: true,
@@ -737,13 +834,17 @@ export async function assignStudentToBatchAction(batchId: string, userId: string
       return { success: false, error: "Student user not found." };
     }
 
-    const activeEnrollment = student.enrollments[0];
-    if (!activeEnrollment) {
-      return { success: false, error: "Student does not have an active course enrollment." };
-    }
+    // Check student program eligibility: student must have an active enrollment for this batch's program
+    // Do not filter by belt, belt color, rank or level. There is only one starting belt.
+    const matchingEnrollment = student.enrollments.find(
+      (enr) => enr.membershipPlan?.programId === batch.programId
+    );
 
-    if (activeEnrollment.membershipPlan?.programId !== batch.programId) {
-      return { success: false, error: `Incompatible Program: Student is enrolled in a different program than batch "${batch.program.title}".` };
+    if (!matchingEnrollment) {
+      return {
+        success: false,
+        error: `Incompatible Program: Student is not actively enrolled in program "${batch.program.title}".`,
+      };
     }
 
     // Perform Assignment
@@ -788,6 +889,169 @@ export async function assignStudentToBatchAction(batchId: string, userId: string
   } catch (err: any) {
     console.error("assignStudentToBatchAction error:", err);
     return { success: false, error: "Failed to assign student to batch." };
+  }
+}
+
+// 5b. GET ELIGIBLE STUDENTS FOR BATCH ASSIGNMENT
+export async function getEligibleStudentsForBatchAction(batchId: string) {
+  try {
+    const session = await auth();
+    if (!session || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
+      return { success: false, error: "Unauthorized access." };
+    }
+
+    const batch = await db.batch.findUnique({
+      where: { id: batchId },
+      include: {
+        program: true,
+        membershipPlan: true,
+        students: {
+          select: { userId: true },
+        },
+      },
+    });
+
+    if (!batch) {
+      return { success: false, error: "Batch not found." };
+    }
+
+    const currentAssignedUserIds = batch.students.map((s) => s.userId);
+
+    // Retrieve students who have an active enrollment for the batch's program
+    // Exclude students who are already assigned to this batch
+    // Do not filter by belt, belt color, rank or level.
+    const eligibleStudents = await db.user.findMany({
+      where: {
+        role: "STUDENT",
+        id: { notIn: currentAssignedUserIds },
+        enrollments: {
+          some: {
+            status: "ACTIVE",
+            membershipPlan: {
+              programId: batch.programId,
+            },
+          },
+        },
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        createdAt: true,
+        studentProfile: {
+          select: { phone: true },
+        },
+        batchStudents: {
+          select: {
+            batchId: true,
+            batch: {
+              select: {
+                id: true,
+                name: true,
+                programId: true,
+              },
+            },
+          },
+        },
+        enrollments: {
+          where: {
+            status: "ACTIVE",
+            membershipPlan: {
+              programId: batch.programId,
+            },
+          },
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            martialArtsType: true,
+            createdAt: true,
+            startDate: true,
+            membershipPlan: {
+              select: {
+                id: true,
+                name: true,
+                tierType: true,
+                programId: true,
+                program: {
+                  select: { id: true, title: true },
+                },
+              },
+            },
+            payments: {
+              where: { status: "SUCCESS" },
+              orderBy: { createdAt: "desc" },
+              take: 1,
+              select: {
+                id: true,
+                amount: true,
+                createdAt: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const formatted = eligibleStudents.map((std) => {
+      const activeEnr = std.enrollments[0];
+      const prg = activeEnr?.membershipPlan?.program || batch.program;
+      const mp = activeEnr?.membershipPlan;
+      const purchaseDateObj = activeEnr?.payments[0]?.createdAt || activeEnr?.createdAt || std.createdAt;
+
+      const otherBatches = (std.batchStudents || []).map((bs) => ({
+        batchId: bs.batchId,
+        batchName: bs.batch?.name || "Another Batch",
+      }));
+
+      const dateStr = purchaseDateObj.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+      const timeStr = purchaseDateObj.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+
+      return {
+        id: std.id,
+        name: std.name,
+        email: std.email,
+        phone: std.studentProfile?.phone || "Not provided",
+        activeProgramId: batch.programId,
+        activeProgramTitle: prg.title,
+        activePlanId: mp?.id || null,
+        activeLevelName: getProgramLevelName(mp?.tierType, mp?.name),
+        martialArtsType: activeEnr?.martialArtsType || null,
+        isEnrolled: true,
+        enrolledProgramIds: [batch.programId],
+        purchaseDate: `${dateStr} • ${timeStr}`,
+        purchaseDateShort: dateStr,
+        purchaseTimestamp: purchaseDateObj.getTime(),
+        otherBatches,
+        isAlreadyAssigned: false,
+      };
+    });
+
+    // Sort by purchase/enrollment date, newest first
+    formatted.sort((a, b) => b.purchaseTimestamp - a.purchaseTimestamp);
+
+    return {
+      success: true,
+      batch: {
+        id: batch.id,
+        name: batch.name,
+        programId: batch.programId,
+        programTitle: batch.program.title,
+        maxCapacity: batch.maxCapacity,
+        studentCount: batch.students.length,
+      },
+      students: formatted,
+    };
+  } catch (err: any) {
+    console.error("getEligibleStudentsForBatchAction error:", err);
+    return { success: false, error: "Failed to load eligible students for batch." };
   }
 }
 
